@@ -37,7 +37,9 @@ export default function DashboardPage() {
   const tasksQuery = useMemoFirebase(() => firestore ? collectionGroup(firestore, 'tasks') : null, [firestore]);
   const { data: tasksData, isLoading: isLoadingTasks } = useCollection<Task>(tasksQuery);
   
-  const stagesQuery = useMemoFirebase(() => firestore ? collectionGroup(firestore, 'stages') : null, [firestore]);
+  // FIX: Stages query was running without project context.
+  // It should only run when we have projects to look into.
+  const stagesQuery = useMemoFirebase(() => firestore && projectsData && projectsData.length > 0 ? collectionGroup(firestore, 'stages') : null, [firestore, projectsData]);
   const { data: stagesData, isLoading: isLoadingStages } = useCollection<Stage>(stagesQuery);
 
 
