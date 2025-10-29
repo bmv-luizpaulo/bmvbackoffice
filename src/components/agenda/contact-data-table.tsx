@@ -83,7 +83,7 @@ const deleteDocumentNonBlocking = (ref: any) => {
 };
 
 interface ContactDataTableProps {
-    type: 'cliente' | 'fornecedor';
+    type: 'cliente' | 'fornecedor' | 'parceiro';
 }
 
 export function ContactDataTable({ type }: ContactDataTableProps) {
@@ -121,7 +121,7 @@ export function ContactDataTable({ type }: ContactDataTableProps) {
     setSelectedContact(null);
   }
   
-  const typeLabel = type === 'cliente' ? 'Cliente' : 'Fornecedor';
+  const typeLabel = type.charAt(0).toUpperCase() + type.slice(1);
 
   const columns: ColumnDef<Contact>[] = [
     {

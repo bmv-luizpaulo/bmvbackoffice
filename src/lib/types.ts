@@ -24,7 +24,7 @@ export type Contact = {
   email: string;
   phone?: string;
   companyName?: string;
-  type: 'cliente' | 'fornecedor';
+  type: 'cliente' | 'fornecedor' | 'parceiro';
   address?: {
     street?: string;
     number?: string;

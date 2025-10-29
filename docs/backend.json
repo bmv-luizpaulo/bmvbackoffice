@@ -215,7 +215,7 @@
     "Contact": {
       "title": "Contact",
       "type": "object",
-      "description": "Represents a contact, which can be a client or a supplier.",
+      "description": "Represents a contact, which can be a client, a supplier, or a partner.",
       "properties": {
         "name": {
           "type": "string",
@@ -237,7 +237,7 @@
         "type": {
           "type": "string",
           "description": "The type of contact.",
-          "enum": ["cliente", "fornecedor"]
+          "enum": ["cliente", "fornecedor", "parceiro"]
         },
         "address": {
           "type": "object",
@@ -334,7 +334,7 @@
     },
     "/contacts/{contactId}": {
       "schema": { "$ref": "#/entities/Contact" },
-      "description": "Represents a contact, either a client or a supplier."
+      "description": "Represents a contact, either a client, a supplier, or a partner."
     },
     "/projects/{projectId}": {
       "schema": { "$ref": "#/entities/Project" },

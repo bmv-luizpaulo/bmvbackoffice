@@ -12,13 +12,14 @@ export default function AgendaPage() {
       <header>
         <h1 className="font-headline text-3xl font-bold tracking-tight">Agenda de Contatos</h1>
         <p className="text-muted-foreground">
-          Gerencie seus clientes, fornecedores e funcionários em um só lugar.
+          Gerencie seus clientes, fornecedores, parceiros e funcionários em um só lugar.
         </p>
       </header>
       <Tabs defaultValue="clientes">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="clientes">Clientes</TabsTrigger>
           <TabsTrigger value="fornecedores">Fornecedores</TabsTrigger>
+          <TabsTrigger value="parceiros">Parceiros</TabsTrigger>
           <TabsTrigger value="funcionarios">Funcionários</TabsTrigger>
         </TabsList>
         <TabsContent value="clientes">
@@ -40,6 +41,17 @@ export default function AgendaPage() {
                 </CardHeader>
                 <CardContent>
                     <ContactDataTable type="fornecedor" />
+                </CardContent>
+            </Card>
+        </TabsContent>
+        <TabsContent value="parceiros">
+             <Card>
+                <CardHeader>
+                    <CardTitle>Parceiros</CardTitle>
+                    <CardDescription>Gerencie as informações dos seus parceiros.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <ContactDataTable type="parceiro" />
                 </CardContent>
             </Card>
         </TabsContent>

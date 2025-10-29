@@ -33,7 +33,7 @@ type ContactFormDialogProps = {
   onOpenChange: (isOpen: boolean) => void;
   onSave: (contact: Omit<Contact, 'id' | 'type'>) => void;
   contact?: Contact | null;
-  type: 'cliente' | 'fornecedor';
+  type: 'cliente' | 'fornecedor' | 'parceiro';
 };
 
 const formSchema = z.object({
@@ -101,7 +101,7 @@ export function ContactFormDialog({ isOpen, onOpenChange, onSave, contact, type 
     onOpenChange(false);
   }
 
-  const typeLabel = type === 'cliente' ? 'Cliente' : 'Fornecedor';
+  const typeLabel = type.charAt(0).toUpperCase() + type.slice(1);
   
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
