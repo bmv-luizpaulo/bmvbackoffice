@@ -135,7 +135,7 @@ export function useCollection<T = any>(
         
         // TEMPORARY WORKAROUND: Do not throw a global error for specific collections
         // This is to prevent the app from breaking while we work on security rules.
-        const collectionsToWarn = ['users', 'contacts'];
+        const collectionsToWarn = ['users', 'contacts', 'teams'];
         if (collectionsToWarn.includes(path)) {
            console.warn(`Firestore permission error on '${path}' collection was caught but not thrown globally. This is a temporary measure.`);
         } else {
