@@ -27,21 +27,13 @@
           "type": "string",
           "description": "End date of the project.",
           "format": "date-time"
-        },
-        "stageIds": {
-          "type": "array",
-          "description": "References to Stages. (Relationship: Project 1:N Stage)",
-          "items": {
-            "type": "string"
-          }
         }
       },
       "required": [
         "id",
         "name",
         "description",
-        "startDate",
-        "stageIds"
+        "startDate"
       ]
     },
     "Task": {
@@ -80,6 +72,15 @@
           "items": {
             "type": "string"
           }
+        },
+        "assigneeId": {
+            "type": "string",
+            "description": "Reference to a User who is responsible for the task."
+        },
+        "dueDate": {
+            "type": "string",
+            "description": "The due date for the task.",
+            "format": "date-time"
         }
       },
       "required": [
@@ -137,7 +138,7 @@
           "schema": {
             "$ref": "#/backend/entities/Project"
           },
-          "description": "Represents a project. Includes the 'id', 'name', 'description', 'startDate', and 'stageIds'.",
+          "description": "Represents a project. Includes the 'id', 'name', 'description', 'startDate', 'endDate'.",
           "params": [
             {
               "name": "projectId",
@@ -167,21 +168,17 @@
         }
       },
       {
-        "path": "/projects/{projectId}/stages/{stageId}/tasks/{taskId}",
+        "path": "/projects/{projectId}/tasks/{taskId}",
         "definition": {
           "entityName": "Task",
           "schema": {
             "$ref": "#/backend/entities/Task"
           },
-          "description": "Represents a task within a stage. Contains 'id', 'name', 'description', 'projectId', 'stageId', 'isCompleted', and 'dependentTaskIds'.",
+          "description": "Represents a task within a stage. Contains 'id', 'name', 'description', 'projectId', 'stageId', 'isCompleted', 'assigneeId', 'dueDate', and 'dependentTaskIds'.",
           "params": [
             {
               "name": "projectId",
               "description": "The unique identifier for the project."
-            },
-            {
-              "name": "stageId",
-              "description": "The unique identifier for the stage."
             },
             {
               "name": "taskId",
@@ -191,6 +188,6 @@
         }
       }
     ],
-    "reasoning": "This design prioritizes authorization independence and QAPs. Projects, Stages, and Tasks are organized in a hierarchy, enabling straightforward ownership-based security rules. Authorization Independence is achieved by avoiding `get()` calls in security rules. The structure supports CRUD operations and enables atomic operations (transactions/batches) for related data.\n\n*   **Projects**: Located at the root collection `/projects/{projectId}`. This allows listing all projects, filtering based on project properties, and securing individual projects.\n*   **Stages:** Stages related to each Project are stored in a subcollection `/projects/{projectId}/stages/{stageId}`.  This enables listing stages related to a project, filtering based on stage properties, and securing individual stages.\n*   **Tasks:** Tasks for each stage are stored in a subcollection `/projects/{projectId}/stages/{stageId}/tasks/{taskId}`. This enables listing tasks related to a stage, filtering based on task properties, and securing individual tasks.\n\nThis structure facilitates conditional stage advancement as it provides easy access to tasks within each stage. Security rules can easily verify task completion status within a stage before allowing a project to advance."
+    "reasoning": "This design prioritizes authorization independence and QAPs. Projects, Stages, and Tasks are organized in a hierarchy, enabling straightforward ownership-based security rules. Authorization Independence is achieved by avoiding `get()` calls in security rules. The structure supports CRUD operations and enables atomic operations (transactions/batches) for related data.\n\n*   **Projects**: Located at the root collection `/projects/{projectId}`. This allows listing all projects, filtering based on project properties, and securing individual projects.\n*   **Stages:** Stages related to each Project are stored in a subcollection `/projects/{projectId}/stages/{stageId}`.  This enables listing stages related to a project, filtering based on stage properties, and securing individual stages.\n*   **Tasks:** Tasks for each stage are stored in a subcollection `/projects/{projectId}/tasks/{taskId}`. This enables listing tasks related to a stage, filtering based on task properties, and securing individual tasks.\n\nThis structure facilitates conditional stage advancement as it provides easy access to tasks within each stage. Security rules can easily verify task completion status within a stage before allowing a project to advance."
   }
 }

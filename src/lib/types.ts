@@ -40,7 +40,6 @@ export type Project = {
     description: string;
     startDate: string;
     endDate?: string;
-    stageIds: string[];
 };
 
 export type Stage = {
@@ -59,4 +58,6 @@ export type Task = {
     stageId: string;
     isCompleted: boolean;
     dependentTaskIds?: string[];
+    assigneeId?: string;
+    dueDate?: string;
 };
