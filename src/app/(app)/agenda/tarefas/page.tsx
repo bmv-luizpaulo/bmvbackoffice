@@ -46,13 +46,17 @@ export default function TaskAgendaPage() {
   const projectsMap = useMemo(() => new Map(projectsData?.map(p => [p.id, p])), [projectsData]);
   const usersMap = useMemo(() => new Map(allUsers?.map(u => [u.id, u])), [allUsers]);
 
-  const tasksWithDates = useMemo(() => tasksData?.filter(t => !!t.dueDate).map(t => ({...t, dueDate: new Date(t.dueDate!)})) || [], [tasksData]);
+  const tasksWithDates = useMemo(() => {
+    return tasksData
+      ?.filter(t => !!t.dueDate)
+      .map(t => ({...t, dueDateObj: new Date(t.dueDate!)})) || [];
+  }, [tasksData]);
 
   const selectedDayTasks = useMemo(() => {
     if (!selectedDate) return [];
     return tasksWithDates
-      .filter(task => task.dueDate && isSameDay(task.dueDate, selectedDate))
-      .sort((a, b) => a.dueDate!.getTime() - b.dueDate!.getTime());
+      .filter(task => task.dueDateObj && isSameDay(task.dueDateObj, selectedDate))
+      .sort((a, b) => a.dueDateObj!.getTime() - b.dueDateObj!.getTime());
   }, [tasksWithDates, selectedDate]);
   
   const isGestor = userProfile?.role === 'Gestor';
@@ -103,7 +107,7 @@ export default function TaskAgendaPage() {
                         row: "w-full flex justify-around mt-2"
                     }}
                     modifiers={{
-                        hasTask: tasksWithDates.map(t => t.dueDate!)
+                        hasTask: tasksWithDates.map(t => t.dueDateObj)
                     }}
                     modifiersClassNames={{
                         hasTask: "relative !flex items-center justify-center after:content-[''] after:absolute after:bottom-1 after:left-1/2 after:-translate-x-1/2 after:h-1 after:w-1 after:rounded-full after:bg-primary"
