@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { DndContext, type DragEndEvent, useSensor, useSensors, PointerSensor } from '@dnd-kit/core';
 import { useToast } from '@/hooks/use-toast';
 import { KanbanColumn } from './kanban-column';
-import type { Task, Stage, Project } from '@/lib/types';
+import type { Task, Stage, Project, User } from '@/lib/types';
 import { Button } from '../ui/button';
 import { Plus, FolderPlus, ChevronsUpDown } from 'lucide-react';
 import { AddTaskDialog } from './add-task-dialog';
@@ -13,8 +13,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '../ui/command';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, doc, writeBatch } from 'firebase/firestore';
-import { addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
-
+import { addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 export function KanbanBoard() {
   const firestore = useFirestore();
@@ -31,7 +30,13 @@ export function KanbanBoard() {
   const tasksQuery = useMemoFirebase(() => firestore && selectedProject ? collection(firestore, 'projects', selectedProject.id, 'tasks') : null, [firestore, selectedProject]);
   const { data: tasksData, isLoading: isLoadingTasks } = useCollection<Task>(tasksQuery);
   
-  const [isAddTaskDialogOpen, setIsAddTaskDialogOpen] = useState(false);
+  const usersQuery = useMemoFirebase(() => firestore ? collection(firestore, 'users') : null, [firestore]);
+  const { data: usersData } = useCollection<User>(usersQuery);
+  const usersMap = useMemo(() => new Map(usersData?.map(user => [user.id, user])), [usersData]);
+  
+  const [isTaskDialogOpen, setIsTaskDialogOpen] = useState(false);
+  const [taskToEdit, setTaskToEdit] = useState<Task | null>(null);
+
   const [isAddProjectDialogOpen, setIsAddProjectDialogOpen] = useState(false);
   const [isProjectSelectorOpen, setIsProjectSelectorOpen] = useState(false);
 
@@ -67,9 +72,9 @@ export function KanbanBoard() {
     const batch = writeBatch(firestore);
     const stagesCollection = collection(firestore, 'projects', newDocRef.id, 'stages');
     const defaultStages = [
-      { name: 'A Fazer', order: 1 },
-      { name: 'Em Progresso', order: 2 },
-      { name: 'Concluído', order: 3 }
+      { name: 'A Fazer', order: 1, description: 'Tarefas que ainda não foram iniciadas.' },
+      { name: 'Em Progresso', order: 2, description: 'Tarefas que estão sendo trabalhadas ativamente.' },
+      { name: 'Concluído', order: 3, description: 'Tarefas que foram finalizadas.' }
     ];
     defaultStages.forEach(stage => {
       const stageRef = doc(stagesCollection);
@@ -86,43 +91,64 @@ export function KanbanBoard() {
     handleSelectProject(newlyCreatedProject as Project)
   }
 
-  const handleAddTask = (newTask: Omit<Task, 'id' | 'isCompleted'>) => {
+  const handleSaveTask = (taskData: Omit<Task, 'id' | 'isCompleted'>, taskId?: string) => {
      if (!firestore || !selectedProject) return;
 
-    const taskToAdd = {
-        ...newTask,
-        isCompleted: false,
-    };
-    const tasksCollection = collection(firestore, 'projects', selectedProject.id, 'tasks');
-    addDocumentNonBlocking(tasksCollection, taskToAdd);
-
-    toast({
-        title: "Tarefa Adicionada",
-        description: `A tarefa "${newTask.name}" foi criada com sucesso.`
-    })
-  }
-
-    const handleUpdateTask = (taskId: string, updates: Partial<Omit<Task, 'id'>>) => {
-        if (!firestore || !selectedProject) return;
+    if (taskId) {
+        // Update existing task
         const taskRef = doc(firestore, 'projects', selectedProject.id, 'tasks', taskId);
-        updateDocumentNonBlocking(taskRef, updates);
-
+        updateDocumentNonBlocking(taskRef, taskData);
         toast({
             title: "Tarefa Atualizada",
-            description: "A tarefa foi atualizada com sucesso."
+            description: `A tarefa "${taskData.name}" foi atualizada.`
         });
-    }
-
-    const handleDeleteTask = (taskId: string) => {
-        if (!firestore || !selectedProject) return;
-        const taskRef = doc(firestore, 'projects', selectedProject.id, 'tasks', taskId);
-        deleteDocumentNonBlocking(taskRef);
-
+    } else {
+        // Create new task
+        const taskToAdd = {
+            ...taskData,
+            isCompleted: false,
+        };
+        const tasksCollection = collection(firestore, 'projects', selectedProject.id, 'tasks');
+        addDocumentNonBlocking(tasksCollection, taskToAdd);
         toast({
-            title: "Tarefa Excluída",
-            description: "A tarefa foi excluída com sucesso."
+            title: "Tarefa Adicionada",
+            description: `A tarefa "${taskData.name}" foi criada com sucesso.`
         });
     }
+  }
+
+  const handleUpdateTaskStatus = (taskId: string, updates: Partial<Omit<Task, 'id'>>) => {
+      if (!firestore || !selectedProject) return;
+      const taskRef = doc(firestore, 'projects', selectedProject.id, 'tasks', taskId);
+      updateDocumentNonBlocking(taskRef, updates);
+
+      toast({
+          title: "Tarefa Atualizada",
+          description: "O status da tarefa foi atualizado."
+      });
+  }
+
+  const handleDeleteTask = (taskId: string) => {
+      if (!firestore || !selectedProject) return;
+      const taskRef = doc(firestore, 'projects', selectedProject.id, 'tasks', taskId);
+      deleteDocumentNonBlocking(taskRef);
+
+      toast({
+          title: "Tarefa Excluída",
+          description: "A tarefa foi excluída com sucesso."
+      });
+  }
+  
+  const handleEditTask = (task: Task) => {
+    setTaskToEdit(task);
+    setIsTaskDialogOpen(true);
+  }
+
+  const handleAddTaskClick = () => {
+    setTaskToEdit(null);
+    setIsTaskDialogOpen(true);
+  }
+
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
@@ -131,7 +157,7 @@ export function KanbanBoard() {
         const taskId = active.id as string;
         const newStageId = over.id as string;
         
-        handleUpdateTask(taskId, { stageId: newStageId });
+        handleUpdateTaskStatus(taskId, { stageId: newStageId });
 
         const stage = stagesData?.find(s => s.id === newStageId);
         toast({
@@ -149,7 +175,7 @@ export function KanbanBoard() {
     })
   );
 
-  const tasksWithDependencyStatus = useMemo(() => {
+  const tasksWithDetails = useMemo(() => {
     if (!tasksData) return [];
     const taskMap = new Map(tasksData.map(task => [task.id, task]));
     return tasksData.map(task => {
@@ -158,9 +184,10 @@ export function KanbanBoard() {
             const dependentTask = taskMap.get(depId);
             return dependentTask && !dependentTask.isCompleted;
         });
-        return { ...task, isLocked };
+        const assignee = task.assigneeId ? usersMap.get(task.assigneeId) : undefined;
+        return { ...task, isLocked, assignee };
     });
-  }, [tasksData]);
+  }, [tasksData, usersMap]);
 
   const sortedStages = stagesData?.sort((a,b) => a.order - b.order) || [];
 
@@ -221,7 +248,7 @@ export function KanbanBoard() {
                         <FolderPlus className='mr-2' />
                         Novo Projeto
                     </Button>
-                    <Button onClick={() => setIsAddTaskDialogOpen(true)} disabled={!selectedProject}>
+                    <Button onClick={handleAddTaskClick} disabled={!selectedProject}>
                         <Plus className='mr-2' />
                         Adicionar Tarefa
                     </Button>
@@ -235,21 +262,23 @@ export function KanbanBoard() {
                     <KanbanColumn
                         key={stage.id}
                         stage={stage}
-                        tasks={tasksWithDependencyStatus?.filter(task => task.stageId === stage.id) || []}
-                        onUpdateTask={handleUpdateTask}
+                        tasks={tasksWithDetails?.filter(task => task.stageId === stage.id) || []}
+                        onUpdateTask={handleUpdateTaskStatus}
                         onDeleteTask={handleDeleteTask}
+                        onEditTask={handleEditTask}
                     />
                   ))
                 )}
             </div>
         </DndContext>
         <AddTaskDialog 
-            isOpen={isAddTaskDialogOpen}
-            onOpenChange={setIsAddTaskDialogOpen}
+            isOpen={isTaskDialogOpen}
+            onOpenChange={setIsTaskDialogOpen}
             stages={sortedStages}
             tasks={tasksData || []}
-            onAddTask={handleAddTask}
+            onSaveTask={handleSaveTask}
             projectId={selectedProject?.id || ''}
+            taskToEdit={taskToEdit}
         />
         <AddProjectDialog
             isOpen={isAddProjectDialogOpen}

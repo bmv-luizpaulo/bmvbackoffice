@@ -3,6 +3,8 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
+import { format } from "date-fns";
+import { CalendarIcon, User } from "lucide-react";
 
 import {
   Dialog,
@@ -24,16 +26,22 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from "../ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
-import type { Stage, Task } from "@/lib/types";
+import type { Stage, Task, User as UserType } from "@/lib/types";
 import { MultiSelect } from "../ui/multi-select";
+import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
+import { collection } from "firebase/firestore";
+import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
+import { Calendar } from "../ui/calendar";
+import { cn } from "@/lib/utils";
 
 type AddTaskDialogProps = {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
-  onAddTask: (task: Omit<Task, 'id' | 'isCompleted'>) => void;
+  onSaveTask: (task: Omit<Task, 'id' | 'isCompleted'>, taskId?: string) => void;
   stages: Stage[];
   tasks: Task[];
   projectId: string;
+  taskToEdit?: Task | null;
 };
 
 const formSchema = z.object({
@@ -41,42 +49,77 @@ const formSchema = z.object({
   description: z.string().optional(),
   stageId: z.string({ required_error: "A etapa é obrigatória." }),
   dependentTaskIds: z.array(z.string()).optional(),
+  assigneeId: z.string().optional(),
+  dueDate: z.date().optional(),
 });
 
-export function AddTaskDialog({ isOpen, onOpenChange, onAddTask, stages, tasks, projectId }: AddTaskDialogProps) {
+export function AddTaskDialog({ isOpen, onOpenChange, onSaveTask, stages, tasks, projectId, taskToEdit }: AddTaskDialogProps) {
+  const firestore = useFirestore();
+  const usersQuery = useMemoFirebase(() => firestore ? collection(firestore, 'users') : null, [firestore]);
+  const { data: usersData } = useCollection<UserType>(usersQuery);
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
       description: "",
-      dependentTaskIds: []
+      dependentTaskIds: [],
+      assigneeId: undefined,
+      dueDate: undefined,
     },
   });
 
-  // Reset form when dialog opens
-  if (isOpen && !form.formState.isDirty) {
-    form.reset({ stageId: stages.length > 0 ? stages[0].id : '', name: '', description: '', dependentTaskIds: [] });
-  }
+  // Reset form when dialog opens or taskToEdit changes
+  React.useEffect(() => {
+    if (isOpen) {
+      if (taskToEdit) {
+        form.reset({
+          name: taskToEdit.name,
+          description: taskToEdit.description,
+          stageId: taskToEdit.stageId,
+          dependentTaskIds: taskToEdit.dependentTaskIds || [],
+          assigneeId: taskToEdit.assigneeId,
+          dueDate: taskToEdit.dueDate ? new Date(taskToEdit.dueDate) : undefined,
+        });
+      } else {
+        form.reset({
+          stageId: stages.length > 0 ? stages[0].id : '',
+          name: '',
+          description: '',
+          dependentTaskIds: [],
+          assigneeId: undefined,
+          dueDate: undefined,
+        });
+      }
+    }
+  }, [isOpen, taskToEdit, form, stages]);
 
 
   function onSubmit(values: z.infer<typeof formSchema>) {
-    onAddTask({ ...values, projectId, description: values.description || '' });
+    onSaveTask({ 
+        ...values,
+        projectId,
+        description: values.description || '',
+        dependentTaskIds: values.dependentTaskIds || [],
+        dueDate: values.dueDate?.toISOString(),
+    }, taskToEdit?.id);
     onOpenChange(false);
-    form.reset();
   }
   
-  const taskOptions = tasks.map(task => ({ value: task.id, label: task.name }));
+  const taskOptions = tasks
+    .filter(task => !taskToEdit || task.id !== taskToEdit.id)
+    .map(task => ({ value: task.id, label: task.name }));
+
+  const userOptions = usersData?.map(user => ({ value: user.id, label: user.name })) || [];
+
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => {
-        if (!open) {
-            form.reset();
-        }
         onOpenChange(open);
     }}>
-      <DialogContent>
+      <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Adicionar Nova Tarefa</DialogTitle>
+          <DialogTitle>{taskToEdit ? 'Editar Tarefa' : 'Adicionar Nova Tarefa'}</DialogTitle>
         </DialogHeader>
         <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -98,7 +141,7 @@ export function AddTaskDialog({ isOpen, onOpenChange, onAddTask, stages, tasks, 
                     name="description"
                     render={({ field }) => (
                         <FormItem>
-                        <FormLabel>Descrição (Opcional)</FormLabel>
+                        <FormLabel>Descrição</FormLabel>
                         <FormControl>
                             <Textarea placeholder="Adicione mais detalhes sobre a tarefa..." {...field} />
                         </FormControl>
@@ -106,49 +149,114 @@ export function AddTaskDialog({ isOpen, onOpenChange, onAddTask, stages, tasks, 
                         </FormItem>
                     )}
                 />
-                <FormField
-                    control={form.control}
-                    name="stageId"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Etapa</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl>
-                            <SelectTrigger>
-                                <SelectValue placeholder="Selecione uma etapa inicial" />
-                            </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                            {stages.map(stage => (
-                                <SelectItem key={stage.id} value={stage.id}>{stage.name}</SelectItem>
-                            ))}
-                            </SelectContent>
-                        </Select>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                />
-                 <FormField
-                    control={form.control}
-                    name="dependentTaskIds"
-                    render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Depende de</FormLabel>
-                            <MultiSelect
-                                options={taskOptions}
-                                selected={field.value || []}
-                                onChange={field.onChange}
-                                placeholder="Selecione as tarefas..."
-                            />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                        control={form.control}
+                        name="stageId"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Etapa</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                                <FormControl>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Selecione uma etapa" />
+                                </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                {stages.map(stage => (
+                                    <SelectItem key={stage.id} value={stage.id}>{stage.name}</SelectItem>
+                                ))}
+                                </SelectContent>
+                            </Select>
                             <FormMessage />
-                        </FormItem>
-                    )}
-                />
+                            </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={form.control}
+                        name="assigneeId"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel className="flex items-center gap-2"><User className="h-4 w-4" />Responsável</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                                <FormControl>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Selecione um responsável" />
+                                </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                <SelectItem value="unassigned">Não atribuído</SelectItem>
+                                {userOptions.map(user => (
+                                    <SelectItem key={user.value} value={user.value}>{user.label}</SelectItem>
+                                ))}
+                                </SelectContent>
+                            </Select>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                </div>
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                        control={form.control}
+                        name="dependentTaskIds"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Depende de</FormLabel>
+                                <MultiSelect
+                                    options={taskOptions}
+                                    selected={field.value || []}
+                                    onChange={field.onChange}
+                                    placeholder="Selecione as tarefas..."
+                                />
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={form.control}
+                        name="dueDate"
+                        render={({ field }) => (
+                            <FormItem className="flex flex-col">
+                            <FormLabel>Data de Entrega</FormLabel>
+                            <Popover>
+                                <PopoverTrigger asChild>
+                                <FormControl>
+                                    <Button
+                                    variant={"outline"}
+                                    className={cn(
+                                        "w-full pl-3 text-left font-normal",
+                                        !field.value && "text-muted-foreground"
+                                    )}
+                                    >
+                                    {field.value ? (
+                                        format(field.value, "PPP")
+                                    ) : (
+                                        <span>Escolha uma data</span>
+                                    )}
+                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                    </Button>
+                                </FormControl>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0" align="start">
+                                <Calendar
+                                    mode="single"
+                                    selected={field.value}
+                                    onSelect={field.onChange}
+                                    initialFocus
+                                />
+                                </PopoverContent>
+                            </Popover>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                        />
+                 </div>
                 <DialogFooter className="pt-4">
                     <DialogClose asChild>
                         <Button type="button" variant="outline">Cancelar</Button>
                     </DialogClose>
-                    <Button type="submit">Adicionar Tarefa</Button>
+                    <Button type="submit">Salvar Tarefa</Button>
                 </DialogFooter>
             </form>
         </Form>

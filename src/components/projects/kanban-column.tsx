@@ -1,18 +1,21 @@
 'use client';
 
 import { useDroppable } from '@dnd-kit/core';
-import type { Stage, Task } from '@/lib/types';
+import type { Stage, Task, User } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { KanbanCard } from './kanban-card';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
+import { Info } from 'lucide-react';
 
 type KanbanColumnProps = {
   stage: Stage;
-  tasks: (Task & { isLocked?: boolean })[];
-  onUpdateTask: (taskId: string, updates: Partial<Task>) => void;
+  tasks: (Task & { isLocked?: boolean; assignee?: User })[];
+  onUpdateTask: (taskId: string, updates: Partial<Omit<Task, 'id'>>) => void;
   onDeleteTask: (taskId: string) => void;
+  onEditTask: (task: Task) => void;
 };
 
-export function KanbanColumn({ stage, tasks, onUpdateTask, onDeleteTask }: KanbanColumnProps) {
+export function KanbanColumn({ stage, tasks, onUpdateTask, onDeleteTask, onEditTask }: KanbanColumnProps) {
   const { setNodeRef, isOver } = useDroppable({ id: stage.id });
 
   return (
@@ -22,7 +25,21 @@ export function KanbanColumn({ stage, tasks, onUpdateTask, onDeleteTask }: Kanba
     >
       <div className="flex flex-col rounded-t-lg bg-card p-3 shadow">
         <div className="flex items-center justify-between">
-            <h2 className="font-semibold">{stage.name}</h2>
+            <div className="flex items-center gap-2">
+                <h2 className="font-semibold">{stage.name}</h2>
+                {stage.description && (
+                    <TooltipProvider>
+                        <Tooltip>
+                            <TooltipTrigger>
+                                <Info className="h-4 w-4 text-muted-foreground" />
+                            </TooltipTrigger>
+                            <TooltipContent>
+                                <p>{stage.description}</p>
+                            </TooltipContent>
+                        </Tooltip>
+                    </TooltipProvider>
+                )}
+            </div>
             <Badge variant="secondary" className="font-mono text-sm">{tasks.length}</Badge>
         </div>
       </div>
@@ -36,6 +53,7 @@ export function KanbanColumn({ stage, tasks, onUpdateTask, onDeleteTask }: Kanba
             task={task} 
             onUpdateTask={onUpdateTask}
             onDeleteTask={onDeleteTask}
+            onEditTask={onEditTask}
             />
         ))}
         {tasks.length === 0 && (
