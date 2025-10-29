@@ -13,7 +13,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '../ui/command';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, doc, writeBatch } from 'firebase/firestore';
-import { addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 
 export function KanbanBoard() {
@@ -39,9 +39,16 @@ export function KanbanBoard() {
 
   useEffect(() => {
     if (projectsData) {
-      setProjects(projectsData);
-      if (!selectedProject && projectsData.length > 0) {
-        setSelectedProject(projectsData[0]);
+      const sortedProjects = [...projectsData].sort((a, b) => a.name.localeCompare(b.name));
+      setProjects(sortedProjects);
+      if (!selectedProject && sortedProjects.length > 0) {
+        setSelectedProject(sortedProjects[0]);
+      } else if (selectedProject) {
+        // refresh selected project data
+        const refreshedProject = sortedProjects.find(p => p.id === selectedProject.id);
+        if(refreshedProject) setSelectedProject(refreshedProject);
+        else if(sortedProjects.length > 0) setSelectedProject(sortedProjects[0]);
+        else setSelectedProject(null);
       }
     }
   }, [projectsData, selectedProject]);
@@ -66,7 +73,7 @@ export function KanbanBoard() {
     ];
     defaultStages.forEach(stage => {
       const stageRef = doc(stagesCollection);
-      batch.set(stageRef, stage);
+      batch.set(stageRef, {id: stageRef.id, ...stage});
     });
     await batch.commit();
 
@@ -74,7 +81,9 @@ export function KanbanBoard() {
         title: "Projeto Adicionado",
         description: `O projeto "${newProject.name}" foi criado com sucesso.`
     });
-    // The new project will appear via the realtime listener.
+    const newlyCreatedProject = { id: newDocRef.id, ...newProject };
+    // The new project will appear via the realtime listener, and we can select it.
+    handleSelectProject(newlyCreatedProject as Project)
   }
 
   const handleAddTask = (newTask: Omit<Task, 'id' | 'isCompleted'>) => {
@@ -93,6 +102,28 @@ export function KanbanBoard() {
     })
   }
 
+    const handleUpdateTask = (taskId: string, updates: Partial<Omit<Task, 'id'>>) => {
+        if (!firestore || !selectedProject) return;
+        const taskRef = doc(firestore, 'projects', selectedProject.id, 'tasks', taskId);
+        updateDocumentNonBlocking(taskRef, updates);
+
+        toast({
+            title: "Tarefa Atualizada",
+            description: "A tarefa foi atualizada com sucesso."
+        });
+    }
+
+    const handleDeleteTask = (taskId: string) => {
+        if (!firestore || !selectedProject) return;
+        const taskRef = doc(firestore, 'projects', selectedProject.id, 'tasks', taskId);
+        deleteDocumentNonBlocking(taskRef);
+
+        toast({
+            title: "Tarefa Excluída",
+            description: "A tarefa foi excluída com sucesso."
+        });
+    }
+
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
 
@@ -100,8 +131,7 @@ export function KanbanBoard() {
         const taskId = active.id as string;
         const newStageId = over.id as string;
         
-        const taskRef = doc(firestore, 'projects', selectedProject.id, 'tasks', taskId);
-        updateDocumentNonBlocking(taskRef, { stageId: newStageId });
+        handleUpdateTask(taskId, { stageId: newStageId });
 
         const stage = stagesData?.find(s => s.id === newStageId);
         toast({
@@ -113,8 +143,28 @@ export function KanbanBoard() {
   
   const sortedStages = stagesData?.sort((a,b) => a.order - b.order) || [];
 
-  if (isLoadingProjects || !selectedProject) {
-    return <div>Carregando projetos...</div>;
+  if (isLoadingProjects) {
+    return <div className="flex justify-center items-center h-full">Carregando projetos...</div>;
+  }
+  
+  if (projects.length === 0) {
+      return (
+          <>
+            <div className="flex flex-col items-center justify-center h-full gap-4">
+                <h2 className="text-2xl font-semibold">Nenhum projeto encontrado</h2>
+                <p className="text-muted-foreground">Crie seu primeiro projeto para começar a gerenciar tarefas.</p>
+                <Button onClick={() => setIsAddProjectDialogOpen(true)}>
+                    <FolderPlus className='mr-2' />
+                    Criar Novo Projeto
+                </Button>
+            </div>
+            <AddProjectDialog
+                isOpen={isAddProjectDialogOpen}
+                onOpenChange={setIsAddProjectDialogOpen}
+                onAddProject={handleAddProject}
+            />
+          </>
+      )
   }
 
   return (
@@ -124,7 +174,7 @@ export function KanbanBoard() {
                 <Popover open={isProjectSelectorOpen} onOpenChange={setIsProjectSelectorOpen}>
                     <PopoverTrigger asChild>
                         <Button variant="outline" role="combobox" aria-expanded={isProjectSelectorOpen} className="w-[300px] justify-between text-lg font-semibold">
-                            {selectedProject.name}
+                            {selectedProject?.name || "Selecione um Projeto"}
                             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                         </Button>
                     </PopoverTrigger>
@@ -156,15 +206,17 @@ export function KanbanBoard() {
                     </Button>
                 </div>
             </div>
-            <div className="flex h-full min-w-max gap-4 pb-4">
+            <div className="flex h-full min-w-max gap-4 pb-4 overflow-x-auto">
                 {isLoadingStages || isLoadingTasks ? (
-                  <div>Carregando...</div>
+                  <div className="flex justify-center items-center w-full">Carregando tarefas...</div>
                 ) : (
                   sortedStages.map(stage => (
                     <KanbanColumn
                         key={stage.id}
                         stage={stage}
                         tasks={tasksData?.filter(task => task.stageId === stage.id) || []}
+                        onUpdateTask={handleUpdateTask}
+                        onDeleteTask={handleDeleteTask}
                     />
                   ))
                 )}
@@ -175,7 +227,7 @@ export function KanbanBoard() {
             onOpenChange={setIsAddTaskDialogOpen}
             stages={sortedStages}
             onAddTask={handleAddTask}
-            projectId={selectedProject.id}
+            projectId={selectedProject?.id || ''}
         />
         <AddProjectDialog
             isOpen={isAddProjectDialogOpen}

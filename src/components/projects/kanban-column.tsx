@@ -8,9 +8,11 @@ import { KanbanCard } from './kanban-card';
 type KanbanColumnProps = {
   stage: Stage;
   tasks: Task[];
+  onUpdateTask: (taskId: string, updates: Partial<Task>) => void;
+  onDeleteTask: (taskId: string) => void;
 };
 
-export function KanbanColumn({ stage, tasks }: KanbanColumnProps) {
+export function KanbanColumn({ stage, tasks, onUpdateTask, onDeleteTask }: KanbanColumnProps) {
   const { setNodeRef, isOver } = useDroppable({ id: stage.id });
 
   return (
@@ -29,7 +31,12 @@ export function KanbanColumn({ stage, tasks }: KanbanColumnProps) {
         style={{ minHeight: '150px' }}
       >
         {tasks.map(task => (
-          <KanbanCard key={task.id} task={task} />
+          <KanbanCard 
+            key={task.id} 
+            task={task} 
+            onUpdateTask={onUpdateTask}
+            onDeleteTask={onDeleteTask}
+            />
         ))}
         {tasks.length === 0 && (
             <div className="flex h-full items-center justify-center rounded-md border-2 border-dashed border-border">
