@@ -48,7 +48,8 @@ export function KanbanCard({ task, onUpdateTask, onDeleteTask, onEditTask }: Kan
   const getDueDateInfo = (dueDate: string) => {
     const date = new Date(dueDate);
     if (isPast(date) && !isToday(date)) {
-      return { text: `Atrasado ${differenceInDays(new Date(), date)}d`, color: 'text-destructive' };
+      const daysOverdue = differenceInDays(new Date(), date);
+      return { text: `Atrasado há ${daysOverdue}d`, color: 'text-destructive' };
     }
     if (isToday(date)) {
       return { text: 'Vence hoje', color: 'text-amber-600' };
@@ -66,71 +67,77 @@ export function KanbanCard({ task, onUpdateTask, onDeleteTask, onEditTask }: Kan
     <Card
       ref={setNodeRef}
       style={style}
-      {...attributes}
-      {...listeners}
       className={cn(
         "group shadow-sm hover:shadow-md transition-shadow flex flex-col",
         task.isLocked ? "cursor-not-allowed bg-muted/50" : "cursor-grab active:cursor-grabbing",
+        isDragging && "ring-2 ring-primary",
       )}
     >
-      <CardHeader className="p-3 flex flex-row items-start justify-between space-y-0 gap-4">
-        <div className="flex items-center gap-2 pt-1">
-            <Checkbox checked={task.isCompleted} onCheckedChange={handleCheckedChange} aria-label="Marcar como concluída" />
-            <CardTitle className={cn(
-              'text-base font-medium leading-tight',
-              task.isCompleted && 'line-through text-muted-foreground',
-              task.isLocked && 'text-muted-foreground'
-            )}>
-                {task.name}
-            </CardTitle>
-        </div>
-        <div className="flex items-center gap-1 shrink-0">
-          {task.isLocked && (
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger>
-                  <Lock className="h-4 w-4 text-muted-foreground" />
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Esta tarefa depende de outras</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          )}
-          <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center">
-             <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onEditTask(task)}>
-                <Edit className="h-4 w-4" />
-            </Button>
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0">
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Esta ação não pode ser desfeita. Isso excluirá permanentemente a tarefa "{task.name}".
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                  <AlertDialogAction onClick={() => onDeleteTask(task.id)}>Excluir</AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+      <div {...attributes} {...listeners}>
+        <CardHeader className="p-3 flex flex-row items-start justify-between space-y-0 gap-4">
+          <div className="flex items-center gap-2 pt-1">
+              <Checkbox 
+                checked={task.isCompleted} 
+                onCheckedChange={handleCheckedChange} 
+                aria-label="Marcar como concluída" 
+                disabled={task.isLocked}
+              />
+              <CardTitle className={cn(
+                'text-base font-medium leading-tight',
+                task.isCompleted && 'line-through text-muted-foreground',
+                task.isLocked && !task.isCompleted && 'text-muted-foreground'
+              )}>
+                  {task.name}
+              </CardTitle>
           </div>
-        </div>
-      </CardHeader>
-      {task.description && (
-         <CardContent className="p-3 pt-0">
-            <p className={cn('text-sm text-muted-foreground', task.isLocked && 'text-muted-foreground/70')}>{task.description}</p>
-         </CardContent>
-      )}
+          <div className="flex items-center gap-1 shrink-0">
+            {task.isLocked && !task.isCompleted && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger>
+                    <Lock className="h-4 w-4 text-muted-foreground" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Esta tarefa depende de outras</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
+            <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center">
+               <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onEditTask(task)}>
+                  <Edit className="h-4 w-4" />
+              </Button>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0">
+                    <Trash2 className="h-4 w-4 text-destructive/70 hover:text-destructive" />
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Esta ação não pode ser desfeita. Isso excluirá permanentemente a tarefa "{task.name}".
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction onClick={() => onDeleteTask(task.id)} className="bg-destructive hover:bg-destructive/90">Excluir</AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </div>
+          </div>
+        </CardHeader>
+        {task.description && (
+           <CardContent className="p-3 pt-0">
+              <p className={cn('text-sm text-muted-foreground', task.isCompleted && 'line-through', task.isLocked && !task.isCompleted && 'text-muted-foreground/70')}>{task.description}</p>
+           </CardContent>
+        )}
+      </div>
       <CardFooter className="p-3 pt-0 mt-auto flex justify-between items-center">
         <div className="flex items-center gap-2">
-            {dueDateInfo && (
+            {dueDateInfo && !task.isCompleted && (
                 <div className={cn("flex items-center gap-1 text-xs font-medium", dueDateInfo.color)}>
                     <CalendarIcon className="h-3.5 w-3.5"/>
                     <span>{dueDateInfo.text}</span>
@@ -142,7 +149,7 @@ export function KanbanCard({ task, onUpdateTask, onDeleteTask, onEditTask }: Kan
               <Tooltip>
                 <TooltipTrigger>
                     <Avatar className="h-6 w-6">
-                        <AvatarImage src={task.assignee.avatarUrl} />
+                        <AvatarImage src={task.assignee.avatarUrl} alt={task.assignee.name} />
                         <AvatarFallback>{task.assignee.name.charAt(0)}</AvatarFallback>
                     </Avatar>
                 </TooltipTrigger>
