@@ -9,6 +9,9 @@ import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { collection, collectionGroup } from "firebase/firestore";
 import type { Project, Task, Stage } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
+
 
 function KpiSkeleton() {
   return (
@@ -24,8 +27,6 @@ function KpiSkeleton() {
     </Card>
   );
 }
-
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
 
 export default function DashboardPage() {
   const firestore = useFirestore();
@@ -94,52 +95,58 @@ export default function DashboardPage() {
         <p className="text-muted-foreground">Seu centro de comando para vendas e operações.</p>
       </header>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {isLoading ? (
-          <>
-            <KpiSkeleton />
-            <KpiSkeleton />
-            <KpiSkeleton />
-            <KpiSkeleton />
-          </>
-        ) : (
-          <>
-            <KpiCard 
-              title="Projetos Ativos" 
-              value={activeProjects.toString()}
-              description="Total de projetos em andamento"
-              icon={<FolderKanban className="text-primary"/>}
-            />
-            <KpiCard 
-              title="Projetos Concluídos" 
-              value={completedProjects.toString()}
-              description="Projetos com todas as tarefas finalizadas"
-              icon={<CheckCircle className="text-green-500"/>}
-            />
-            <KpiCard 
-              title="Tarefas Abertas" 
-              value={openTasks.toString()}
-              description="Total de tarefas não concluídas"
-              icon={<Target className="text-amber-500"/>}
-            />
-            <KpiCard 
-              title="Valor Total em Projetos" 
-              value={`$${activeProjects}k`}
-              description="Valor estimado de todos os projetos"
-              icon={<DollarSign className="text-blue-500"/>}
-            />
-          </>
-        )}
-      </div>
-
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
-        <div className="lg:col-span-3">
-          <PipelineChart data={tasksByStage} isLoading={isLoading} />
-        </div>
-        <div className="lg:col-span-2">
-          <ChatSummary />
-        </div>
-      </div>
+      <Tabs defaultValue="overview">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="overview">Visão Geral</TabsTrigger>
+          <TabsTrigger value="tasks">Análise de Tarefas</TabsTrigger>
+          <TabsTrigger value="collab">Colaboração</TabsTrigger>
+        </TabsList>
+        <TabsContent value="overview" className="mt-6">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {isLoading ? (
+              <>
+                <KpiSkeleton />
+                <KpiSkeleton />
+                <KpiSkeleton />
+                <KpiSkeleton />
+              </>
+            ) : (
+              <>
+                <KpiCard 
+                  title="Projetos Ativos" 
+                  value={activeProjects.toString()}
+                  description="Total de projetos em andamento"
+                  icon={<FolderKanban className="text-primary"/>}
+                />
+                <KpiCard 
+                  title="Projetos Concluídos" 
+                  value={completedProjects.toString()}
+                  description="Projetos com todas as tarefas finalizadas"
+                  icon={<CheckCircle className="text-green-500"/>}
+                />
+                <KpiCard 
+                  title="Tarefas Abertas" 
+                  value={openTasks.toString()}
+                  description="Total de tarefas não concluídas"
+                  icon={<Target className="text-amber-500"/>}
+                />
+                <KpiCard 
+                  title="Valor Total em Projetos" 
+                  value={`$${activeProjects}k`}
+                  description="Valor estimado de todos os projetos"
+                  icon={<DollarSign className="text-blue-500"/>}
+                />
+              </>
+            )}
+          </div>
+        </TabsContent>
+        <TabsContent value="tasks" className="mt-6">
+           <PipelineChart data={tasksByStage} isLoading={isLoading} />
+        </TabsContent>
+        <TabsContent value="collab" className="mt-6">
+            <ChatSummary />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
