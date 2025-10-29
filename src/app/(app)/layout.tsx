@@ -10,6 +10,7 @@ import {
   PanelLeft,
   Settings,
   User,
+  FolderKanban,
 } from 'lucide-react';
 import Image from 'next/image';
 
@@ -39,7 +40,7 @@ import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 const navItems = [
   { href: '/dashboard', icon: BarChart2, label: 'Painel' },
-  { href: '/pipeline', icon: LayoutGrid, label: 'Pipeline' },
+  { href: '/projects', icon: FolderKanban, label: 'Projetos' },
   { href: '/chat', icon: MessageSquare, label: 'Chat' },
 ];
 
