@@ -1,4 +1,5 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { UserDataTable } from "@/components/teams/user-data-table";
 
 export default function TeamsPage() {
   return (
@@ -17,7 +18,7 @@ export default function TeamsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <p>A funcionalidade de gerenciamento de equipes, gestores, funcionários e grupos será implementada aqui.</p>
+          <UserDataTable />
         </CardContent>
       </Card>
     </div>

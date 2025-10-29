@@ -3,6 +3,7 @@ export type User = {
   name: string;
   email: string;
   avatarUrl: string;
+  role?: 'Gestor' | 'Funcionário';
 };
 
 export type Contact = {
