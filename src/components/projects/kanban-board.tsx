@@ -6,9 +6,10 @@ import { useToast } from '@/hooks/use-toast';
 import { KanbanColumn } from './kanban-column';
 import type { Task, Stage, Project, User } from '@/lib/types';
 import { Button } from '../ui/button';
-import { Plus, FolderPlus, ChevronsUpDown } from 'lucide-react';
+import { Plus, FolderPlus, ChevronsUpDown, Files } from 'lucide-react';
 import { AddTaskDialog } from './add-task-dialog';
 import { AddProjectDialog } from './add-project-dialog';
+import { ProjectFilesDialog } from './project-files-dialog';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '../ui/command';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
@@ -72,6 +73,7 @@ export function KanbanBoard() {
   const [taskToEdit, setTaskToEdit] = useState<Task | null>(null);
 
   const [isAddProjectDialogOpen, setIsAddProjectDialogOpen] = useState(false);
+  const [isProjectFilesDialogOpen, setIsProjectFilesDialogOpen] = useState(false);
   const [isProjectSelectorOpen, setIsProjectSelectorOpen] = useState(false);
 
   const { toast } = useToast();
@@ -282,6 +284,10 @@ export function KanbanBoard() {
                         <FolderPlus className='mr-2' />
                         Novo Projeto
                     </Button>
+                    <Button onClick={() => setIsProjectFilesDialogOpen(true)} variant="outline" disabled={!selectedProject}>
+                        <Files className='mr-2' />
+                        Arquivos
+                    </Button>
                     <Button onClick={handleAddTaskClick} disabled={!selectedProject}>
                         <Plus className='mr-2' />
                         Adicionar Tarefa
@@ -318,6 +324,11 @@ export function KanbanBoard() {
             isOpen={isAddProjectDialogOpen}
             onOpenChange={setIsAddProjectDialogOpen}
             onAddProject={handleAddProject}
+        />
+        <ProjectFilesDialog
+            isOpen={isProjectFilesDialogOpen}
+            onOpenChange={setIsProjectFilesDialogOpen}
+            project={selectedProject}
         />
     </>
   );

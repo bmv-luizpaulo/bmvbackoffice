@@ -83,3 +83,13 @@ export type Team = {
     name: string;
     description?: string;
 };
+
+export type ProjectFile = {
+    id: string;
+    name: string;
+    url: string;
+    size: number;
+    type: string;
+    uploadedAt: string;
+    uploaderId: string;
+}

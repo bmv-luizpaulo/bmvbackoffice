@@ -197,6 +197,20 @@
             }
         },
         "required": ["name"]
+    },
+    "ProjectFile": {
+      "title": "ProjectFile",
+      "type": "object",
+      "description": "Represents a file uploaded to a project.",
+      "properties": {
+        "name": { "type": "string", "description": "The name of the file." },
+        "url": { "type": "string", "format": "uri", "description": "The public URL of the file in Firebase Storage." },
+        "size": { "type": "number", "description": "The size of the file in bytes." },
+        "type": { "type": "string", "description": "The MIME type of the file." },
+        "uploadedAt": { "type": "string", "format": "date-time", "description": "The timestamp when the file was uploaded." },
+        "uploaderId": { "type": "string", "description": "The ID of the user who uploaded the file." }
+      },
+      "required": ["name", "url", "size", "type", "uploadedAt", "uploaderId"]
     }
   },
   "auth": {
@@ -225,6 +239,10 @@
     "/projects/{projectId}/tasks/{taskId}": {
       "schema": { "$ref": "#/entities/Task" },
       "description": "Represents a task within a stage. Contains 'id', 'name', 'description', 'projectId', 'stageId', 'isCompleted', 'assigneeId', 'dueDate', and 'dependentTaskIds'."
+    },
+     "/projects/{projectId}/files/{fileId}": {
+      "schema": { "$ref": "#/entities/ProjectFile" },
+      "description": "Represents a file associated with a specific project."
     }
   }
 }
