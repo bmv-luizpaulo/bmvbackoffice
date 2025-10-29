@@ -2,7 +2,7 @@
 
 import React, { DependencyList, createContext, useContext, ReactNode, useMemo, useState, useEffect } from 'react';
 import { FirebaseApp } from 'firebase/app';
-import { Firestore, doc, getDoc, setDoc } from 'firebase/firestore';
+import { Firestore, doc, getDoc, setDoc, collection, addDoc } from 'firebase/firestore';
 import { Auth, User, onAuthStateChanged } from 'firebase/auth';
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener'
 
@@ -91,6 +91,16 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
                 role: 'Gestor', // Make first user a manager
               };
               await setDoc(userRef, newUserProfile);
+
+               // Create a welcome notification
+              const notificationsCollection = collection(firestore, `users/${firebaseUser.uid}/notifications`);
+              await addDoc(notificationsCollection, {
+                title: 'Bem-vindo ao BMV Nexus!',
+                message: 'Explore o painel e comece a gerenciar seus projetos.',
+                link: '/dashboard',
+                isRead: false,
+                createdAt: new Date().toISOString(),
+              });
             }
           } catch (error) {
             console.error("Error creating or checking user profile:", error);
