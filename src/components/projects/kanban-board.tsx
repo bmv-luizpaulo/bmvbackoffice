@@ -16,6 +16,7 @@ import { useCollection, useDoc, useFirestore, useMemoFirebase, useUser as useAut
 import { collection, doc, writeBatch, addDoc, updateDoc, deleteDoc, query, where } from 'firebase/firestore';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { errorEmitter } from '@/firebase/error-emitter';
+import { AiFollowUpSuggestions } from './ai-follow-up-suggestions';
 
 const addDocumentNonBlocking = (ref: any, data: any) => {
     return addDoc(ref, data).catch(err => {
@@ -268,15 +269,15 @@ export function KanbanBoard() {
   return (
     <>
         <DndContext onDragEnd={handleDragEnd} sensors={sensors}>
-            <div className='mb-4 flex justify-between items-center gap-4'>
+            <div className='mb-4 flex flex-wrap justify-between items-center gap-4'>
                 <Popover open={isProjectSelectorOpen} onOpenChange={setIsProjectSelectorOpen}>
                     <PopoverTrigger asChild>
-                        <Button variant="outline" role="combobox" aria-expanded={isProjectSelectorOpen} className="w-[300px] justify-between text-lg font-semibold">
+                        <Button variant="outline" role="combobox" aria-expanded={isProjectSelectorOpen} className="w-full sm:w-[300px] justify-between text-lg font-semibold">
                             {selectedProject?.name || "Selecione um Projeto"}
                             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                         </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-[300px] p-0">
+                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
                         <Command>
                             <CommandInput placeholder="Procurar projeto..." />
                             <CommandList>
@@ -308,6 +309,8 @@ export function KanbanBoard() {
                     </Button>
                 </div>
             </div>
+            {selectedProject && <AiFollowUpSuggestions project={selectedProject} />}
+
             <div className="flex h-full min-w-max gap-4 pb-4 overflow-x-auto">
                 {isLoadingStages || isLoadingTasks ? (
                   <div className="flex justify-center items-center w-full">Carregando tarefas...</div>

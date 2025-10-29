@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react';
 import { KpiCard } from "@/components/dashboard/kpi-card";
-import { DollarSign, Handshake, Target, FolderKanban, CheckCircle } from "lucide-react";
+import { DollarSign, CheckCircle, Target, FolderKanban } from "lucide-react";
 import { PipelineChart } from "@/components/dashboard/pipeline-chart";
 import { ChatSummary } from "@/components/dashboard/chat-summary";
 import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
@@ -41,9 +41,9 @@ export default function DashboardPage() {
   const { data: stagesData, isLoading: isLoadingStages } = useCollection<Stage>(stagesQuery);
 
 
-  const { activeProjects, completedProjects, openTasks, tasksByStage } = useMemo(() => {
+  const { activeProjects, completedProjects, openTasks, tasksByStage, totalValue } = useMemo(() => {
     if (!projectsData || !tasksData || !stagesData) {
-      return { activeProjects: 0, completedProjects: 0, openTasks: 0, tasksByStage: [] };
+      return { activeProjects: 0, completedProjects: 0, openTasks: 0, tasksByStage: [], totalValue: 0 };
     }
 
     const tasksPerProject = tasksData.reduce((acc, task) => {
@@ -77,12 +77,15 @@ export default function DashboardPage() {
     }, {} as Record<string, number>);
 
     const chartData = Object.entries(tasksByStage).map(([name, total]) => ({ name, total }));
+    
+    const totalValue = projectsData.reduce((sum, project) => sum + (project.value || 0), 0);
 
     return {
       activeProjects: projectsData.length,
       completedProjects: completedProjectsCount,
       openTasks: openTasksCount,
       tasksByStage: chartData,
+      totalValue: totalValue,
     };
   }, [projectsData, tasksData, stagesData]);
 
@@ -132,7 +135,7 @@ export default function DashboardPage() {
                 />
                 <KpiCard 
                   title="Valor Total em Projetos" 
-                  value={`$${activeProjects}k`}
+                  value={`R$ ${totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
                   description="Valor estimado de todos os projetos"
                   icon={<DollarSign className="text-blue-500"/>}
                 />
