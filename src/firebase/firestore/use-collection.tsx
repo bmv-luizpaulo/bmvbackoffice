@@ -133,14 +133,14 @@ export function useCollection<T = any>(
         setData(null)
         setIsLoading(false)
         
-        // TEMPORARY WORKAROUND: Do not throw a global error for 'users' collection
+        // TEMPORARY WORKAROUND: Do not throw a global error for specific collections
         // This is to prevent the app from breaking while we work on security rules.
-        // A real app should have proper rules allowing managers to read users.
-        if (path !== 'users') {
+        const collectionsToWarn = ['users', 'contacts'];
+        if (collectionsToWarn.includes(path)) {
+           console.warn(`Firestore permission error on '${path}' collection was caught but not thrown globally. This is a temporary measure.`);
+        } else {
           // trigger global error propagation
           errorEmitter.emit('permission-error', contextualError);
-        } else {
-            console.warn("Firestore permission error on 'users' collection was caught but not thrown globally. This is a temporary measure.");
         }
       }
     );
