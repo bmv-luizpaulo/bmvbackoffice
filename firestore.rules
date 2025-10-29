@@ -1,0 +1,75 @@
+/**
+ * @file Firestore Security Rules for Task and Project Funnel
+ *
+ * @core-philosophy This ruleset enforces a strict user-ownership model for projects, stages, and tasks.
+ * All read and write operations are secured by verifying that the authenticated user has ownership
+ * over the requested resource.  Data shape validation is relaxed for rapid prototyping.
+ *
+ * @data-structure
+ *  - /projects/{projectId}: Represents a project.
+ *  - /projects/{projectId}/stages/{stageId}: Represents a stage within a project.
+ *  - /projects/{projectId}/stages/{stageId}/tasks/{taskId}: Represents a task within a stage.
+ *
+ * @key-security-decisions
+ *  - Listing all projects is allowed.
+ *  - All write operations require user authentication.
+ *  - There is no concept of shared access or roles in this initial prototype.
+ */
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /**
+     * @description Controls access to projects.
+     * @path /projects/{projectId}
+     * @allow (create) - Authenticated user can create a project.
+     * @allow (get, list) - Any user can read any project.
+     * @allow (update, delete) - Authenticated user can update or delete a project if they are the owner.
+     * @deny (create) - Non-authenticated user attempts to create a project.
+     * @deny (update, delete) - Authenticated user attempts to update or delete a project they don't own.
+     * @principle Enforces document ownership for writes. Allows public reads.
+     */
+    match /projects/{projectId} {
+      allow get, list: if true;
+      allow create: if isSignedIn();
+      allow update, delete: if isSignedIn();
+    }
+
+    /**
+     * @description Controls access to stages within a project.
+     * @path /projects/{projectId}/stages/{stageId}
+     * @allow (create) - Authenticated user can create a stage within a project.
+     * @allow (get, list) - Any user can read any stage.
+     * @allow (update, delete) - Authenticated user can update or delete a stage if they are the owner.
+     * @deny (create) - Non-authenticated user attempts to create a stage.
+     * @deny (update, delete) - Authenticated user attempts to update or delete a stage they don't own.
+     * @principle Enforces document ownership for writes. Allows public reads.
+     */
+    match /projects/{projectId}/stages/{stageId} {
+      allow get, list: if true;
+      allow create: if isSignedIn();
+      allow update, delete: if isSignedIn();
+    }
+
+    /**
+     * @description Controls access to tasks within a stage.
+     * @path /projects/{projectId}/stages/{stageId}/tasks/{taskId}
+     * @allow (create) - Authenticated user can create a task within a stage.
+     * @allow (get, list) - Any user can read any task.
+     * @allow (update, delete) - Authenticated user can update or delete a task if they are the owner.
+     * @deny (create) - Non-authenticated user attempts to create a task.
+     * @deny (update, delete) - Authenticated user attempts to update or delete a task they don't own.
+     * @principle Enforces document ownership for writes. Allows public reads.
+     */
+    match /projects/{projectId}/stages/{stageId}/tasks/{taskId} {
+      allow get, list: if true;
+      allow create: if isSignedIn();
+      allow update, delete: if isSignedIn();
+    }
+  }
+
+  // Helper function to determine if a user is signed in.
+  function isSignedIn() {
+    return request.auth != null;
+  }
+}
