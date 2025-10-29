@@ -1,6 +1,6 @@
 import { LoginForm } from "@/components/auth/login-form";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Gem } from "lucide-react";
+import Image from 'next/image';
 
 export default function LoginPage() {
   return (
@@ -8,7 +8,7 @@ export default function LoginPage() {
       <div className="flex w-full max-w-6xl flex-col items-center justify-center gap-16 md:flex-row">
         <div className="w-full max-w-md text-center md:text-left">
           <div className="mb-4 flex items-center justify-center gap-3 md:justify-start">
-            <Gem className="h-10 w-10 text-primary" />
+            <Image src="/image/BMV.png" alt="BMV Logo" width={40} height={40} className="text-primary" />
             <h1 className="font-headline text-4xl font-bold tracking-tight">
               BMV Back Office
             </h1>

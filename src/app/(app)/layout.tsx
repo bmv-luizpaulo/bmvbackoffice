@@ -11,6 +11,7 @@ import {
   Settings,
   User,
 } from 'lucide-react';
+import Image from 'next/image';
 
 import {
   SidebarProvider,
@@ -51,7 +52,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <Sidebar>
         <SidebarHeader>
           <div className="flex items-center gap-2">
-            <Gem className="size-6 text-primary" />
+            <Image src="/image/BMV.png" alt="BMV Logo" width={24} height={24} className="text-primary" />
             <h1 className="font-headline text-xl font-semibold">BMV</h1>
           </div>
         </SidebarHeader>
