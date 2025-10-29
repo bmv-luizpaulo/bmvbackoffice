@@ -45,7 +45,7 @@ const navItems = [
   { href: '/agenda/tarefas', icon: Calendar, label: 'Agenda' },
   { href: '/contatos', icon: BookUser, label: 'Contatos' },
   { href: '/chat', icon: MessageSquare, label: 'Chat' },
-  { href: '/teams', icon: Users, label: 'Equipes' },
+  { href: '/teams', icon: Users, label: 'Usuários & Equipes' },
 ];
 
 function UserAvatar() {
