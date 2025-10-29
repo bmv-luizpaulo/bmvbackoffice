@@ -6,7 +6,6 @@ import {
   BarChart2,
   Users,
   MessageSquare,
-  PanelLeft,
   Settings,
   FolderKanban,
 } from 'lucide-react';
@@ -80,11 +79,11 @@ function InnerLayout({ children }: { children: React.ReactNode }) {
 
   return (
       <SidebarProvider>
-        <Sidebar>
+        <Sidebar collapsible="icon">
           <SidebarHeader>
             <div className="flex items-center gap-2">
               <Image src="/image/BMV.png" alt="BMV Logo" width={24} height={24} className="text-primary" />
-              <h1 className="font-headline text-xl font-semibold">BMV</h1>
+              <h1 className="font-headline text-xl font-semibold">BMV Nexus</h1>
             </div>
           </SidebarHeader>
           <SidebarContent>

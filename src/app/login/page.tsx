@@ -12,7 +12,7 @@ export default function LoginPage() {
             <div className="mb-4 flex items-center justify-center gap-3 md:justify-start">
               <Image src="/image/BMV.png" alt="BMV Logo" width={40} height={40} className="text-primary" />
               <h1 className="font-headline text-4xl font-bold tracking-tight">
-                BMV Back Office
+                BMV Nexus
               </h1>
             </div>
             <p className="text-lg text-muted-foreground">

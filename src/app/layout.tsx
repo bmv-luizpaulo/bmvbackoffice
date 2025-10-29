@@ -4,7 +4,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { cn } from '@/lib/utils';
 
 export const metadata: Metadata = {
-  title: 'BMV Back Office',
+  title: 'BMV Nexus',
   description: 'Otimize suas vendas e operações de back-office.',
 };
 
