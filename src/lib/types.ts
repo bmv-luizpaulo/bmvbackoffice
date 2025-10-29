@@ -119,3 +119,12 @@ export type ProjectFile = {
     uploadedAt: string;
     uploaderId: string;
 }
+
+export type Notification = {
+  id: string;
+  title: string;
+  message: string;
+  link: string;
+  isRead: boolean;
+  createdAt: string; // ISO string
+};

@@ -319,6 +319,19 @@
         "read": { "type": "boolean", "description": "Whether the message has been read by the recipient(s)." }
       },
       "required": ["chatId", "senderId", "text", "timestamp"]
+    },
+    "Notification": {
+      "title": "Notification",
+      "type": "object",
+      "description": "Represents a notification for a user.",
+      "properties": {
+        "title": { "type": "string" },
+        "message": { "type": "string" },
+        "link": { "type": "string", "format": "uri" },
+        "isRead": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "message", "link", "isRead", "createdAt"]
     }
   },
   "auth": {
@@ -331,6 +344,10 @@
     "/users/{userId}": {
       "schema": { "$ref": "#/entities/User" },
       "description": "Represents a user of the application. Contains profile information."
+    },
+    "/users/{userId}/notifications/{notificationId}": {
+      "schema": { "$ref": "#/entities/Notification" },
+      "description": "Contains notifications for a specific user."
     },
     "/teams/{teamId}": {
       "schema": { "$ref": "#/entities/Team" },

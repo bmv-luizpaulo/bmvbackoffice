@@ -38,6 +38,10 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { FirebaseClientProvider, useUser } from '@/firebase';
 import { signOut } from 'firebase/auth';
 import { useAuth } from '@/firebase';
+import {
+  NotificationsProvider,
+} from '@/components/notifications/notifications-provider';
+import { NotificationBell } from '@/components/notifications/notification-bell';
 
 const navItems = [
   { href: '/dashboard', icon: BarChart2, label: 'Painel' },
@@ -126,21 +130,24 @@ function InnerLayout({ children }: { children: React.ReactNode }) {
         <SidebarInset>
           <header className="sticky top-0 z-10 flex h-14 items-center justify-between gap-4 border-b bg-background/80 px-4 backdrop-blur-sm sm:justify-end">
             <SidebarTrigger className="sm:hidden" />
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-                  <UserAvatar />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuLabel>Minha Conta</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem>Perfil</DropdownMenuItem>
-                <DropdownMenuItem>Faturamento</DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleSignOut}>Sair</DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <div className='flex items-center gap-2'>
+              <NotificationBell />
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                    <UserAvatar />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuLabel>Minha Conta</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem>Perfil</DropdownMenuItem>
+                  <DropdownMenuItem>Faturamento</DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleSignOut}>Sair</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </header>
           <main className="flex-1 p-4 md:p-6">
             {children}
@@ -153,7 +160,9 @@ function InnerLayout({ children }: { children: React.ReactNode }) {
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <FirebaseClientProvider>
-      <InnerLayout>{children}</InnerLayout>
+      <NotificationsProvider>
+        <InnerLayout>{children}</InnerLayout>
+      </NotificationsProvider>
     </FirebaseClientProvider>
   );
 }

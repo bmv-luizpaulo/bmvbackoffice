@@ -17,6 +17,7 @@ import { collection, doc, writeBatch, addDoc, updateDoc, deleteDoc, query, where
 import { FirestorePermissionError } from '@/firebase/errors';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { AiFollowUpSuggestions } from './ai-follow-up-suggestions';
+import { useNotifications } from '../notifications/notifications-provider';
 
 const addDocumentNonBlocking = (ref: any, data: any) => {
     return addDoc(ref, data).catch(err => {
@@ -54,6 +55,7 @@ const deleteDocumentNonBlocking = (ref: any) => {
 export function KanbanBoard() {
   const firestore = useFirestore();
   const { user: authUser } = useAuthUser();
+  const { createNotification } = useNotifications();
 
   const userProfileQuery = useMemoFirebase(() => firestore && authUser ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser]);
   const { data: userProfile, isLoading: isLoadingUserProfile } = useDoc<User>(userProfileQuery);
@@ -143,12 +145,24 @@ export function KanbanBoard() {
   }
 
   const handleSaveTask = (taskData: Omit<Task, 'id' | 'isCompleted'>, taskId?: string) => {
-     if (!firestore || !selectedProject) return;
+     if (!firestore || !selectedProject || !authUser) return;
 
     if (taskId) {
         // Update existing task
+        const existingTask = tasksData?.find(t => t.id === taskId);
         const taskRef = doc(firestore, 'projects', selectedProject.id, 'tasks', taskId);
         updateDocumentNonBlocking(taskRef, taskData);
+
+        // Notify on re-assignment
+        if (taskData.assigneeId && taskData.assigneeId !== existingTask?.assigneeId) {
+            const assignee = usersMap.get(taskData.assigneeId);
+            createNotification(taskData.assigneeId, {
+                title: 'Nova Tarefa Atribuída',
+                message: `Você foi atribuído à tarefa "${taskData.name}" no projeto "${selectedProject.name}".`,
+                link: `/projects?projectId=${selectedProject.id}&taskId=${taskId}`
+            });
+        }
+        
         toast({
             title: "Tarefa Atualizada",
             description: `A tarefa "${taskData.name}" foi atualizada.`
@@ -160,7 +174,15 @@ export function KanbanBoard() {
             isCompleted: false,
         };
         const tasksCollection = collection(firestore, 'projects', selectedProject.id, 'tasks');
-        addDocumentNonBlocking(tasksCollection, taskToAdd);
+        addDocumentNonBlocking(tasksCollection, taskToAdd).then(docRef => {
+            if (taskToAdd.assigneeId) {
+                createNotification(taskToAdd.assigneeId, {
+                    title: 'Nova Tarefa Atribuída',
+                    message: `Você foi atribuído à tarefa "${taskToAdd.name}" no projeto "${selectedProject.name}".`,
+                    link: `/projects?projectId=${selectedProject.id}&taskId=${docRef.id}`
+                });
+            }
+        });
         toast({
             title: "Tarefa Adicionada",
             description: `A tarefa "${taskData.name}" foi criada com sucesso.`
@@ -169,9 +191,26 @@ export function KanbanBoard() {
   }
 
   const handleUpdateTaskStatus = (taskId: string, updates: Partial<Omit<Task, 'id'>>) => {
-      if (!firestore || !selectedProject) return;
+      if (!firestore || !selectedProject || !userProfile) return;
       const taskRef = doc(firestore, 'projects', selectedProject.id, 'tasks', taskId);
       updateDocumentNonBlocking(taskRef, updates);
+
+      const task = tasksData?.find(t => t.id === taskId);
+      if (task && updates.isCompleted) {
+        const projectOwnerId = selectedProject.ownerId;
+        const notificationReceivers = new Set<string>([projectOwnerId]);
+        if(task.assigneeId) notificationReceivers.add(task.assigneeId);
+
+        notificationReceivers.forEach(userId => {
+            if (userId !== authUser?.uid) { // Don't notify user about their own action
+                createNotification(userId, {
+                    title: 'Tarefa Concluída',
+                    message: `A tarefa "${task.name}" foi concluída no projeto "${selectedProject.name}".`,
+                    link: `/projects?projectId=${selectedProject.id}&taskId=${taskId}`
+                });
+            }
+        });
+      }
 
       toast({
           title: "Tarefa Atualizada",
