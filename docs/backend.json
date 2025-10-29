@@ -27,13 +27,33 @@
           "type": "string",
           "description": "End date of the project.",
           "format": "date-time"
+        },
+        "ownerId": {
+            "type": "string",
+            "description": "Reference to a User who is the project owner."
+        },
+        "teamMembers": {
+            "type": "array",
+            "description": "References to Users who are part of the project team.",
+            "items": {
+                "type": "string"
+            }
+        },
+        "contactPhone": {
+            "type": "string",
+            "description": "Contact phone for the project."
+        },
+        "technicalDetails": {
+            "type": "string",
+            "description": "Technical specifications and details of the project."
         }
       },
       "required": [
         "id",
         "name",
         "description",
-        "startDate"
+        "startDate",
+        "ownerId"
       ]
     },
     "Task": {
@@ -138,7 +158,7 @@
           "schema": {
             "$ref": "#/backend/entities/Project"
           },
-          "description": "Represents a project. Includes the 'id', 'name', 'description', 'startDate', 'endDate'.",
+          "description": "Represents a project. Includes the 'id', 'name', 'description', 'startDate', 'endDate', 'ownerId', 'teamMembers', 'contactPhone', 'technicalDetails'.",
           "params": [
             {
               "name": "projectId",

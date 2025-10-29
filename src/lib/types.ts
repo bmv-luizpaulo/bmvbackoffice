@@ -40,6 +40,10 @@ export type Project = {
     description: string;
     startDate: string;
     endDate?: string;
+    ownerId: string;
+    teamMembers?: string[];
+    contactPhone?: string;
+    technicalDetails?: string;
 };
 
 export type Stage = {
