@@ -174,15 +174,19 @@ export const useFirebaseApp = (): FirebaseApp => {
   return firebaseApp;
 };
 
-type MemoFirebase <T> = T & {__memo?: boolean};
+// Global registry to track memoized Firebase SDK objects without mutating them
+export const firebaseMemoSet = new WeakSet<object>();
 
-export function useMemoFirebase<T>(factory: () => T, deps: DependencyList): T | (MemoFirebase<T>) {
+export function useMemoFirebase<T>(factory: () => T, deps: DependencyList): T {
   const memoized = useMemo(factory, deps);
-  
-  if(typeof memoized !== 'object' || memoized === null) return memoized;
-  (memoized as MemoFirebase<T>).__memo = true;
-  
-  return memoized;
+  if (typeof memoized === 'object' && memoized !== null) {
+    try {
+      firebaseMemoSet.add(memoized as object);
+    } catch {
+      // Ignore if object cannot be added (shouldn't happen for objects)
+    }
+  }
+  return memoized as T;
 }
 
 /**

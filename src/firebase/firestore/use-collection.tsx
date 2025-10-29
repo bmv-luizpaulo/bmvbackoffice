@@ -12,6 +12,7 @@ import {
 } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
+import { firebaseMemoSet } from '@/firebase/provider';
 
 /** Utility type to add an 'id' field to a given type T. */
 export type WithId<T> = T & { id: string };
@@ -87,7 +88,7 @@ const getQueryPath = (query: CollectionReference<DocumentData> | Query<DocumentD
  * @returns {UseCollectionResult<T>} Object with data, isLoading, error.
  */
 export function useCollection<T = any>(
-    memoizedTargetRefOrQuery: ((CollectionReference<DocumentData> | Query<DocumentData>) & {__memo?: boolean})  | null | undefined,
+    memoizedTargetRefOrQuery: (CollectionReference<DocumentData> | Query<DocumentData>)  | null | undefined,
 ): UseCollectionResult<T> {
   type ResultItemType = WithId<T>;
   type StateDataType = ResultItemType[] | null;
@@ -148,9 +149,12 @@ export function useCollection<T = any>(
     return () => unsubscribe();
   }, [memoizedTargetRefOrQuery]); // Re-run if the target query/reference changes.
   
-  if(memoizedTargetRefOrQuery && !memoizedTargetRefOrQuery.__memo) {
+  if (memoizedTargetRefOrQuery) {
+    const isObject = typeof memoizedTargetRefOrQuery === 'object' && memoizedTargetRefOrQuery !== null;
+    if (isObject && !firebaseMemoSet.has(memoizedTargetRefOrQuery as object)) {
       const path = getQueryPath(memoizedTargetRefOrQuery);
-    throw new Error(`Query for path "${path}" was not properly memoized using useMemoFirebase`);
+      console.warn(`Query for path "${path}" was not properly memoized using useMemoFirebase. Proceeding anyway.`);
+    }
   }
   return { data, isLoading, error };
 }

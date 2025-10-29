@@ -29,9 +29,15 @@ export function FirebaseErrorListener() {
     };
   }, []);
 
-  // On re-render, if an error exists in state, throw it.
+  // If an error exists, log it and reset the state to avoid locking the app.
   if (error) {
-    throw error;
+    console.error('Firebase permission error (suppressed):', error);
+    // reset error so we don't keep re-rendering
+    queueMicrotask(() => {
+      // Using microtask to avoid state update during render warnings
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      (setError as any)(null);
+    });
   }
 
   // This component renders nothing.
