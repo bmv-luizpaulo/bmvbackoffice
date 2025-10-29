@@ -76,6 +76,9 @@ export type Task = {
     dependentTaskIds?: string[];
     assigneeId?: string;
     dueDate?: string;
+    isRecurring?: boolean;
+    recurrenceFrequency?: 'diaria' | 'semanal' | 'mensal';
+    recurrenceEndDate?: string;
 };
 
 export type Team = {

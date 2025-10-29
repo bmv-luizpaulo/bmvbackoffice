@@ -148,6 +148,20 @@
             "type": "string",
             "description": "The due date for the task.",
             "format": "date-time"
+        },
+        "isRecurring": {
+          "type": "boolean",
+          "description": "Indicates if the task is recurring."
+        },
+        "recurrenceFrequency": {
+            "type": "string",
+            "description": "The frequency of the recurrence.",
+            "enum": ["diaria", "semanal", "mensal"]
+        },
+        "recurrenceEndDate": {
+            "type": "string",
+            "description": "The end date for the recurrence.",
+            "format": "date-time"
         }
       },
       "required": [

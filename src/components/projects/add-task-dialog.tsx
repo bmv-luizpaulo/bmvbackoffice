@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { format } from "date-fns";
-import { CalendarIcon, User } from "lucide-react";
+import { CalendarIcon, User, RefreshCcw } from "lucide-react";
 import React from 'react';
 
 import {
@@ -34,6 +34,8 @@ import { collection } from "firebase/firestore";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { Calendar } from "../ui/calendar";
 import { cn } from "@/lib/utils";
+import { Separator } from "../ui/separator";
+import { Switch } from "../ui/switch";
 
 type AddTaskDialogProps = {
   isOpen: boolean;
@@ -52,7 +54,19 @@ const formSchema = z.object({
   dependentTaskIds: z.array(z.string()).optional(),
   assigneeId: z.string().optional(),
   dueDate: z.date().optional(),
+  isRecurring: z.boolean().default(false),
+  recurrenceFrequency: z.enum(['diaria', 'semanal', 'mensal']).optional(),
+  recurrenceEndDate: z.date().optional(),
+}).refine(data => {
+    if (data.isRecurring) {
+        return !!data.recurrenceFrequency && !!data.recurrenceEndDate;
+    }
+    return true;
+}, {
+    message: "Frequência e data de término são obrigatórias para tarefas recorrentes.",
+    path: ["recurrenceFrequency"],
 });
+
 
 export function AddTaskDialog({ isOpen, onOpenChange, onSaveTask, stages, tasks, projectId, taskToEdit }: AddTaskDialogProps) {
   const firestore = useFirestore();
@@ -67,8 +81,11 @@ export function AddTaskDialog({ isOpen, onOpenChange, onSaveTask, stages, tasks,
       dependentTaskIds: [],
       assigneeId: undefined,
       dueDate: undefined,
+      isRecurring: false,
     },
   });
+
+  const isRecurring = form.watch("isRecurring");
 
   // Reset form when dialog opens or taskToEdit changes
   React.useEffect(() => {
@@ -81,6 +98,9 @@ export function AddTaskDialog({ isOpen, onOpenChange, onSaveTask, stages, tasks,
           dependentTaskIds: taskToEdit.dependentTaskIds || [],
           assigneeId: taskToEdit.assigneeId,
           dueDate: taskToEdit.dueDate ? new Date(taskToEdit.dueDate) : undefined,
+          isRecurring: taskToEdit.isRecurring || false,
+          recurrenceFrequency: taskToEdit.recurrenceFrequency,
+          recurrenceEndDate: taskToEdit.recurrenceEndDate ? new Date(taskToEdit.recurrenceEndDate) : undefined,
         });
       } else {
         form.reset({
@@ -90,6 +110,9 @@ export function AddTaskDialog({ isOpen, onOpenChange, onSaveTask, stages, tasks,
           dependentTaskIds: [],
           assigneeId: undefined,
           dueDate: undefined,
+          isRecurring: false,
+          recurrenceFrequency: undefined,
+          recurrenceEndDate: undefined,
         });
       }
     }
@@ -103,6 +126,7 @@ export function AddTaskDialog({ isOpen, onOpenChange, onSaveTask, stages, tasks,
         description: values.description || '',
         dependentTaskIds: values.dependentTaskIds || [],
         dueDate: values.dueDate?.toISOString(),
+        recurrenceEndDate: values.recurrenceEndDate?.toISOString(),
     }, taskToEdit?.id);
     onOpenChange(false);
   }
@@ -123,7 +147,7 @@ export function AddTaskDialog({ isOpen, onOpenChange, onSaveTask, stages, tasks,
           <DialogTitle>{taskToEdit ? 'Editar Tarefa' : 'Adicionar Nova Tarefa'}</DialogTitle>
         </DialogHeader>
         <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 max-h-[80vh] overflow-y-auto p-1 pr-4">
                 <FormField
                     control={form.control}
                     name="name"
@@ -252,6 +276,90 @@ export function AddTaskDialog({ isOpen, onOpenChange, onSaveTask, stages, tasks,
                             </FormItem>
                         )}
                         />
+                 </div>
+                 <Separator />
+                 <div className="space-y-4">
+                    <FormField
+                        control={form.control}
+                        name="isRecurring"
+                        render={({ field }) => (
+                            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                                <div className="space-y-0.5">
+                                    <FormLabel className="flex items-center gap-2"><RefreshCcw className="h-4 w-4"/>Tarefa Recorrente</FormLabel>
+                                </div>
+                                <FormControl>
+                                    <Switch
+                                    checked={field.value}
+                                    onCheckedChange={field.onChange}
+                                    />
+                                </FormControl>
+                            </FormItem>
+                        )}
+                    />
+                    {isRecurring && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-3 border rounded-lg">
+                             <FormField
+                                control={form.control}
+                                name="recurrenceFrequency"
+                                render={({ field }) => (
+                                    <FormItem>
+                                    <FormLabel>Frequência</FormLabel>
+                                    <Select onValueChange={field.onChange} value={field.value}>
+                                        <FormControl>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Selecione a frequência" />
+                                        </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                            <SelectItem value="diaria">Diária</SelectItem>
+                                            <SelectItem value="semanal">Semanal</SelectItem>
+                                            <SelectItem value="mensal">Mensal</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="recurrenceEndDate"
+                                render={({ field }) => (
+                                    <FormItem className="flex flex-col">
+                                    <FormLabel>Data de Término</FormLabel>
+                                    <Popover>
+                                        <PopoverTrigger asChild>
+                                        <FormControl>
+                                            <Button
+                                            variant={"outline"}
+                                            className={cn(
+                                                "w-full pl-3 text-left font-normal",
+                                                !field.value && "text-muted-foreground"
+                                            )}
+                                            >
+                                            {field.value ? (
+                                                format(field.value, "PPP")
+                                            ) : (
+                                                <span>Escolha uma data</span>
+                                            )}
+                                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                            </Button>
+                                        </FormControl>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-auto p-0" align="start">
+                                        <Calendar
+                                            mode="single"
+                                            selected={field.value}
+                                            onSelect={field.onChange}
+                                            initialFocus
+                                        />
+                                        </PopoverContent>
+                                    </Popover>
+                                    <FormMessage />
+                                    </FormItem>
+                                )}
+                                />
+                        </div>
+                    )}
                  </div>
                 <DialogFooter className="pt-4">
                     <DialogClose asChild>
