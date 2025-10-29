@@ -1,3 +1,34 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "user1",
+      "description": "Professional headshot of a smiling woman.",
+      "imageUrl": "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw3fHx3b21hbiUyMHBvcnRyYWl0fGVufDB8fHx8MTc2MTY5NjE0NHww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "woman portrait"
+    },
+    {
+      "id": "user2",
+      "description": "Professional headshot of a smiling man.",
+      "imageUrl": "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxtYW4lMjBwb3J0cmFpdHxlbnwwfHx8fDE3NjE3NTYzNjF8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "man portrait"
+    },
+    {
+      "id": "user3",
+      "description": "Professional headshot of a person with glasses.",
+      "imageUrl": "https://images.unsplash.com/photo-1660057873647-882398b8ec1f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxMHx8cGVyc29uJTIwZ2xhc3Nlc3xlbnwwfHx8fDE3NjE3Mjk3MzZ8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "person glasses"
+    },
+    {
+      "id": "user4",
+      "description": "Candid shot of a person working at a desk.",
+      "imageUrl": "https://images.unsplash.com/photo-1524508762098-fd966ffb6ef9?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHxwZXJzb24lMjB3b3JraW5nfGVufDB8fHx8MTc2MTY3NjczNnww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "person working"
+    },
+    {
+      "id": "user5",
+      "description": "Team member posing for a photo.",
+      "imageUrl": "https://images.unsplash.com/photo-1580489944761-15a19d654956?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxwZXJzb24lMjBzbWlsaW5nfGVufDB8fHx8MTc2MTYzNTk2M3ww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "person smiling"
+    }
+  ]
 }
