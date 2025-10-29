@@ -23,6 +23,8 @@ import {
 export function NotificationBell() {
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
 
+  const notificationList = notifications || [];
+
   return (
     <Popover>
       <PopoverTrigger asChild>
@@ -60,13 +62,13 @@ export function NotificationBell() {
           </TooltipProvider>
         </header>
         <ScrollArea className="h-80">
-          {notifications.length === 0 ? (
+          {notificationList.length === 0 ? (
             <div className="flex h-full items-center justify-center">
               <p className="text-muted-foreground">Nenhuma notificação</p>
             </div>
           ) : (
             <div className="flex flex-col">
-              {notifications.map((notification) => (
+              {notificationList.map((notification) => (
                 <Link
                   key={notification.id}
                   href={notification.link}
