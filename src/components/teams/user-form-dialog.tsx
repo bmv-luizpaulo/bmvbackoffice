@@ -84,36 +84,38 @@ export function UserFormDialog({ isOpen, onOpenChange, onSave, user }: UserFormD
   });
 
   React.useEffect(() => {
-    if (user) {
-      form.reset({ 
-        name: user.name, 
-        email: user.email, 
-        role: user.role || 'Funcionário',
-        phone: user.phone || '',
-        personalDocument: user.personalDocument || '',
-        address: user.address || {},
-        teamIds: user.teamIds || [],
-      });
-    } else {
-      form.reset({ 
-        name: '', 
-        email: '', 
-        role: 'Funcionário',
-        phone: '',
-        personalDocument: '',
-        address: {
-          street: '',
-          number: '',
-          complement: '',
-          neighborhood: '',
-          city: '',
-          state: '',
-          zipCode: '',
-        },
-        teamIds: [],
-      });
+    if (isOpen) {
+        if (user) {
+            form.reset({ 
+                name: user.name, 
+                email: user.email, 
+                role: user.role || 'Funcionário',
+                phone: user.phone || '',
+                personalDocument: user.personalDocument || '',
+                address: user.address || {},
+                teamIds: user.teamIds || [],
+            });
+            } else {
+            form.reset({ 
+                name: '', 
+                email: '', 
+                role: 'Funcionário',
+                phone: '',
+                personalDocument: '',
+                address: {
+                street: '',
+                number: '',
+                complement: '',
+                neighborhood: '',
+                city: '',
+                state: '',
+                zipCode: '',
+                },
+                teamIds: [],
+            });
+        }
     }
-  }, [user, form, isOpen]);
+  }, [user, isOpen, form.reset]);
 
 
   function onSubmit(values: z.infer<typeof formSchema>) {
