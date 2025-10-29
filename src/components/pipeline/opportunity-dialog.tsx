@@ -68,8 +68,8 @@ export function OpportunityDialog({
     } else {
         toast({
             variant: "destructive",
-            title: "Error",
-            description: result.error || "Could not fetch AI suggestions."
+            title: "Erro",
+            description: result.error || "Não foi possível buscar sugestões de IA."
         })
     }
     setIsLoadingAi(false);
@@ -89,15 +89,15 @@ export function OpportunityDialog({
             <div className="md:col-span-2 space-y-6">
                 <Card>
                     <CardHeader>
-                        <CardTitle className="text-lg flex items-center gap-2"><Bot className="text-primary"/> AI Suggested Follow-ups</CardTitle>
+                        <CardTitle className="text-lg flex items-center gap-2"><Bot className="text-primary"/> Acompanhamentos Sugeridos por IA</CardTitle>
                     </CardHeader>
                     <CardContent>
                         <Button onClick={handleGetSuggestions} disabled={isLoadingAi} className="w-full">
-                             {isLoadingAi ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> Generating...</> : "Suggest Follow-ups"}
+                             {isLoadingAi ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> Gerando...</> : "Sugerir Acompanhamentos"}
                         </Button>
                         {aiSuggestions && (
                             <Alert className="mt-4">
-                                <AlertTitle className="font-bold">Recommended Actions</AlertTitle>
+                                <AlertTitle className="font-bold">Ações Recomendadas</AlertTitle>
                                 <AlertDescription>
                                     <ul className="list-disc pl-5 mt-2 space-y-1">
                                         {aiSuggestions.actions.map((action, i) => <li key={i}>{action}</li>)}
@@ -110,7 +110,7 @@ export function OpportunityDialog({
                 </Card>
                  <Card>
                     <CardHeader>
-                        <CardTitle className="text-lg flex items-center gap-2"><Timeline className="text-primary"/> Stage History</CardTitle>
+                        <CardTitle className="text-lg flex items-center gap-2"><Timeline className="text-primary"/> Histórico de Estágios</CardTitle>
                     </CardHeader>
                     <CardContent>
                         <div className="space-y-4">
@@ -127,10 +127,10 @@ export function OpportunityDialog({
             </div>
             <div className="space-y-6">
                 <div>
-                    <h4 className="font-semibold mb-2">Stage</h4>
+                    <h4 className="font-semibold mb-2">Estágio</h4>
                     <Select value={opportunity.stage} onValueChange={handleStageChange}>
                         <SelectTrigger>
-                            <SelectValue placeholder="Select stage" />
+                            <SelectValue placeholder="Selecione o estágio" />
                         </SelectTrigger>
                         <SelectContent>
                             {STAGES.map(stage => <SelectItem key={stage} value={stage}>{stage}</SelectItem>)}
@@ -138,11 +138,11 @@ export function OpportunityDialog({
                     </Select>
                 </div>
                  <div>
-                    <h4 className="font-semibold mb-2 flex items-center gap-2"><Calendar className="h-4 w-4"/> Last Contact</h4>
+                    <h4 className="font-semibold mb-2 flex items-center gap-2"><Calendar className="h-4 w-4"/> Último Contato</h4>
                     <p className="text-sm text-muted-foreground">{new Date(opportunity.lastContact).toLocaleString()}</p>
                 </div>
                 <div>
-                    <h4 className="font-semibold mb-2">Contacts</h4>
+                    <h4 className="font-semibold mb-2">Contatos</h4>
                     {opportunity.contacts.map(contact => (
                         <div key={contact.id} className="text-sm space-y-1 rounded-md border p-3">
                             <p className="font-medium flex items-center gap-2"><User className="h-4 w-4"/> {contact.name}</p>

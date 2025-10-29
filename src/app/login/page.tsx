@@ -14,13 +14,13 @@ export default function LoginPage() {
             </h1>
           </div>
           <p className="text-lg text-muted-foreground">
-            Streamline your sales and back-office operations. Your integrated suite for pipeline management, analytics, and team collaboration.
+            Otimize suas vendas e operações de back-office. Sua suíte integrada para gerenciamento de pipeline, análises e colaboração em equipe.
           </p>
         </div>
         <Card className="w-full max-w-sm shrink-0">
           <CardHeader>
-            <CardTitle className="font-headline text-2xl">Welcome Back</CardTitle>
-            <CardDescription>Enter your credentials to access your dashboard.</CardDescription>
+            <CardTitle className="font-headline text-2xl">Bem-vindo de Volta</CardTitle>
+            <CardDescription>Insira suas credenciais para acessar seu painel.</CardDescription>
           </CardHeader>
           <CardContent>
             <LoginForm />

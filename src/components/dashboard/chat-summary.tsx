@@ -23,14 +23,14 @@ export function ChatSummary() {
         if (result.success && result.data) {
             setSummary(result.data.summary);
             toast({
-                title: "Summary Generated",
-                description: "Today's chat highlights are ready.",
+                title: "Resumo Gerado",
+                description: "Os destaques do chat de hoje estão prontos.",
             });
         } else {
             toast({
                 variant: 'destructive',
-                title: "Error",
-                description: result.error || "Could not generate chat summary.",
+                title: "Erro",
+                description: result.error || "Não foi possível gerar o resumo do chat.",
             });
         }
         setIsLoading(false);
@@ -41,10 +41,10 @@ export function ChatSummary() {
             <CardHeader>
                 <CardTitle className="font-headline flex items-center gap-2">
                     <Bot className="text-primary" />
-                    AI Daily Digest
+                    Resumo Diário da IA
                 </CardTitle>
                 <CardDescription>
-                    Get a quick summary of today's important conversations.
+                    Obtenha um resumo rápido das conversas importantes de hoje.
                 </CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col gap-4">
@@ -52,16 +52,16 @@ export function ChatSummary() {
                     {isLoading ? (
                         <>
                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Generating...
+                            Gerando...
                         </>
                     ) : (
-                        "Generate Today's Summary"
+                        "Gerar Resumo de Hoje"
                     )}
                 </Button>
 
                 {summary && (
                      <Alert>
-                        <AlertTitle className="font-bold">Conversation Highlights</AlertTitle>
+                        <AlertTitle className="font-bold">Destaques da Conversa</AlertTitle>
                         <AlertDescription className="whitespace-pre-wrap text-sm">
                             {summary}
                         </AlertDescription>

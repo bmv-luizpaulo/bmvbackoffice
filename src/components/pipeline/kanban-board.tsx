@@ -19,13 +19,13 @@ export function KanbanBoard() {
     );
     const opp = opportunities.find(o => o.id === opportunityId);
     toast({
-        title: "Opportunity Updated",
-        description: `${opp?.title} moved to ${newStage}.`,
+        title: "Oportunidade Atualizada",
+        description: `${opp?.title} movido para ${newStage}.`,
     });
-    if (newStage === 'Won') {
+    if (newStage === 'Ganha') {
         toast({
-            title: "Contract Generation Initiated",
-            description: `Contracts and tasks are being created for ${opp?.title}.`,
+            title: "Geração de Contrato Iniciada",
+            description: `Contratos e tarefas estão sendo criados para ${opp?.title}.`,
         });
     }
   };

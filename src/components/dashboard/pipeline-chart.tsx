@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { opportunities, STAGES } from '@/lib/data';
 import { ChartTooltipContent } from '@/components/ui/chart';
 
-const chartData = STAGES.filter(stage => stage !== 'Won' && stage !== 'Lost').map(stage => ({
+const chartData = STAGES.filter(stage => stage !== 'Ganha' && stage !== 'Perdida').map(stage => ({
     name: stage,
     total: opportunities
         .filter(opp => opp.stage === stage)
@@ -16,8 +16,8 @@ export function PipelineChart() {
     return (
         <Card>
             <CardHeader>
-                <CardTitle className="font-headline">Pipeline Value by Stage</CardTitle>
-                <CardDescription>An overview of the value distribution in your sales funnel.</CardDescription>
+                <CardTitle className="font-headline">Valor do Pipeline por Estágio</CardTitle>
+                <CardDescription>Uma visão geral da distribuição de valor em seu funil de vendas.</CardDescription>
             </CardHeader>
             <CardContent>
                 <div className="h-[300px] w-full">

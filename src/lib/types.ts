@@ -17,7 +17,7 @@ export type Opportunity = {
   title: string;
   company: string;
   value: number;
-  stage: 'Lead' | 'Qualification' | 'Proposal' | 'Negotiation' | 'Won' | 'Lost';
+  stage: 'Lead' | 'Qualificação' | 'Proposta' | 'Negociação' | 'Ganha' | 'Perdida';
   lastContact: string;
   contacts: Contact[];
   history: { stage: string; date: string }[];

@@ -6,40 +6,40 @@ import { ChatSummary } from "@/components/dashboard/chat-summary";
 
 export default function DashboardPage() {
   const totalValue = opportunities.reduce((sum, opp) => sum + opp.value, 0);
-  const wonValue = opportunities.filter(opp => opp.stage === 'Won').reduce((sum, opp) => sum + opp.value, 0);
-  const openOpportunities = opportunities.filter(opp => opp.stage !== 'Won' && opp.stage !== 'Lost').length;
-  const conversionRate = (opportunities.filter(opp => opp.stage === 'Won').length / opportunities.length) * 100;
+  const wonValue = opportunities.filter(opp => opp.stage === 'Ganha').reduce((sum, opp) => sum + opp.value, 0);
+  const openOpportunities = opportunities.filter(opp => opp.stage !== 'Ganha' && opp.stage !== 'Perdida').length;
+  const conversionRate = (opportunities.filter(opp => opp.stage === 'Ganha').length / opportunities.length) * 100;
 
   return (
     <div className="flex flex-col gap-6">
       <header>
-        <h1 className="font-headline text-3xl font-bold tracking-tight">Dashboard</h1>
-        <p className="text-muted-foreground">Your command center for sales and operations.</p>
+        <h1 className="font-headline text-3xl font-bold tracking-tight">Painel</h1>
+        <p className="text-muted-foreground">Seu centro de comando para vendas e operações.</p>
       </header>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <KpiCard 
-          title="Total Pipeline Value" 
+          title="Valor Total do Pipeline" 
           value={`$${(totalValue / 1000).toFixed(1)}k`}
-          description="Total value of all opportunities"
+          description="Valor total de todas as oportunidades"
           icon={<DollarSign className="text-primary"/>}
         />
         <KpiCard 
-          title="Total Closed Won" 
+          title="Total Fechado (Ganha)" 
           value={`$${(wonValue / 1000).toFixed(1)}k`}
-          description="Value of deals won"
+          description="Valor dos negócios ganhos"
           icon={<Handshake className="text-green-500"/>}
         />
         <KpiCard 
-          title="Open Opportunities" 
+          title="Oportunidades Abertas" 
           value={openOpportunities.toString()}
-          description="Deals currently in progress"
+          description="Negócios atualmente em andamento"
           icon={<BarChart className="text-blue-500"/>}
         />
         <KpiCard 
-          title="Conversion Rate" 
+          title="Taxa de Conversão" 
           value={`${conversionRate.toFixed(1)}%`}
-          description="From lead to won"
+          description="De lead para ganha"
           icon={<Target className="text-amber-500"/>}
         />
       </div>

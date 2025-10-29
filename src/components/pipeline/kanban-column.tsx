@@ -16,11 +16,11 @@ export function KanbanColumn({ stage, opportunities, onStageChange }: KanbanColu
   
   const stageColors: Record<Opportunity['stage'], string> = {
     Lead: 'bg-blue-500/20 text-blue-700 border-blue-500/30',
-    Qualification: 'bg-purple-500/20 text-purple-700 border-purple-500/30',
-    Proposal: 'bg-amber-500/20 text-amber-700 border-amber-500/30',
-    Negotiation: 'bg-orange-500/20 text-orange-700 border-orange-500/30',
-    Won: 'bg-green-500/20 text-green-700 border-green-500/30',
-    Lost: 'bg-red-500/20 text-red-700 border-red-500/30',
+    Qualificação: 'bg-purple-500/20 text-purple-700 border-purple-500/30',
+    Proposta: 'bg-amber-500/20 text-amber-700 border-amber-500/30',
+    Negociação: 'bg-orange-500/20 text-orange-700 border-orange-500/30',
+    Ganha: 'bg-green-500/20 text-green-700 border-green-500/30',
+    Perdida: 'bg-red-500/20 text-red-700 border-red-500/30',
   };
 
   const totalValue = opportunities.reduce((sum, opp) => sum + opp.value, 0);
@@ -40,7 +40,7 @@ export function KanbanColumn({ stage, opportunities, onStageChange }: KanbanColu
         ))}
         {opportunities.length === 0 && (
             <div className="flex h-full items-center justify-center rounded-md border-2 border-dashed border-border">
-                <p className="text-sm text-muted-foreground">Drop cards here</p>
+                <p className="text-sm text-muted-foreground">Arraste os cartões aqui</p>
             </div>
         )}
       </div>

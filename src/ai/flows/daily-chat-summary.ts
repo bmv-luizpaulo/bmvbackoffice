@@ -1,11 +1,11 @@
 'use server';
 
 /**
- * @fileOverview Generates a daily summary of internal chat conversations.
+ * @fileOverview Gera um resumo diário das conversas de chat internas.
  *
- * - generateDailyChatSummary - A function that generates the daily chat summary.
- * - DailyChatSummaryInput - The input type for the generateDailyChatSummary function.
- * - DailyChatSummaryOutput - The return type for the generateDailyChatSummary function.
+ * - generateDailyChatSummary - Uma função que gera o resumo diário do chat.
+ * - DailyChatSummaryInput - O tipo de entrada para a função generateDailyChatSummary.
+ * - DailyChatSummaryOutput - O tipo de retorno para a função generateDailyChatSummary.
  */
 
 import {ai} from '@/ai/genkit';
@@ -14,7 +14,7 @@ import {z} from 'genkit';
 const DailyChatSummaryInputSchema = z.object({
   chatLog: z
     .string()
-    .describe('The complete chat log for the day to be summarized.'),
+    .describe('O registro completo de chat do dia a ser resumido.'),
 });
 
 export type DailyChatSummaryInput = z.infer<typeof DailyChatSummaryInputSchema>;
@@ -23,7 +23,7 @@ const DailyChatSummaryOutputSchema = z.object({
   summary: z
     .string()
     .describe(
-      'A concise summary of the day\'s chat log, highlighting key decisions, action items, and potential roadblocks.'
+      'Um resumo conciso do registro de chat do dia, destacando as principais decisões, itens de ação e possíveis obstáculos.'
     ),
 });
 
@@ -39,17 +39,17 @@ const prompt = ai.definePrompt({
   name: 'dailyChatSummaryPrompt',
   input: {schema: DailyChatSummaryInputSchema},
   output: {schema: DailyChatSummaryOutputSchema},
-  prompt: `You are an AI assistant tasked with summarizing internal chat logs for a team lead.
+  prompt: `Você é um assistente de IA encarregado de resumir os registros de chat internos para um líder de equipe.
 
-  Your goal is to provide a concise overview of the day's conversations, highlighting:
+  Seu objetivo é fornecer uma visão geral concisa das conversas do dia, destacando:
 
-  - Key decisions that were made.
-  - Action items that were assigned or agreed upon.
-  - Any potential roadblocks or issues that were identified.
+  - Principais decisões que foram tomadas.
+  - Itens de ação que foram atribuídos ou acordados.
+  - Quaisquer possíveis obstáculos ou problemas que foram identificados.
 
-  Use the following chat log to create the summary:
+  Use o seguinte registro de chat para criar o resumo:
 
-  Chat Log:
+  Registro de Chat:
   {{chatLog}}`,
 });
 

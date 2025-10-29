@@ -37,7 +37,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 const navItems = [
-  { href: '/dashboard', icon: BarChart2, label: 'Dashboard' },
+  { href: '/dashboard', icon: BarChart2, label: 'Painel' },
   { href: '/pipeline', icon: LayoutGrid, label: 'Pipeline' },
   { href: '/chat', icon: MessageSquare, label: 'Chat' },
 ];
@@ -78,10 +78,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 <Link href="/settings" legacyBehavior passHref>
                   <SidebarMenuButton
                     isActive={pathname === '/settings'}
-                    tooltip="Settings"
+                    tooltip="Configurações"
                   >
                     <Settings />
-                    <span>Settings</span>
+                    <span>Configurações</span>
                   </SidebarMenuButton>
                 </Link>
               </SidebarMenuItem>
@@ -101,13 +101,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuLabel>My Account</DropdownMenuLabel>
+              <DropdownMenuLabel>Minha Conta</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem>Profile</DropdownMenuItem>
-              <DropdownMenuItem>Billing</DropdownMenuItem>
+              <DropdownMenuItem>Perfil</DropdownMenuItem>
+              <DropdownMenuItem>Faturamento</DropdownMenuItem>
               <DropdownMenuSeparator />
                <Link href="/login" passHref>
-                 <DropdownMenuItem>Log out</DropdownMenuItem>
+                 <DropdownMenuItem>Sair</DropdownMenuItem>
                </Link>
             </DropdownMenuContent>
           </DropdownMenu>

@@ -1,10 +1,10 @@
 'use server';
 /**
- * @fileOverview AI-powered follow-up suggestions for sales opportunities.
+ * @fileOverview Sugestões de acompanhamento baseadas em IA para oportunidades de vendas.
  *
- * - getSuggestedFollowUps - A function that analyzes the sales pipeline and suggests follow-up actions.
- * - SuggestedFollowUpsInput - The input type for the getSuggestedFollowUps function.
- * - SuggestedFollowUpsOutput - The return type for the getSuggestedFollowUps function.
+ * - getSuggestedFollowUps - Uma função que analisa o pipeline de vendas e sugere ações de acompanhamento.
+ * - SuggestedFollowUpsInput - O tipo de entrada para a função getSuggestedFollowUps.
+ * - SuggestedFollowUpsOutput - O tipo de retorno para a função getSuggestedFollowUps.
  */
 
 import {ai} from '@/ai/genkit';
@@ -13,21 +13,21 @@ import {z} from 'genkit';
 const SuggestedFollowUpsInputSchema = z.object({
   opportunityDetails: z
     .string()
-    .describe('Detailed information about the sales opportunity, including communication history, deal size, stage, and key stakeholders.'),
-  currentPipelineStage: z.string().describe('The current stage of the opportunity in the sales pipeline.'),
+    .describe('Informações detalhadas sobre a oportunidadede vendas, incluindo histórico de comunicação, tamanho do negócio, estágio e principais partes interessadas.'),
+  currentPipelineStage: z.string().describe('O estágio atual da oportunidade no pipeline de vendas.'),
   pastFollowUpActions: z
     .string()
-    .describe('A summary of past follow-up actions taken and their outcomes.'),
+    .describe('Um resumo das ações de acompanhamento anteriores tomadas e seus resultados.'),
 });
 export type SuggestedFollowUpsInput = z.infer<typeof SuggestedFollowUpsInputSchema>;
 
 const SuggestedFollowUpsOutputSchema = z.object({
   suggestedActions: z
     .array(z.string())
-    .describe('A list of suggested follow-up actions, with clear and actionable steps.'),
+    .describe('Uma lista de ações de acompanhamento sugeridas, com etapas claras e acionáveis.'),
   reasoning: z
     .string()
-    .describe('The AI’s reasoning for suggesting these actions, including the factors considered.'),
+    .describe('O raciocínio da IA para sugerir essas ações, incluindo os fatores considerados.'),
 });
 export type SuggestedFollowUpsOutput = z.infer<typeof SuggestedFollowUpsOutputSchema>;
 
@@ -39,21 +39,21 @@ const prompt = ai.definePrompt({
   name: 'suggestedFollowUpsPrompt',
   input: {schema: SuggestedFollowUpsInputSchema},
   output: {schema: SuggestedFollowUpsOutputSchema},
-  prompt: `You are an AI assistant helping sales managers prioritize their team\'s efforts by suggesting relevant follow-up actions for each sales opportunity.
+  prompt: `Você é um assistente de IA que ajuda os gerentes de vendas a priorizar os esforços de sua equipe, sugerindo ações de acompanhamento relevantes para cada oportunidade de venda.
 
-  Analyze the provided opportunity details, current pipeline stage, and past follow-up actions to suggest the next best actions.
+  Analise os detalhes da oportunidade fornecidos, o estágio atual do pipeline e as ações de acompanhamento anteriores para sugerir as próximas melhores ações.
 
-  Opportunity Details: {{{opportunityDetails}}}
-Current Pipeline Stage: {{{currentPipelineStage}}}
-Past Follow-Up Actions: {{{pastFollowUpActions}}}
+  Detalhes da Oportunidade: {{{opportunityDetails}}}
+Estágio Atual do Pipeline: {{{currentPipelineStage}}}
+Ações de Acompanhamento Anteriores: {{{pastFollowUpActions}}}
 
-  Consider these factors when formulating your suggestions:
-  - The likelihood of closing the deal based on the current stage and past interactions.
-  - The potential impact of each action on moving the opportunity forward.
-  - The relevance of the action to the specific opportunity and its stakeholders.
+  Considere estes fatores ao formular suas sugestões:
+  - A probabilidade de fechar o negócio com base no estágio atual e nas interações anteriores.
+  - O impacto potencial de cada ação para avançar a oportunidade.
+  - A relevância da ação para a oportunidade específica e suas partes interessadas.
 
-  Provide a list of suggested follow-up actions and the reasoning behind each suggestion.
-  Format the output to be concise, with clear and actionable steps.
+  Forneça uma lista de ações de acompanhamento sugeridas e o raciocínio por trás de cada sugestão.
+  Formate a saída para ser concisa, com etapas claras e acionáveis.
   `,
 });
 

@@ -47,7 +47,7 @@ export function KanbanCard({ opportunity, onStageChange }: KanbanCardProps) {
             {opportunity.value.toLocaleString()}
           </Badge>
           <span className="text-xs text-muted-foreground">
-            Last contact: {new Date(opportunity.lastContact).toLocaleDateString()}
+            Último contato: {new Date(opportunity.lastContact).toLocaleDateString()}
           </span>
         </CardContent>
       </Card>

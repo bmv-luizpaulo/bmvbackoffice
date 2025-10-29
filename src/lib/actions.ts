@@ -8,24 +8,24 @@ import { chatLogForSummary } from "./data";
 export async function getFollowUpSuggestionsAction(opportunity: Opportunity) {
     try {
         const opportunityDetails = `
-            Title: ${opportunity.title}
-            Company: ${opportunity.company}
-            Value: $${opportunity.value.toLocaleString()}
-            Contacts: ${opportunity.contacts.map(c => `${c.name} (${c.role})`).join(', ')}
-            Last Contact: ${new Date(opportunity.lastContact).toLocaleDateString()}
-            History: ${opportunity.history.map(h => `${h.stage} on ${new Date(h.date).toLocaleDateString()}`).join(' -> ')}
+            Título: ${opportunity.title}
+            Empresa: ${opportunity.company}
+            Valor: R$${opportunity.value.toLocaleString('pt-BR')}
+            Contatos: ${opportunity.contacts.map(c => `${c.name} (${c.role})`).join(', ')}
+            Último Contato: ${new Date(opportunity.lastContact).toLocaleDateString()}
+            Histórico: ${opportunity.history.map(h => `${h.stage} em ${new Date(h.date).toLocaleDateString()}`).join(' -> ')}
         `;
 
         const result = await getSuggestedFollowUps({
             opportunityDetails,
             currentPipelineStage: opportunity.stage,
-            pastFollowUpActions: `Last contact was on ${new Date(opportunity.lastContact).toLocaleDateString()}. The opportunity is currently in the ${opportunity.stage} stage.`
+            pastFollowUpActions: `O último contato foi em ${new Date(opportunity.lastContact).toLocaleDateString()}. A oportunidade está atualmente no estágio de ${opportunity.stage}.`
         });
         
         return { success: true, data: result };
     } catch (error) {
-        console.error("Error getting AI suggestions:", error);
-        return { success: false, error: "Failed to get AI suggestions." };
+        console.error("Erro ao obter sugestões de IA:", error);
+        return { success: false, error: "Falha ao obter sugestões de IA." };
     }
 }
 
@@ -36,7 +36,7 @@ export async function getChatSummaryAction() {
         });
         return { success: true, data: result };
     } catch (error) {
-        console.error("Error generating chat summary:", error);
-        return { success: false, error: "Failed to generate chat summary." };
+        console.error("Erro ao gerar resumo do chat:", error);
+        return { success: false, error: "Falha ao gerar resumo do chat." };
     }
 }

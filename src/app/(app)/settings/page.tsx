@@ -5,37 +5,37 @@ export default function SettingsPage() {
   return (
     <div className="space-y-6">
       <header>
-        <h1 className="font-headline text-3xl font-bold tracking-tight">Settings</h1>
+        <h1 className="font-headline text-3xl font-bold tracking-tight">Configurações</h1>
         <p className="text-muted-foreground">
-          Manage your account and application preferences.
+          Gerencie sua conta e as preferências do aplicativo.
         </p>
       </header>
       <Separator />
       <Card>
         <CardHeader>
-          <CardTitle>Profile</CardTitle>
-          <CardDescription>This is a placeholder for profile settings.</CardDescription>
+          <CardTitle>Perfil</CardTitle>
+          <CardDescription>Este é um espaço reservado para as configurações do perfil.</CardDescription>
         </CardHeader>
         <CardContent>
-          <p>User profile information will be displayed and editable here.</p>
+          <p>As informações do perfil do usuário serão exibidas e editáveis aqui.</p>
         </CardContent>
       </Card>
       <Card>
         <CardHeader>
-          <CardTitle>Notifications</CardTitle>
-          <CardDescription>This is a placeholder for notification settings.</CardDescription>
+          <CardTitle>Notificações</CardTitle>
+          <CardDescription>Este é um espaço reservado para as configurações de notificação.</CardDescription>
         </CardHeader>
         <CardContent>
-          <p>User notification preferences will be configured here.</p>
+          <p>As preferências de notificação do usuário serão configuradas aqui.</p>
         </CardContent>
       </Card>
        <Card>
         <CardHeader>
-          <CardTitle>Theme</CardTitle>
-          <CardDescription>This is a placeholder for theme settings.</CardDescription>
+          <CardTitle>Tema</CardTitle>
+          <CardDescription>Este é um espaço reservado para as configurações do tema.</CardDescription>
         </CardHeader>
         <CardContent>
-          <p>Light/dark mode and other theme options will be available here.</p>
+          <p>Modo claro/escuro e outras opções de tema estarão disponíveis aqui.</p>
         </CardContent>
       </Card>
     </div>

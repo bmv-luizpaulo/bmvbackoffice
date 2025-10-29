@@ -21,10 +21,10 @@ import { Loader2 } from "lucide-react";
 
 const formSchema = z.object({
   email: z.string().email({
-    message: "Please enter a valid email address.",
+    message: "Por favor, insira um endereço de e-mail válido.",
   }),
   password: z.string().min(6, {
-    message: "Password must be at least 6 characters.",
+    message: "A senha deve ter pelo menos 6 caracteres.",
   }),
 });
 
@@ -49,8 +49,8 @@ export function LoginForm() {
       // For this demo, any input is considered valid.
       console.log(values);
       toast({
-        title: "Login Successful",
-        description: "Welcome back! Redirecting you to the dashboard.",
+        title: "Login Bem-sucedido",
+        description: "Bem-vindo de volta! Redirecionando para o painel.",
       });
       router.push('/dashboard');
       setIsLoading(false);
@@ -67,7 +67,7 @@ export function LoginForm() {
             <FormItem>
               <FormLabel>Email</FormLabel>
               <FormControl>
-                <Input placeholder="name@example.com" {...field} />
+                <Input placeholder="nome@exemplo.com" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -78,7 +78,7 @@ export function LoginForm() {
           name="password"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Password</FormLabel>
+              <FormLabel>Senha</FormLabel>
               <FormControl>
                 <Input type="password" placeholder="••••••••" {...field} />
               </FormControl>
@@ -88,7 +88,7 @@ export function LoginForm() {
         />
         <Button type="submit" className="w-full" disabled={isLoading}>
           {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          Sign In
+          Entrar
         </Button>
       </form>
     </Form>

@@ -44,7 +44,7 @@ export function ChatLayout() {
     <div className="flex h-full">
       <div className="w-1/3 border-r">
         <div className="p-4 border-b">
-            <h2 className="text-xl font-semibold">Conversations</h2>
+            <h2 className="text-xl font-semibold">Conversas</h2>
         </div>
         <ScrollArea className="h-[calc(100%-65px)]">
             {users.filter(u => u.id !== currentUser.id).map(user => {
@@ -100,7 +100,7 @@ export function ChatLayout() {
         <div className="p-4 border-t bg-background">
             <form onSubmit={handleSendMessage} className="relative">
                 <Input 
-                    placeholder="Type a message..." 
+                    placeholder="Digite uma mensagem..." 
                     className="pr-24"
                     value={newMessage}
                     onChange={(e) => setNewMessage(e.target.value)}
