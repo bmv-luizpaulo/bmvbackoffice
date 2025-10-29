@@ -32,8 +32,8 @@ export interface UseCollectionResult<T> {
 export interface InternalQuery extends Query<DocumentData> {
   _query: {
     path: {
-      canonicalString(): string;
-      toString(): string;
+      canonicalString: () => string;
+      toString: () => string;
     }
   }
 }
@@ -108,10 +108,21 @@ export function useCollection<T = any>(
       },
       (error: FirestoreError) => {
         // This logic extracts the path from either a ref or a query
-        const path: string =
-          memoizedTargetRefOrQuery.type === 'collection'
-            ? (memoizedTargetRefOrQuery as CollectionReference).path
-            : (memoizedTargetRefOrQuery as unknown as InternalQuery)._query.path.canonicalString()
+        let path: string;
+        if(memoizedTargetRefOrQuery.type === 'collection') {
+            path = (memoizedTargetRefOrQuery as CollectionReference).path;
+        } else {
+            // This is a more robust way to get the path from a query object.
+            // It accesses a non-public property, which can be risky, but it's a common workaround.
+            const internalQuery = (memoizedTargetRefOrQuery as any)._query;
+            if (internalQuery && internalQuery.path && typeof internalQuery.path.canonicalString === 'function') {
+                path = internalQuery.path.canonicalString();
+            } else {
+                // Fallback if the internal structure changes
+                path = '(path-not-retrievable)';
+            }
+        }
+        
 
         const contextualError = new FirestorePermissionError({
           operation: 'list',
