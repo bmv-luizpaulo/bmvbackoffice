@@ -47,7 +47,6 @@ export type Stage = {
     name: string;
     description?: string;
     order: number;
-    projectId: string;
 };
 
 export type Task = {

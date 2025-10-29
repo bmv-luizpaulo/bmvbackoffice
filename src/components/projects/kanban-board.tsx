@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { DndContext, type DragEndEvent } from '@dnd-kit/core';
 import { useToast } from '@/hooks/use-toast';
 import { KanbanColumn } from './kanban-column';
@@ -11,37 +11,25 @@ import { AddTaskDialog } from './add-task-dialog';
 import { AddProjectDialog } from './add-project-dialog';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '../ui/command';
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { collection, doc, writeBatch } from 'firebase/firestore';
+import { addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
-
-// Dados mocados enquanto o backend não está conectado
-const initialProjects: Project[] = [
-    { id: 'proj-1', name: 'Projeto BMV Back Office', description: 'Desenvolvimento do novo sistema interno.', startDate: new Date().toISOString() },
-    { id: 'proj-2', name: 'Campanha de Marketing Q3', description: 'Planejamento e execução da campanha de marketing para o terceiro trimestre.', startDate: new Date().toISOString() }
-];
-
-const initialStages: Stage[] = [
-    { id: 'stage-1', name: 'A Fazer', order: 1, projectId: 'proj-1' },
-    { id: 'stage-2', name: 'Em Progresso', order: 2, projectId: 'proj-1' },
-    { id: 'stage-3', name: 'Concluído', order: 3, projectId: 'proj-1' },
-    { id: 'stage-4', name: 'Planejamento', order: 1, projectId: 'proj-2' },
-    { id: 'stage-5', name: 'Execução', order: 2, projectId: 'proj-2' },
-    { id: 'stage-6', name: 'Análise', order: 3, projectId: 'proj-2' },
-];
-
-const initialTasks: Task[] = [
-    { id: 'task-1', name: 'Configurar ambiente de desenvolvimento', description: 'Instalar todas as dependências necessárias.', projectId: 'proj-1', stageId: 'stage-1', isCompleted: false },
-    { id: 'task-2', name: 'Desenvolver a interface do usuário', description: 'Criar os componentes de UI para o dashboard.', projectId: 'proj-1', stageId: 'stage-1', isCompleted: false },
-    { id: 'task-3', name: 'Implementar autenticação', description: 'Configurar login com e-mail e senha.', projectId: 'proj-1', stageId: 'stage-2', isCompleted: false },
-    { id: 'task-4', name: 'Realizar testes de unidade', description: 'Testar todos os componentes e funções.', projectId: 'proj-1', stageId: 'stage-3', isCompleted: true },
-    { id: 'task-5', name: 'Definir KPIs da campanha', description: 'Estabelecer os indicadores chave de performance.', projectId: 'proj-2', stageId: 'stage-4', isCompleted: false },
-    { id: 'task-6', name: 'Criar criativos para redes sociais', description: 'Desenvolver imagens e vídeos para as postagens.', projectId: 'proj-2', stageId: 'stage-5', isCompleted: false },
-];
 
 export function KanbanBoard() {
-  const [projects, setProjects] = useState<Project[]>(initialProjects);
-  const [selectedProject, setSelectedProject] = useState<Project>(initialProjects[0]);
-  const [stages, setStages] = useState<Stage[]>(initialStages.filter(s => s.projectId === selectedProject.id).sort((a,b) => a.order - b.order));
-  const [tasks, setTasks] = useState<Task[]>(initialTasks);
+  const firestore = useFirestore();
+
+  const projectsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'projects') : null, [firestore]);
+  const { data: projectsData, isLoading: isLoadingProjects } = useCollection<Project>(projectsQuery);
+  
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+
+  const stagesQuery = useMemoFirebase(() => firestore && selectedProject ? collection(firestore, 'projects', selectedProject.id, 'stages') : null, [firestore, selectedProject]);
+  const { data: stagesData, isLoading: isLoadingStages } = useCollection<Stage>(stagesQuery);
+
+  const tasksQuery = useMemoFirebase(() => firestore && selectedProject ? collection(firestore, 'projects', selectedProject.id, 'tasks') : null, [firestore, selectedProject]);
+  const { data: tasksData, isLoading: isLoadingTasks } = useCollection<Task>(tasksQuery);
   
   const [isAddTaskDialogOpen, setIsAddTaskDialogOpen] = useState(false);
   const [isAddProjectDialogOpen, setIsAddProjectDialogOpen] = useState(false);
@@ -49,32 +37,56 @@ export function KanbanBoard() {
 
   const { toast } = useToast();
 
+  useEffect(() => {
+    if (projectsData) {
+      setProjects(projectsData);
+      if (!selectedProject && projectsData.length > 0) {
+        setSelectedProject(projectsData[0]);
+      }
+    }
+  }, [projectsData, selectedProject]);
+
   const handleSelectProject = (project: Project) => {
     setSelectedProject(project);
-    setStages(initialStages.filter(s => s.projectId === project.id).sort((a,b) => a.order - b.order));
     setIsProjectSelectorOpen(false);
   }
 
-  const handleAddProject = (newProject: Omit<Project, 'id'>) => {
-    const projectToAdd: Project = {
-        ...newProject,
-        id: `proj-${Date.now()}`
-    };
-    setProjects(prev => [...prev, projectToAdd]);
+  const handleAddProject = async (newProject: Omit<Project, 'id'>) => {
+    if (!firestore) return;
+    const projectCollection = collection(firestore, 'projects');
+    const newDocRef = await addDocumentNonBlocking(projectCollection, newProject);
+    
+    // Create default stages for the new project
+    const batch = writeBatch(firestore);
+    const stagesCollection = collection(firestore, 'projects', newDocRef.id, 'stages');
+    const defaultStages = [
+      { name: 'A Fazer', order: 1 },
+      { name: 'Em Progresso', order: 2 },
+      { name: 'Concluído', order: 3 }
+    ];
+    defaultStages.forEach(stage => {
+      const stageRef = doc(stagesCollection);
+      batch.set(stageRef, stage);
+    });
+    await batch.commit();
+
     toast({
         title: "Projeto Adicionado",
         description: `O projeto "${newProject.name}" foi criado com sucesso.`
     });
-    handleSelectProject(projectToAdd);
+    // The new project will appear via the realtime listener.
   }
 
   const handleAddTask = (newTask: Omit<Task, 'id' | 'isCompleted'>) => {
-    const taskToAdd: Task = {
+     if (!firestore || !selectedProject) return;
+
+    const taskToAdd = {
         ...newTask,
-        id: `task-${Date.now()}`,
         isCompleted: false,
     };
-    setTasks(prev => [...prev, taskToAdd]);
+    const tasksCollection = collection(firestore, 'projects', selectedProject.id, 'tasks');
+    addDocumentNonBlocking(tasksCollection, taskToAdd);
+
     toast({
         title: "Tarefa Adicionada",
         description: `A tarefa "${newTask.name}" foi criada com sucesso.`
@@ -84,34 +96,26 @@ export function KanbanBoard() {
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
 
-    if (over && active.id !== over.id) {
+    if (firestore && selectedProject && over && active.id !== over.id) {
         const taskId = active.id as string;
         const newStageId = over.id as string;
         
-        // Check if task exists in the current project context
-        const taskExists = tasks.some(t => t.id === taskId && t.projectId === selectedProject.id);
-        if (!taskExists) return;
+        const taskRef = doc(firestore, 'projects', selectedProject.id, 'tasks', taskId);
+        updateDocumentNonBlocking(taskRef, { stageId: newStageId });
 
-        setTasks(prevTasks => {
-            const taskIndex = prevTasks.findIndex(t => t.id === taskId);
-            if (taskIndex === -1) return prevTasks;
-
-            const updatedTask = { ...prevTasks[taskIndex], stageId: newStageId };
-            const newTasks = [...prevTasks];
-            newTasks[taskIndex] = updatedTask;
-            
-            const stage = stages.find(s => s.id === newStageId);
-            toast({
-                title: "Tarefa Movida",
-                description: `A tarefa foi movida para a etapa "${stage?.name}".`,
-            });
-            
-            return newTasks;
+        const stage = stagesData?.find(s => s.id === newStageId);
+        toast({
+            title: "Tarefa Movida",
+            description: `A tarefa foi movida para a etapa "${stage?.name}".`,
         });
     }
   };
   
-  const projectTasks = tasks.filter(t => t.projectId === selectedProject.id);
+  const sortedStages = stagesData?.sort((a,b) => a.order - b.order) || [];
+
+  if (isLoadingProjects || !selectedProject) {
+    return <div>Carregando projetos...</div>;
+  }
 
   return (
     <>
@@ -146,26 +150,30 @@ export function KanbanBoard() {
                         <FolderPlus className='mr-2' />
                         Novo Projeto
                     </Button>
-                    <Button onClick={() => setIsAddTaskDialogOpen(true)}>
+                    <Button onClick={() => setIsAddTaskDialogOpen(true)} disabled={!selectedProject}>
                         <Plus className='mr-2' />
                         Adicionar Tarefa
                     </Button>
                 </div>
             </div>
             <div className="flex h-full min-w-max gap-4 pb-4">
-                {stages.map(stage => (
-                <KanbanColumn
-                    key={stage.id}
-                    stage={stage}
-                    tasks={projectTasks.filter(task => task.stageId === stage.id)}
-                />
-                ))}
+                {isLoadingStages || isLoadingTasks ? (
+                  <div>Carregando...</div>
+                ) : (
+                  sortedStages.map(stage => (
+                    <KanbanColumn
+                        key={stage.id}
+                        stage={stage}
+                        tasks={tasksData?.filter(task => task.stageId === stage.id) || []}
+                    />
+                  ))
+                )}
             </div>
         </DndContext>
         <AddTaskDialog 
             isOpen={isAddTaskDialogOpen}
             onOpenChange={setIsAddTaskDialogOpen}
-            stages={stages}
+            stages={sortedStages}
             onAddTask={handleAddTask}
             projectId={selectedProject.id}
         />

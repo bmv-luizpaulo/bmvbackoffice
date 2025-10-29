@@ -49,14 +49,25 @@ export function AddTaskDialog({ isOpen, onOpenChange, onAddTask, stages, project
     },
   });
 
+  // Reset form when dialog opens
+  if (isOpen && !form.formState.isDirty) {
+    form.reset({ stageId: stages.length > 0 ? stages[0].id : '' });
+  }
+
+
   function onSubmit(values: z.infer<typeof formSchema>) {
-    onAddTask({ ...values, projectId });
+    onAddTask({ ...values, projectId, description: values.description || '' });
     onOpenChange(false);
     form.reset();
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+    <Dialog open={isOpen} onOpenChange={(open) => {
+        if (!open) {
+            form.reset();
+        }
+        onOpenChange(open);
+    }}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Adicionar Nova Tarefa</DialogTitle>
@@ -95,7 +106,7 @@ export function AddTaskDialog({ isOpen, onOpenChange, onAddTask, stages, project
                     render={({ field }) => (
                         <FormItem>
                         <FormLabel>Etapa</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <Select onValueChange={field.onChange} value={field.value}>
                             <FormControl>
                             <SelectTrigger>
                                 <SelectValue placeholder="Selecione uma etapa inicial" />

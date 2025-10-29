@@ -41,6 +41,9 @@ const formSchema = z.object({
   description: z.string().optional(),
   startDate: z.date({ required_error: "A data de início é obrigatória." }),
   endDate: z.date().optional(),
+}).refine(data => !data.endDate || data.endDate > data.startDate, {
+  message: "A data de término deve ser posterior à data de início.",
+  path: ["endDate"],
 });
 
 export function AddProjectDialog({ isOpen, onOpenChange, onAddProject }: AddProjectDialogProps) {
@@ -54,7 +57,8 @@ export function AddProjectDialog({ isOpen, onOpenChange, onAddProject }: AddProj
 
   function onSubmit(values: z.infer<typeof formSchema>) {
     const projectData = {
-        ...values,
+        name: values.name,
+        description: values.description || '',
         startDate: values.startDate.toISOString(),
         endDate: values.endDate?.toISOString(),
     };
