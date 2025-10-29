@@ -61,7 +61,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <SidebarMenu>
             {navItems.map((item) => (
               <SidebarMenuItem key={item.href}>
-                <Link href={item.href} legacyBehavior passHref>
+                <Link href={item.href}>
                   <SidebarMenuButton
                     isActive={pathname.startsWith(item.href)}
                     tooltip={item.label}
@@ -77,7 +77,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <SidebarFooter>
           <SidebarMenu>
              <SidebarMenuItem>
-                <Link href="/settings" legacyBehavior passHref>
+                <Link href="/settings">
                   <SidebarMenuButton
                     isActive={pathname === '/settings'}
                     tooltip="Configurações"
@@ -108,7 +108,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               <DropdownMenuItem>Perfil</DropdownMenuItem>
               <DropdownMenuItem>Faturamento</DropdownMenuItem>
               <DropdownMenuSeparator />
-               <Link href="/login" passHref>
+               <Link href="/login">
                  <DropdownMenuItem>Sair</DropdownMenuItem>
                </Link>
             </DropdownMenuContent>
