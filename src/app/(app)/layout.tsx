@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   BarChart2,
-  Gem,
+  Users,
   LayoutGrid,
   MessageSquare,
   PanelLeft,
@@ -43,6 +43,7 @@ const navItems = [
   { href: '/dashboard', icon: BarChart2, label: 'Painel' },
   { href: '/projects', icon: FolderKanban, label: 'Projetos' },
   { href: '/chat', icon: MessageSquare, label: 'Chat' },
+  { href: '/teams', icon: Users, label: 'Equipes' },
 ];
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
