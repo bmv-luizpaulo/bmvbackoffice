@@ -32,3 +32,31 @@ export type Message = {
   read: boolean;
   attachment?: string;
 };
+
+// Tipos para o Funil de Projetos
+export type Project = {
+    id: string;
+    name: string;
+    description: string;
+    startDate: string;
+    endDate?: string;
+    stageIds: string[];
+};
+
+export type Stage = {
+    id: string;
+    name: string;
+    description?: string;
+    order: number;
+    projectId: string;
+};
+
+export type Task = {
+    id: string;
+    name: string;
+    description?: string;
+    projectId: string;
+    stageId: string;
+    isCompleted: boolean;
+    dependentTaskIds?: string[];
+};
