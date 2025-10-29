@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react';
 import { KpiCard } from "@/components/dashboard/kpi-card";
-import { CheckCircle, Target, FolderKanban, Banknote } from "lucide-react";
+import { CheckCircle, Target, FolderKanban, ListChecks } from "lucide-react";
 import { PipelineChart } from "@/components/dashboard/pipeline-chart";
 import { ChatSummary } from "@/components/dashboard/chat-summary";
 import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
@@ -41,9 +41,9 @@ export default function DashboardPage() {
   const { data: stagesData, isLoading: isLoadingStages } = useCollection<Stage>(stagesQuery);
 
 
-  const { activeProjects, completedProjects, openTasks, tasksByStage, totalValue } = useMemo(() => {
+  const { activeProjects, completedProjects, openTasks, tasksByStage, totalTasks } = useMemo(() => {
     if (!projectsData || !tasksData || !stagesData) {
-      return { activeProjects: 0, completedProjects: 0, openTasks: 0, tasksByStage: [], totalValue: 0 };
+      return { activeProjects: 0, completedProjects: 0, openTasks: 0, tasksByStage: [], totalTasks: 0 };
     }
 
     const tasksPerProject = tasksData.reduce((acc, task) => {
@@ -78,14 +78,14 @@ export default function DashboardPage() {
 
     const chartData = Object.entries(tasksByStage).map(([name, total]) => ({ name, total }));
     
-    const totalValue = projectsData.reduce((sum, project) => sum + (project.value || 0), 0);
+    const totalTasks = tasksData.length;
 
     return {
       activeProjects: projectsData.length,
       completedProjects: completedProjectsCount,
       openTasks: openTasksCount,
       tasksByStage: chartData,
-      totalValue: totalValue,
+      totalTasks: totalTasks,
     };
   }, [projectsData, tasksData, stagesData]);
 
@@ -134,10 +134,10 @@ export default function DashboardPage() {
                   icon={<Target className="text-amber-500"/>}
                 />
                 <KpiCard 
-                  title="Valor Total em Projetos" 
-                  value={`R$ ${totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
-                  description="Valor estimado de todos os projetos"
-                  icon={<Banknote className="text-blue-500"/>}
+                  title="Total de Tarefas" 
+                  value={totalTasks.toString()}
+                  description="Soma de todas as tarefas do sistema"
+                  icon={<ListChecks className="text-blue-500"/>}
                 />
               </>
             )}

@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { format } from "date-fns";
-import { CalendarIcon, User, Users, DollarSign } from "lucide-react";
+import { CalendarIcon, User, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 import {
@@ -43,7 +43,6 @@ type AddProjectDialogProps = {
 const formSchema = z.object({
   name: z.string().min(1, "O nome do projeto é obrigatório."),
   description: z.string().optional(),
-  value: z.coerce.number().min(0, "O valor deve ser positivo.").optional(),
   ownerId: z.string({ required_error: "O responsável é obrigatório." }),
   teamMembers: z.array(z.string()).optional(),
   contactPhone: z.string().optional(),
@@ -65,7 +64,6 @@ export function AddProjectDialog({ isOpen, onOpenChange, onAddProject }: AddProj
     defaultValues: {
       name: "",
       description: "",
-      value: 0,
       teamMembers: [],
     },
   });
@@ -74,7 +72,6 @@ export function AddProjectDialog({ isOpen, onOpenChange, onAddProject }: AddProj
     const projectData = {
         name: values.name,
         description: values.description || '',
-        value: values.value || 0,
         startDate: values.startDate.toISOString(),
         endDate: values.endDate?.toISOString(),
         ownerId: values.ownerId,
@@ -252,19 +249,6 @@ export function AddProjectDialog({ isOpen, onOpenChange, onAddProject }: AddProj
                                 <FormLabel>Telefone de Contato</FormLabel>
                                 <FormControl>
                                     <Input placeholder="(XX) XXXXX-XXXX" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                        <FormField
-                            control={form.control}
-                            name="value"
-                            render={({ field }) => (
-                                <FormItem>
-                                <FormLabel className="flex items-center gap-2"><DollarSign className="h-4 w-4" />Valor do Projeto (R$)</FormLabel>
-                                <FormControl>
-                                    <Input type="number" placeholder="5000.00" {...field} />
                                 </FormControl>
                                 <FormMessage />
                                 </FormItem>

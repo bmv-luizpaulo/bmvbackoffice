@@ -73,7 +73,6 @@ export type Project = {
     id: string;
     name: string;
     description: string;
-    value?: number;
     startDate: string;
     endDate?: string;
     ownerId: string;

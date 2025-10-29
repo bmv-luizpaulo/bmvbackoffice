@@ -20,7 +20,6 @@ export async function getFollowUpSuggestionsAction(project: Project) {
             Título do Projeto: ${project.name}
             Descrição: ${project.description}
             Data de Início: ${new Date(project.startDate).toLocaleDateString()}
-            Valor: R$ ${project.value?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) || '0,00'}
             Tarefas Abertas: 
             ${openTasks || 'Nenhuma'}
         `;
