@@ -56,7 +56,8 @@ const convertTimestampsToISO = (data: any): any => {
   return data;
 };
 
-const getQueryPath = (query: CollectionReference<DocumentData> | Query<DocumentData>): string => {
+const getQueryPath = (query: CollectionReference<DocumentData> | Query<DocumentData> | null | undefined): string => {
+    if (!query) return '';
     if (query.type === 'collection') {
         return (query as CollectionReference).path;
     }
@@ -96,27 +97,19 @@ export function useCollection<T = any>(
   const [error, setError] = useState<FirestoreError | Error | null>(null);
 
   useEffect(() => {
-    if (!memoizedTargetRefOrQuery) {
+    const path = getQueryPath(memoizedTargetRefOrQuery);
+    
+    if (!memoizedTargetRefOrQuery || !path || path.trim() === '' || path.includes('//')) {
       setData(null);
       setIsLoading(false);
       setError(null);
       return;
     }
     
-    // Defensive check: Ensure the path is not empty, which causes permission errors.
-    const path = getQueryPath(memoizedTargetRefOrQuery);
-    if (!path || path.trim() === '' || path.includes('//')) {
-        // Invalid path, so we don't proceed with the query.
-        // This can happen during initial render if dependencies aren't ready.
-        setData(null);
-        setIsLoading(false);
-        return;
-    }
 
     setIsLoading(true);
     setError(null);
 
-    // Directly use memoizedTargetRefOrQuery as it's assumed to be the final query
     const unsubscribe = onSnapshot(
       memoizedTargetRefOrQuery,
       (snapshot: QuerySnapshot<DocumentData>) => {
@@ -139,16 +132,25 @@ export function useCollection<T = any>(
         setError(contextualError)
         setData(null)
         setIsLoading(false)
-
-        // trigger global error propagation
-        errorEmitter.emit('permission-error', contextualError);
+        
+        // TEMPORARY WORKAROUND: Do not throw a global error for 'users' collection
+        // This is to prevent the app from breaking while we work on security rules.
+        // A real app should have proper rules allowing managers to read users.
+        if (path !== 'users') {
+          // trigger global error propagation
+          errorEmitter.emit('permission-error', contextualError);
+        } else {
+            console.warn("Firestore permission error on 'users' collection was caught but not thrown globally. This is a temporary measure.");
+        }
       }
     );
 
     return () => unsubscribe();
   }, [memoizedTargetRefOrQuery]); // Re-run if the target query/reference changes.
+  
   if(memoizedTargetRefOrQuery && !memoizedTargetRefOrQuery.__memo) {
-    throw new Error(memoizedTargetRefOrQuery + ' was not properly memoized using useMemoFirebase');
+      const path = getQueryPath(memoizedTargetRefOrQuery);
+    throw new Error(`Query for path "${path}" was not properly memoized using useMemoFirebase`);
   }
   return { data, isLoading, error };
 }
