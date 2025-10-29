@@ -31,6 +31,7 @@ import { Calendar } from "../ui/calendar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { users } from "@/lib/data";
 import type { Project } from "@/lib/types";
+import { MultiSelect } from "../ui/multi-select";
 
 type AddProjectDialogProps = {
   isOpen: boolean;
@@ -77,6 +78,8 @@ export function AddProjectDialog({ isOpen, onOpenChange, onAddProject }: AddProj
     onOpenChange(false);
     form.reset();
   }
+
+  const userOptions = users.map(user => ({ value: user.id, label: user.name }));
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -219,6 +222,22 @@ export function AddProjectDialog({ isOpen, onOpenChange, onAddProject }: AddProj
                         />
                          <FormField
                             control={form.control}
+                            name="teamMembers"
+                            render={({ field }) => (
+                                <FormItem>
+                                <FormLabel className="flex items-center gap-2"><Users className="h-4 w-4" />Equipe Empenhada</FormLabel>
+                                    <MultiSelect
+                                        options={userOptions}
+                                        selected={field.value || []}
+                                        onChange={field.onChange}
+                                        placeholder="Selecione os membros da equipe..."
+                                    />
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                         <FormField
+                            control={form.control}
                             name="contactPhone"
                             render={({ field }) => (
                                 <FormItem>
@@ -237,7 +256,7 @@ export function AddProjectDialog({ isOpen, onOpenChange, onAddProject }: AddProj
                                 <FormItem>
                                 <FormLabel>Detalhes Técnicos</FormLabel>
                                 <FormControl>
-                                    <Textarea placeholder="Stack de tecnologia, dependências, etc..." {...field} rows={5}/>
+                                    <Textarea placeholder="Stack de tecnologia, dependências, etc..." {...field} rows={3}/>
                                 </FormControl>
                                 <FormMessage />
                                 </FormItem>
