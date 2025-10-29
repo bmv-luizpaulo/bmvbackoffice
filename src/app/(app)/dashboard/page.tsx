@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react';
 import { KpiCard } from "@/components/dashboard/kpi-card";
-import { DollarSign, CheckCircle, Target, FolderKanban } from "lucide-react";
+import { CheckCircle, Target, FolderKanban, Banknote } from "lucide-react";
 import { PipelineChart } from "@/components/dashboard/pipeline-chart";
 import { ChatSummary } from "@/components/dashboard/chat-summary";
 import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
@@ -37,8 +37,6 @@ export default function DashboardPage() {
   const tasksQuery = useMemoFirebase(() => firestore ? collectionGroup(firestore, 'tasks') : null, [firestore]);
   const { data: tasksData, isLoading: isLoadingTasks } = useCollection<Task>(tasksQuery);
   
-  // FIX: Stages query was running without project context.
-  // It should only run when we have projects to look into.
   const stagesQuery = useMemoFirebase(() => firestore && projectsData && projectsData.length > 0 ? collectionGroup(firestore, 'stages') : null, [firestore, projectsData]);
   const { data: stagesData, isLoading: isLoadingStages } = useCollection<Stage>(stagesQuery);
 
@@ -139,7 +137,7 @@ export default function DashboardPage() {
                   title="Valor Total em Projetos" 
                   value={`R$ ${totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
                   description="Valor estimado de todos os projetos"
-                  icon={<DollarSign className="text-blue-500"/>}
+                  icon={<Banknote className="text-blue-500"/>}
                 />
               </>
             )}
