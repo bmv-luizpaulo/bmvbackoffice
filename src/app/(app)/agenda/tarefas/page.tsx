@@ -17,14 +17,14 @@ export default function TaskAgendaPage() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [selectedUserId, setSelectedUserId] = useState<string | 'all'>('all');
 
-  const userProfileQuery = useMemoFirebase(() => firestore && authUser ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser]);
+  const userProfileQuery = useMemoFirebase(() => firestore && authUser?.uid ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser]);
   const { data: userProfile } = useDoc<User>(userProfileQuery);
   
   const allUsersQuery = useMemoFirebase(() => firestore ? collection(firestore, 'users') : null, [firestore]);
   const { data: allUsers } = useCollection<User>(allUsersQuery);
 
   const tasksQuery = useMemoFirebase(() => {
-    if (!firestore || !userProfile) return null;
+    if (!firestore || !userProfile || !authUser?.uid) return null;
 
     const tasksCollection = collectionGroup(firestore, 'tasks');
     
@@ -35,7 +35,7 @@ export default function TaskAgendaPage() {
       return query(tasksCollection, where('assigneeId', '==', selectedUserId));
     }
     
-    return query(tasksCollection, where('assigneeId', '==', authUser?.uid));
+    return query(tasksCollection, where('assigneeId', '==', authUser.uid));
   }, [firestore, userProfile, selectedUserId, authUser]);
   const { data: tasksData, isLoading: isLoadingTasks } = useCollection<Task>(tasksQuery);
   

@@ -28,21 +28,21 @@ export function ChatLayout() {
 
   // 2. Fetch all chats the current user is a part of
   const chatsQuery = useMemoFirebase(() => {
-    if (!firestore || !currentUser) return null;
+    if (!firestore || !currentUser?.uid) return null;
     return query(collection(firestore, 'chats'), where('userIds', 'array-contains', currentUser.uid));
   }, [firestore, currentUser]);
   const { data: userChats, isLoading: isLoadingChats } = useCollection<Chat>(chatsQuery);
 
   // 3. Fetch messages for the currently selected chat
   const messagesQuery = useMemoFirebase(() => {
-    if (!firestore || !selectedChat) return null;
+    if (!firestore || !selectedChat?.id) return null;
     return query(collection(firestore, 'chats', selectedChat.id, 'messages'), orderBy('timestamp', 'asc'));
   }, [firestore, selectedChat]);
   const { data: messages, isLoading: isLoadingMessages } = useCollection<Message>(messagesQuery);
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newMessage.trim() || !selectedChat || !currentUser) return;
+    if (!newMessage.trim() || !selectedChat || !currentUser || !firestore) return;
 
     const messagesCollection = collection(firestore, 'chats', selectedChat.id, 'messages');
     
@@ -58,7 +58,7 @@ export function ChatLayout() {
   };
 
   const handleSelectUser = async (user: User) => {
-      if (!currentUser || !firestore) return;
+      if (!currentUser?.uid || !firestore) return;
       // Check if a chat already exists
       const existingChat = userChats?.find(c => c.userIds.includes(user.id));
       if (existingChat) {
@@ -89,13 +89,13 @@ export function ChatLayout() {
       };
       
       const newChatRef = await addDoc(chatsCollection, newChatData);
-      setSelectedChat({ id: newChatRef.id, ...newChatData });
+      setSelectedChat({ id: newChatRef.id, ...newChatData } as Chat);
   };
   
   const otherUser = useMemo(() => {
     if (!selectedChat || !currentUser) return null;
     const otherUserId = selectedChat.userIds.find(id => id !== currentUser.uid);
-    if (!otherUserId) return null;
+    if (!otherUserId || !selectedChat.users) return null;
     return selectedChat.users[otherUserId];
   }, [selectedChat, currentUser]);
 

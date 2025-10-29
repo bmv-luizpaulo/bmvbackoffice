@@ -52,7 +52,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
 
   const notificationsQuery = useMemoFirebase(
     () =>
-      firestore && user
+      firestore && user?.uid
         ? query(
             collection(firestore, `users/${user.uid}/notifications`),
             orderBy('createdAt', 'desc'),
@@ -62,7 +62,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
     [firestore, user]
   );
 
-  const { data: notifications = [], isLoading } =
+  const { data: notifications, isLoading } =
     useCollection<Notification>(notificationsQuery);
 
   useEffect(() => {
@@ -76,7 +76,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
 
   const markAsRead = useCallback(
     (notificationId: string) => {
-      if (!firestore || !user) return;
+      if (!firestore || !user?.uid) return;
       const notifRef = doc(
         firestore,
         `users/${user.uid}/notifications`,
@@ -88,7 +88,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
   );
 
   const markAllAsRead = useCallback(async () => {
-    if (!firestore || !user || unreadCount === 0) return;
+    if (!firestore || !user?.uid || unreadCount === 0 || !notifications) return;
 
     const unreadNotifications = notifications.filter((n) => !n.isRead);
     const batch = writeBatch(firestore);
@@ -133,7 +133,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
   return (
     <NotificationsContext.Provider
       value={{
-        notifications,
+        notifications: notifications || [],
         unreadCount,
         isLoading,
         markAsRead,
