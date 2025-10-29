@@ -8,6 +8,7 @@ import {
   MessageSquare,
   Settings,
   FolderKanban,
+  BookUser,
 } from 'lucide-react';
 import Image from 'next/image';
 
@@ -40,6 +41,7 @@ import { useAuth } from '@/firebase';
 const navItems = [
   { href: '/dashboard', icon: BarChart2, label: 'Painel' },
   { href: '/projects', icon: FolderKanban, label: 'Projetos' },
+  { href: '/agenda', icon: BookUser, label: 'Agenda' },
   { href: '/chat', icon: MessageSquare, label: 'Chat' },
   { href: '/teams', icon: Users, label: 'Equipes' },
 ];

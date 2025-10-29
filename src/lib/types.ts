@@ -20,9 +20,20 @@ export type User = {
 
 export type Contact = {
   id: string;
-  name:string;
-  role: string;
+  name: string;
   email: string;
+  phone?: string;
+  companyName?: string;
+  type: 'cliente' | 'fornecedor';
+  address?: {
+    street?: string;
+    number?: string;
+    complement?: string;
+    neighborhood?: string;
+    city?: string;
+    state?: string;
+    zipCode?: string;
+  };
 };
 
 export type Opportunity = {

@@ -212,6 +212,49 @@
         },
         "required": ["name"]
     },
+    "Contact": {
+      "title": "Contact",
+      "type": "object",
+      "description": "Represents a contact, which can be a client or a supplier.",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The contact's full name."
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "The contact's email address."
+        },
+        "phone": {
+          "type": "string",
+          "description": "The contact's phone number."
+        },
+        "companyName": {
+            "type": "string",
+            "description": "The name of the company the contact works for."
+        },
+        "type": {
+          "type": "string",
+          "description": "The type of contact.",
+          "enum": ["cliente", "fornecedor"]
+        },
+        "address": {
+          "type": "object",
+          "description": "The contact's full address.",
+          "properties": {
+            "street": { "type": "string" },
+            "number": { "type": "string" },
+            "complement": { "type": "string" },
+            "neighborhood": { "type": "string" },
+            "city": { "type": "string" },
+            "state": { "type": "string" },
+            "zipCode": { "type": "string" }
+          }
+        }
+      },
+      "required": ["name", "email", "type"]
+    },
     "ProjectFile": {
       "title": "ProjectFile",
       "type": "object",
@@ -288,6 +331,10 @@
     "/teams/{teamId}": {
       "schema": { "$ref": "#/entities/Team" },
       "description": "Represents a team (núcleo). Contains 'id', 'name', and 'description'."
+    },
+    "/contacts/{contactId}": {
+      "schema": { "$ref": "#/entities/Contact" },
+      "description": "Represents a contact, either a client or a supplier."
     },
     "/projects/{projectId}": {
       "schema": { "$ref": "#/entities/Project" },
