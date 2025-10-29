@@ -1,14 +1,3 @@
-import type { User } from '@/lib/types';
-import { PlaceHolderImages } from '@/lib/placeholder-images';
-
-export const users: User[] = [
-  { id: 'user-1', name: 'Alex Thompson', email: 'alex.t@bmv.com', avatarUrl: PlaceHolderImages.find(p => p.id === 'user1')?.imageUrl || '', role: 'Gestor' },
-  { id: 'user-2', name: 'Brenda Chen', email: 'brenda.c@bmv.com', avatarUrl: PlaceHolderImages.find(p => p.id === 'user2')?.imageUrl || '', role: 'Funcionário' },
-  { id: 'user-3', name: 'Carlos Diaz', email: 'carlos.d@bmv.com', avatarUrl: PlaceHolderImages.find(p => p.id === 'user3')?.imageUrl || '', role: 'Funcionário' },
-  { id: 'user-4', name: 'Diana Evans', email: 'diana.e@bmv.com', avatarUrl: PlaceHolderImages.find(p => p.id === 'user4')?.imageUrl || '', role: 'Funcionário' },
-  { id: 'user-5', name: 'Ethan Foster', email: 'ethan.f@bmv.com', avatarUrl: PlaceHolderImages.find(p => p.id === 'user5')?.imageUrl || '', role: 'Funcionário' },
-];
-
 
 export const chatLogForSummary = `
   Brenda Chen para Alex Thompson [10:05 AM]: Oi Alex, enviei a proposta para o Projeto Phoenix. Eles devem analisar até o final do dia de sexta-feira.

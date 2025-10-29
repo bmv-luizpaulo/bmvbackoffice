@@ -88,7 +88,7 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
                 name: firebaseUser.displayName || firebaseUser.email || "Novo Usuário",
                 email: firebaseUser.email,
                 avatarUrl: firebaseUser.photoURL || `https://picsum.photos/seed/${firebaseUser.uid}/200`,
-                role: 'Funcionário',
+                role: 'Gestor', // Make first user a manager
               };
               await setDoc(userRef, newUserProfile);
             }
