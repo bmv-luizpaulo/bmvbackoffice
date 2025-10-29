@@ -15,6 +15,7 @@ export type User = {
     zipCode?: string;
   };
   personalDocument?: string;
+  teamIds?: string[];
 };
 
 export type Contact = {
@@ -75,4 +76,10 @@ export type Task = {
     dependentTaskIds?: string[];
     assigneeId?: string;
     dueDate?: string;
+};
+
+export type Team = {
+    id: string;
+    name: string;
+    description?: string;
 };

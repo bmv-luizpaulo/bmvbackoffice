@@ -44,6 +44,13 @@
         "personalDocument": {
           "type": "string",
           "description": "The user's personal document number (e.g., CPF)."
+        },
+        "teamIds": {
+            "type": "array",
+            "description": "An array of team IDs the user belongs to.",
+            "items": {
+                "type": "string"
+            }
         }
       },
       "required": [
@@ -174,6 +181,22 @@
         "description",
         "order"
       ]
+    },
+    "Team": {
+        "title": "Team",
+        "type": "object",
+        "description": "Represents a team or 'núcleo' within the organization.",
+        "properties": {
+            "name": {
+                "type": "string",
+                "description": "Name of the team."
+            },
+            "description": {
+                "type": "string",
+                "description": "Description of the team's purpose or responsibilities."
+            }
+        },
+        "required": ["name"]
     }
   },
   "auth": {
@@ -186,6 +209,10 @@
     "/users/{userId}": {
       "schema": { "$ref": "#/entities/User" },
       "description": "Represents a user of the application. Contains profile information."
+    },
+    "/teams/{teamId}": {
+      "schema": { "$ref": "#/entities/Team" },
+      "description": "Represents a team (núcleo). Contains 'id', 'name', and 'description'."
     },
     "/projects/{projectId}": {
       "schema": { "$ref": "#/entities/Project" },

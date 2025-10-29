@@ -24,8 +24,13 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
-import type { User } from "@/lib/types";
+import type { User, Team } from "@/lib/types";
 import { Separator } from "../ui/separator";
+import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
+import { collection } from "firebase/firestore";
+import { MultiSelect } from "../ui/multi-select";
+import { Users } from "lucide-react";
+
 
 type UserFormDialogProps = {
   isOpen: boolean;
@@ -49,9 +54,14 @@ const formSchema = z.object({
     state: z.string().optional(),
     zipCode: z.string().optional(),
   }).optional(),
+  teamIds: z.array(z.string()).optional(),
 });
 
 export function UserFormDialog({ isOpen, onOpenChange, onSave, user }: UserFormDialogProps) {
+  const firestore = useFirestore();
+  const teamsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'teams') : null, [firestore]);
+  const { data: teamsData } = useCollection<Team>(teamsQuery);
+  
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -68,7 +78,8 @@ export function UserFormDialog({ isOpen, onOpenChange, onSave, user }: UserFormD
         city: '',
         state: '',
         zipCode: '',
-      }
+      },
+      teamIds: [],
     }
   });
 
@@ -81,6 +92,7 @@ export function UserFormDialog({ isOpen, onOpenChange, onSave, user }: UserFormD
         phone: user.phone || '',
         personalDocument: user.personalDocument || '',
         address: user.address || {},
+        teamIds: user.teamIds || [],
       });
     } else {
       form.reset({ 
@@ -97,7 +109,8 @@ export function UserFormDialog({ isOpen, onOpenChange, onSave, user }: UserFormD
           city: '',
           state: '',
           zipCode: '',
-        }
+        },
+        teamIds: [],
       });
     }
   }, [user, form, isOpen]);
@@ -107,17 +120,19 @@ export function UserFormDialog({ isOpen, onOpenChange, onSave, user }: UserFormD
     onSave(values);
     onOpenChange(false);
   }
+
+  const teamOptions = teamsData?.map(team => ({ value: team.id, label: team.name })) || [];
   
   return (
     <Dialog open={isOpen} onOpenChange={(open) => {
         onOpenChange(open);
     }}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-3xl">
         <DialogHeader>
           <DialogTitle>{user ? 'Editar Usuário' : 'Adicionar Novo Usuário'}</DialogTitle>
         </DialogHeader>
         <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 max-h-[80vh] overflow-y-auto p-1">
                 <div className="space-y-2">
                     <h3 className="text-lg font-medium">Informações Pessoais</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -279,27 +294,45 @@ export function UserFormDialog({ isOpen, onOpenChange, onSave, user }: UserFormD
                 
                 <div className="space-y-2">
                     <h3 className="text-lg font-medium">Informações do Sistema</h3>
-                    <FormField
-                        control={form.control}
-                        name="role"
-                        render={({ field }) => (
-                            <FormItem>
-                            <FormLabel>Função</FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value}>
-                                <FormControl>
-                                <SelectTrigger className="w-[250px]">
-                                    <SelectValue placeholder="Selecione uma função" />
-                                </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                    <SelectItem value="Gestor">Gestor</SelectItem>
-                                    <SelectItem value="Funcionário">Funcionário</SelectItem>
-                                </SelectContent>
-                            </Select>
-                            <FormMessage />
-                            </FormItem>
-                        )}
-                    />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <FormField
+                            control={form.control}
+                            name="role"
+                            render={({ field }) => (
+                                <FormItem>
+                                <FormLabel>Função</FormLabel>
+                                <Select onValueChange={field.onChange} value={field.value}>
+                                    <FormControl>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Selecione uma função" />
+                                    </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                        <SelectItem value="Gestor">Gestor</SelectItem>
+                                        <SelectItem value="Funcionário">Funcionário</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                         <FormField
+                            control={form.control}
+                            name="teamIds"
+                            render={({ field }) => (
+                                <FormItem>
+                                <FormLabel className="flex items-center gap-2"><Users className="h-4 w-4" />Núcleos</FormLabel>
+                                    <MultiSelect
+                                        options={teamOptions}
+                                        selected={field.value || []}
+                                        onChange={field.onChange}
+                                        placeholder="Selecione os núcleos..."
+                                    />
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                    </div>
                 </div>
 
                 <DialogFooter className="pt-4">

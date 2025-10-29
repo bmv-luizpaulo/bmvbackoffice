@@ -1,5 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { UserDataTable } from "@/components/teams/user-data-table";
+import { TeamDataTable } from "@/components/teams/team-data-table";
+import { Separator } from "@/components/ui/separator";
 
 export default function TeamsPage() {
   return (
@@ -19,6 +21,20 @@ export default function TeamsPage() {
         </CardHeader>
         <CardContent>
           <UserDataTable />
+        </CardContent>
+      </Card>
+      
+      <Separator />
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Gerenciamento de Núcleos</CardTitle>
+          <CardDescription>
+            Crie e gerencie os núcleos (equipes) da sua organização.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <TeamDataTable />
         </CardContent>
       </Card>
     </div>
