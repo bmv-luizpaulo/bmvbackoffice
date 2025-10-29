@@ -3,7 +3,7 @@
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { opportunities, STAGES } from '@/lib/data';
-import { ChartTooltipContent } from '@/components/ui/chart';
+import { ChartTooltipContent, ChartContainer, type ChartConfig } from '@/components/ui/chart';
 
 const chartData = STAGES.filter(stage => stage !== 'Ganha' && stage !== 'Perdida').map(stage => ({
     name: stage,
@@ -11,6 +11,13 @@ const chartData = STAGES.filter(stage => stage !== 'Ganha' && stage !== 'Perdida
         .filter(opp => opp.stage === stage)
         .reduce((sum, opp) => sum + opp.value, 0)
 }));
+
+const chartConfig = {
+    total: {
+        label: 'Total',
+        color: 'hsl(var(--primary))',
+    },
+} satisfies ChartConfig;
 
 export function PipelineChart() {
     return (
@@ -21,8 +28,8 @@ export function PipelineChart() {
             </CardHeader>
             <CardContent>
                 <div className="h-[300px] w-full">
-                    <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={chartData}>
+                    <ChartContainer config={chartConfig} className="min-h-[200px] w-full">
+                        <BarChart data={chartData} accessibilityLayer>
                             <CartesianGrid strokeDasharray="3 3" vertical={false} />
                             <XAxis
                                 dataKey="name"
@@ -44,9 +51,9 @@ export function PipelineChart() {
                                     formatter={(value) => `$${(value as number).toLocaleString()}`}
                                 />}
                             />
-                            <Bar dataKey="total" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                            <Bar dataKey="total" fill="var(--color-total)" radius={[4, 4, 0, 0]} />
                         </BarChart>
-                    </ResponsiveContainer>
+                    </ChartContainer>
                 </div>
             </CardContent>
         </Card>
