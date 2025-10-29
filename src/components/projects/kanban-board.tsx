@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { DndContext, type DragEndEvent } from '@dnd-kit/core';
+import { useState, useEffect, useMemo } from 'react';
+import { DndContext, type DragEndEvent, useSensor, useSensors, PointerSensor } from '@dnd-kit/core';
 import { useToast } from '@/hooks/use-toast';
 import { KanbanColumn } from './kanban-column';
 import type { Task, Stage, Project } from '@/lib/types';
@@ -141,6 +141,27 @@ export function KanbanBoard() {
     }
   };
   
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    })
+  );
+
+  const tasksWithDependencyStatus = useMemo(() => {
+    if (!tasksData) return [];
+    const taskMap = new Map(tasksData.map(task => [task.id, task]));
+    return tasksData.map(task => {
+        const dependencies = task.dependentTaskIds || [];
+        const isLocked = dependencies.some(depId => {
+            const dependentTask = taskMap.get(depId);
+            return dependentTask && !dependentTask.isCompleted;
+        });
+        return { ...task, isLocked };
+    });
+  }, [tasksData]);
+
   const sortedStages = stagesData?.sort((a,b) => a.order - b.order) || [];
 
   if (isLoadingProjects) {
@@ -169,7 +190,7 @@ export function KanbanBoard() {
 
   return (
     <>
-        <DndContext onDragEnd={handleDragEnd}>
+        <DndContext onDragEnd={handleDragEnd} sensors={sensors}>
             <div className='mb-4 flex justify-between items-center gap-4'>
                 <Popover open={isProjectSelectorOpen} onOpenChange={setIsProjectSelectorOpen}>
                     <PopoverTrigger asChild>
@@ -214,7 +235,7 @@ export function KanbanBoard() {
                     <KanbanColumn
                         key={stage.id}
                         stage={stage}
-                        tasks={tasksData?.filter(task => task.stageId === stage.id) || []}
+                        tasks={tasksWithDependencyStatus?.filter(task => task.stageId === stage.id) || []}
                         onUpdateTask={handleUpdateTask}
                         onDeleteTask={handleDeleteTask}
                     />
@@ -226,6 +247,7 @@ export function KanbanBoard() {
             isOpen={isAddTaskDialogOpen}
             onOpenChange={setIsAddTaskDialogOpen}
             stages={sortedStages}
+            tasks={tasksData || []}
             onAddTask={handleAddTask}
             projectId={selectedProject?.id || ''}
         />

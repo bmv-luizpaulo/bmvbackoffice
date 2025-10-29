@@ -7,7 +7,7 @@ import { KanbanCard } from './kanban-card';
 
 type KanbanColumnProps = {
   stage: Stage;
-  tasks: Task[];
+  tasks: (Task & { isLocked?: boolean })[];
   onUpdateTask: (taskId: string, updates: Partial<Task>) => void;
   onDeleteTask: (taskId: string) => void;
 };

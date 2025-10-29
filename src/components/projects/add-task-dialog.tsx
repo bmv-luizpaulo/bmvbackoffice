@@ -25,12 +25,14 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from "../ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import type { Stage, Task } from "@/lib/types";
+import { MultiSelect } from "../ui/multi-select";
 
 type AddTaskDialogProps = {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
   onAddTask: (task: Omit<Task, 'id' | 'isCompleted'>) => void;
   stages: Stage[];
+  tasks: Task[];
   projectId: string;
 };
 
@@ -38,20 +40,22 @@ const formSchema = z.object({
   name: z.string().min(1, "O nome da tarefa é obrigatório."),
   description: z.string().optional(),
   stageId: z.string({ required_error: "A etapa é obrigatória." }),
+  dependentTaskIds: z.array(z.string()).optional(),
 });
 
-export function AddTaskDialog({ isOpen, onOpenChange, onAddTask, stages, projectId }: AddTaskDialogProps) {
+export function AddTaskDialog({ isOpen, onOpenChange, onAddTask, stages, tasks, projectId }: AddTaskDialogProps) {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
       description: "",
+      dependentTaskIds: []
     },
   });
 
   // Reset form when dialog opens
   if (isOpen && !form.formState.isDirty) {
-    form.reset({ stageId: stages.length > 0 ? stages[0].id : '' });
+    form.reset({ stageId: stages.length > 0 ? stages[0].id : '', name: '', description: '', dependentTaskIds: [] });
   }
 
 
@@ -60,6 +64,8 @@ export function AddTaskDialog({ isOpen, onOpenChange, onAddTask, stages, project
     onOpenChange(false);
     form.reset();
   }
+  
+  const taskOptions = tasks.map(task => ({ value: task.id, label: task.name }));
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => {
@@ -119,6 +125,22 @@ export function AddTaskDialog({ isOpen, onOpenChange, onAddTask, stages, project
                             </SelectContent>
                         </Select>
                         <FormMessage />
+                        </FormItem>
+                    )}
+                />
+                 <FormField
+                    control={form.control}
+                    name="dependentTaskIds"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Depende de</FormLabel>
+                            <MultiSelect
+                                options={taskOptions}
+                                selected={field.value || []}
+                                onChange={field.onChange}
+                                placeholder="Selecione as tarefas..."
+                            />
+                            <FormMessage />
                         </FormItem>
                     )}
                 />
