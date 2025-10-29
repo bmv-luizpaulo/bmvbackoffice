@@ -57,20 +57,13 @@ const formSchema = z.object({
   teamIds: z.array(z.string()).optional(),
 });
 
-export function UserFormDialog({ isOpen, onOpenChange, onSave, user }: UserFormDialogProps) {
-  const firestore = useFirestore();
-  const teamsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'teams') : null, [firestore]);
-  const { data: teamsData } = useCollection<Team>(teamsQuery);
-  
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      name: '',
-      email: '',
-      role: 'Funcionário',
-      phone: '',
-      personalDocument: '',
-      address: {
+const defaultValues = {
+    name: '',
+    email: '',
+    role: 'Funcionário' as 'Gestor' | 'Funcionário',
+    phone: '',
+    personalDocument: '',
+    address: {
         street: '',
         number: '',
         complement: '',
@@ -78,44 +71,41 @@ export function UserFormDialog({ isOpen, onOpenChange, onSave, user }: UserFormD
         city: '',
         state: '',
         zipCode: '',
-      },
-      teamIds: [],
-    }
+    },
+    teamIds: [],
+};
+
+export function UserFormDialog({ isOpen, onOpenChange, onSave, user }: UserFormDialogProps) {
+  const firestore = useFirestore();
+  const teamsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'teams') : null, [firestore]);
+  const { data: teamsData } = useCollection<Team>(teamsQuery);
+  
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: user ? {
+        name: user.name,
+        email: user.email,
+        role: user.role || 'Funcionário',
+        phone: user.phone || '',
+        personalDocument: user.personalDocument || '',
+        address: user.address || {},
+        teamIds: user.teamIds || [],
+    } : defaultValues,
   });
 
   React.useEffect(() => {
     if (isOpen) {
-        if (user) {
-            form.reset({ 
-                name: user.name, 
-                email: user.email, 
-                role: user.role || 'Funcionário',
-                phone: user.phone || '',
-                personalDocument: user.personalDocument || '',
-                address: user.address || {},
-                teamIds: user.teamIds || [],
-            });
-            } else {
-            form.reset({ 
-                name: '', 
-                email: '', 
-                role: 'Funcionário',
-                phone: '',
-                personalDocument: '',
-                address: {
-                street: '',
-                number: '',
-                complement: '',
-                neighborhood: '',
-                city: '',
-                state: '',
-                zipCode: '',
-                },
-                teamIds: [],
-            });
-        }
+      form.reset(user ? {
+        name: user.name,
+        email: user.email,
+        role: user.role || 'Funcionário',
+        phone: user.phone || '',
+        personalDocument: user.personalDocument || '',
+        address: user.address || {},
+        teamIds: user.teamIds || [],
+      } : defaultValues);
     }
-  }, [user, isOpen, form.reset]);
+  }, [user, isOpen, form]);
 
 
   function onSubmit(values: z.infer<typeof formSchema>) {
@@ -126,9 +116,7 @@ export function UserFormDialog({ isOpen, onOpenChange, onSave, user }: UserFormD
   const teamOptions = teamsData?.map(team => ({ value: team.id, label: team.name })) || [];
   
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => {
-        onOpenChange(open);
-    }}>
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl">
         <DialogHeader>
           <DialogTitle>{user ? 'Editar Usuário' : 'Adicionar Novo Usuário'}</DialogTitle>
