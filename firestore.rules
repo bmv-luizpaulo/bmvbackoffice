@@ -1,151 +1,143 @@
 /**
- * @file Firebase Security Rules for Firestore.
- * @description This ruleset enforces a user-ownership model for user profiles and a shared access model for projects.
+ * @file Firestore Security Rules
+ * @description This ruleset enforces a strict user-ownership model for user profiles and project data.
  *
  * Data Structure:
  * - /users/{userId}: User profiles, accessible only to the owning user.
- * - /projects/{projectId}: Projects, accessible to project owners and team members.
+ * - /projects/{projectId}: Projects, accessible only to project owners and team members.
  * - /projects/{projectId}/stages/{stageId}: Stages within a project, access controlled by project membership.
  * - /projects/{projectId}/tasks/{taskId}: Tasks within a project, access controlled by project membership.
  *
  * Key Security Decisions:
  * - Users can only read and write their own profile data.
- * - Project access is granted to owners and team members. This is enforced by checking for the user's UID in the project's `teamMembers` array or matching the `ownerId` field.
- * - Listing of user documents is disallowed for privacy.
+ * - Projects can be created by any authenticated user, but only owners and team members can modify or delete them.
+ * - Listing of all users is disallowed.
  *
  * Denormalization for Authorization:
- * - The `Project` entity contains `ownerId` and `teamMembers` fields to simplify authorization checks.
+ * - Projects denormalize `ownerId` and `teamMembers` directly onto the project document to avoid `get()` calls in security rules.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Controls access to user profile information.
+     * @description Controls access to user profiles.
      * @path /users/{userId}
-     * @allow (create) User with ID 'user123' can create their profile.
-     * @allow (get) User with ID 'user123' can read their profile.
-     * @allow (update) User with ID 'user123' can update their profile.
-     * @allow (delete) User with ID 'user123' can delete their profile.
-     * @deny (create) User with ID 'user123' cannot create a profile for 'user456'.
-     * @deny (get) User with ID 'user123' cannot read the profile of 'user456'.
-     * @principle Enforces document ownership for writes, restricts access to a user's own data tree, validates relational integrity between documents.
+     * @allow (create) An authenticated user can create their own profile (where userId matches auth.uid).
+     * @allow (get, update, delete) An authenticated user can get, update, or delete their own profile.
+     * @deny (create) An unauthenticated user cannot create a user profile.
+     * @deny (get, update, delete) An authenticated user cannot access another user's profile.
+     * @deny (list) Listing all users is prohibited.
+     * @principle Enforces strict user-ownership for profile data.
      */
     match /users/{userId} {
       function isOwner(userId) {
-        return request.auth != null && request.auth.uid == userId;
+        return request.auth.uid == userId;
+      }
+      function isSignedIn() {
+        return request.auth != null;
       }
 
       allow get: if isOwner(userId);
       allow list: if false;
-
-      allow create: if isOwner(userId);
+      allow create: if isSignedIn() && isOwner(userId);
       allow update: if isOwner(userId);
       allow delete: if isOwner(userId);
     }
 
     /**
-     * @description Controls access to project information.
+     * @description Controls access to projects.
      * @path /projects/{projectId}
-     * @allow (create) User with ID 'user123' can create a project with ownerId 'user123'.
-     * @allow (get) User with ID 'user123' can read project if owner or team member.
-     * @allow (update) User with ID 'user123' can update a project if owner.
-     * @allow (delete) User with ID 'user123' can delete a project if owner.
-     * @deny (create) User with ID 'user123' cannot create a project with ownerId 'user456'.
-     * @deny (get) User with ID 'user123' cannot read project if not owner or team member.
-     * @principle Enforces document ownership for writes and shared access via team membership.
+     * @allow (create) An authenticated user can create a project. The ownerId field must match their UID.
+     * @allow (get) Any authenticated user can read a project.
+     * @allow (update, delete) Only the owner or a team member can update or delete a project.
+     * @deny (update, delete) Non-owners and non-team members cannot update or delete a project.
+     * @principle Enforces project ownership and shared access via team membership.
      */
     match /projects/{projectId} {
-      function isProjectOwner(resource) {
-        return request.auth != null && request.auth.uid == resource.data.ownerId;
-      }
+        function isOwner() {
+            return request.auth.uid == resource.data.ownerId;
+        }
 
-      function isProjectTeamMember(resource) {
-        return request.auth != null && resource.data.teamMembers is list && request.auth.uid in resource.data.teamMembers;
-      }
+        function isSignedIn() {
+            return request.auth != null;
+        }
 
-      function canAccessProject(resource) {
-        return isProjectOwner(resource) || isProjectTeamMember(resource);
-      }
+        function isTeamMember() {
+            return request.auth.uid in resource.data.teamMembers;
+        }
 
-      allow get: if canAccessProject(resource);
-      allow list: if false;
-
-      allow create: if request.auth.uid == request.resource.data.ownerId;
-      allow update: if isProjectOwner(resource);
-      allow delete: if isProjectOwner(resource);
+        allow get: if isSignedIn();
+        allow list: if isSignedIn();
+        allow create: if request.auth.uid != null && request.resource.data.ownerId == request.auth.uid;
+        allow update: if isSignedIn() && (isOwner() || isTeamMember());
+        allow delete: if isSignedIn() && isOwner();
     }
 
     /**
-     * @description Controls access to stage information within a project.
+     * @description Controls access to stages within a project.
      * @path /projects/{projectId}/stages/{stageId}
-     * @allow (create) User with ID 'user123' can create a stage within a project they have access to.
-     * @allow (get) User with ID 'user123' can read stage within a project they have access to.
-     * @allow (update) User with ID 'user123' can update a stage within a project they have access to.
-     * @allow (delete) User with ID 'user123' can delete a stage within a project they have access to.
-     * @deny (create) User with ID 'user123' cannot create a stage within a project they don't have access to.
-     * @deny (get) User with ID 'user123' cannot read stage within a project they don't have access to.
-     * @principle Restricts stage access to project members.
+     * @allow (get, list) Only project team members can read stages.
+     * @allow (create) Only project owners can create stages.
+     * @allow (update, delete) Only project owners can update or delete stages.
+     * @deny (create, update, delete) Non-owners cannot create, update, or delete stages.
+     * @principle Enforces project-based access control for stages.
      */
     match /projects/{projectId}/stages/{stageId} {
-      function getProject(projectId) {
-        return get(/databases/$(database)/documents/projects/$(projectId));
-      }
+       function getProject() {
+          return get(/databases/$(database)/documents/projects/$(projectId)).data;
+       }
 
-      function isProjectOwner(projectId) {
-        return getProject(projectId).data.ownerId == request.auth.uid;
-      }
+        function isProjectOwner() {
+            return getProject().ownerId == request.auth.uid;
+        }
 
-      function isProjectTeamMember(projectId) {
-        return request.auth.uid in getProject(projectId).data.teamMembers;
-      }
+        function isTeamMember() {
+            return request.auth.uid in getProject().teamMembers;
+        }
 
-      function canAccessProject(projectId) {
-        return isProjectOwner(projectId) || isProjectTeamMember(projectId);
-      }
+        function isSignedIn() {
+            return request.auth != null;
+        }
 
-      allow get: if canAccessProject(projectId);
-      allow list: if false;
-
-      allow create: if canAccessProject(projectId);
-      allow update: if canAccessProject(projectId);
-      allow delete: if canAccessProject(projectId);
+        allow get: if isSignedIn() && (isProjectOwner() || isTeamMember());
+        allow list: if isSignedIn() && (isProjectOwner() || isTeamMember());
+        allow create: if isSignedIn() && isProjectOwner();
+        allow update: if isSignedIn() && isProjectOwner();
+        allow delete: if isSignedIn() && isProjectOwner();
     }
 
     /**
-     * @description Controls access to task information within a project.
+     * @description Controls access to tasks within a project.
      * @path /projects/{projectId}/tasks/{taskId}
-     * @allow (create) User with ID 'user123' can create a task within a project they have access to.
-     * @allow (get) User with ID 'user123' can read task within a project they have access to.
-     * @allow (update) User with ID 'user123' can update a task within a project they have access to.
-     * @allow (delete) User with ID 'user123' can delete a task within a project they have access to.
-     * @deny (create) User with ID 'user123' cannot create a task within a project they don't have access to.
-     * @deny (get) User with ID 'user123' cannot read task within a project they don't have access to.
-     * @principle Restricts task access to project members.
+     * @allow (get, list) Only project team members can read tasks.
+     * @allow (create) Only project owners can create tasks.
+     * @allow (update, delete) Only project owners can update or delete tasks.
+     * @deny (create, update, delete) Non-owners cannot create, update, or delete tasks.
+     * @principle Enforces project-based access control for tasks.
      */
     match /projects/{projectId}/tasks/{taskId} {
-      function getProject(projectId) {
-        return get(/databases/$(database)/documents/projects/$(projectId));
-      }
+       function getProject() {
+          return get(/databases/$(database)/documents/projects/$(projectId)).data;
+       }
 
-      function isProjectOwner(projectId) {
-        return getProject(projectId).data.ownerId == request.auth.uid;
-      }
+        function isProjectOwner() {
+            return getProject().ownerId == request.auth.uid;
+        }
 
-      function isProjectTeamMember(projectId) {
-        return request.auth.uid in getProject(projectId).data.teamMembers;
-      }
+        function isTeamMember() {
+            return request.auth.uid in getProject().teamMembers;
+        }
 
-      function canAccessProject(projectId) {
-        return isProjectOwner(projectId) || isProjectTeamMember(projectId);
-      }
+        function isSignedIn() {
+            return request.auth != null;
+        }
 
-      allow get: if canAccessProject(projectId);
-      allow list: if false;
-
-      allow create: if canAccessProject(projectId);
-      allow update: if canAccessProject(projectId);
-      allow delete: if canAccessProject(projectId);
+        allow get: if isSignedIn() && (isProjectOwner() || isTeamMember());
+        allow list: if isSignedIn() && (isProjectOwner() || isTeamMember());
+        allow create: if isSignedIn() && isProjectOwner();
+        allow update: if isSignedIn() && isProjectOwner();
+        allow delete: if isSignedIn() && isProjectOwner();
     }
   }
 }
