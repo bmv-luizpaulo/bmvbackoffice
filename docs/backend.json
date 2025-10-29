@@ -225,6 +225,53 @@
         "uploaderId": { "type": "string", "description": "The ID of the user who uploaded the file." }
       },
       "required": ["name", "url", "size", "type", "uploadedAt", "uploaderId"]
+    },
+     "Chat": {
+      "title": "Chat",
+      "type": "object",
+      "description": "Represents a chat conversation between two or more users.",
+      "properties": {
+        "userIds": {
+          "type": "array",
+          "description": "An array of user IDs participating in the chat.",
+          "items": { "type": "string" }
+        },
+        "lastMessage": {
+          "type": "object",
+          "description": "The last message sent in the chat for preview purposes.",
+          "properties": {
+            "text": { "type": "string" },
+            "timestamp": { "type": "string", "format": "date-time" },
+            "senderId": { "type": "string" }
+          }
+        },
+         "users": {
+          "type": "object",
+          "description": "Denormalized user data for quick display.",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "avatarUrl": { "type": "string", "format": "uri" },
+              "email": { "type": "string", "format": "email" }
+            }
+          }
+        }
+      },
+      "required": ["userIds"]
+    },
+    "Message": {
+      "title": "Message",
+      "type": "object",
+      "description": "Represents a single message within a chat.",
+      "properties": {
+        "chatId": { "type": "string", "description": "The ID of the chat this message belongs to." },
+        "senderId": { "type": "string", "description": "The ID of the user who sent the message." },
+        "text": { "type": "string", "description": "The content of the message." },
+        "timestamp": { "type": "string", "format": "date-time", "description": "The time the message was sent." },
+        "read": { "type": "boolean", "description": "Whether the message has been read by the recipient(s)." }
+      },
+      "required": ["chatId", "senderId", "text", "timestamp"]
     }
   },
   "auth": {
@@ -254,9 +301,17 @@
       "schema": { "$ref": "#/entities/Task" },
       "description": "Represents a task within a stage. Contains 'id', 'name', 'description', 'projectId', 'stageId', 'isCompleted', 'assigneeId', 'dueDate', and 'dependentTaskIds'."
     },
-     "/projects/{projectId}/files/{fileId}": {
+    "/projects/{projectId}/files/{fileId}": {
       "schema": { "$ref": "#/entities/ProjectFile" },
       "description": "Represents a file associated with a specific project."
+    },
+    "/chats/{chatId}": {
+      "schema": { "$ref": "#/entities/Chat" },
+      "description": "Represents a chat conversation metadata."
+    },
+    "/chats/{chatId}/messages/{messageId}": {
+      "schema": { "$ref": "#/entities/Message" },
+      "description": "Contains all messages for a given chat."
     }
   }
 }

@@ -36,10 +36,21 @@ export type Opportunity = {
   history: { stage: string; date: string }[];
 };
 
+export type Chat = {
+  id: string;
+  userIds: string[];
+  lastMessage: {
+    text: string;
+    timestamp: string;
+    senderId: string;
+  } | null;
+  users: { [key: string]: Pick<User, 'name' | 'avatarUrl' | 'email'> };
+}
+
 export type Message = {
   id: string;
-  sender: User;
-  recipient: User;
+  chatId: string;
+  senderId: string;
   text: string;
   timestamp: string;
   read: boolean;
