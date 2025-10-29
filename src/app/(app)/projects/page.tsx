@@ -8,7 +8,7 @@ export default function ProjectsPage() {
         <p className="text-muted-foreground">Gerencie seus projetos e tarefas do início ao fim.</p>
       </header>
       <div className="flex-1 overflow-x-auto">
-        <p>Em breve: Um painel Kanban para visualizar seus projetos e seu progresso através das etapas.</p>
+        <KanbanBoard />
       </div>
     </div>
   );
