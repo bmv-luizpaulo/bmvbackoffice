@@ -4,6 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { format } from "date-fns";
+import { ptBR } from 'date-fns/locale';
 import { CalendarIcon, User, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -140,7 +141,7 @@ export function AddProjectDialog({ isOpen, onOpenChange, onAddProject }: AddProj
                                             )}
                                             >
                                             {field.value ? (
-                                                format(field.value, "PPP", { locale: require('date-fns/locale/pt-BR') })
+                                                format(field.value, "PPP", { locale: ptBR })
                                             ) : (
                                                 <span>Escolha uma data</span>
                                             )}
@@ -153,6 +154,7 @@ export function AddProjectDialog({ isOpen, onOpenChange, onAddProject }: AddProj
                                             mode="single"
                                             selected={field.value}
                                             onSelect={field.onChange}
+                                            locale={ptBR}
                                             initialFocus
                                         />
                                         </PopoverContent>
@@ -178,7 +180,7 @@ export function AddProjectDialog({ isOpen, onOpenChange, onAddProject }: AddProj
                                             )}
                                             >
                                             {field.value ? (
-                                                format(field.value, "PPP", { locale: require('date-fns/locale/pt-BR') })
+                                                format(field.value, "PPP", { locale: ptBR })
                                             ) : (
                                                 <span>Escolha uma data</span>
                                             )}
@@ -191,6 +193,7 @@ export function AddProjectDialog({ isOpen, onOpenChange, onAddProject }: AddProj
                                             mode="single"
                                             selected={field.value}
                                             onSelect={field.onChange}
+                                            locale={ptBR}
                                             initialFocus
                                         />
                                         </PopoverContent>

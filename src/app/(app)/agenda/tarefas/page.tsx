@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { TaskAgendaItem } from '@/components/agenda/task-agenda-item';
 import { isSameDay } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 export default function TaskAgendaPage() {
   const firestore = useFirestore();
@@ -91,6 +92,7 @@ export default function TaskAgendaPage() {
                     mode="single"
                     selected={selectedDate}
                     onSelect={setSelectedDate}
+                    locale={ptBR}
                     className="p-0"
                     classNames={{
                         root: "w-full",

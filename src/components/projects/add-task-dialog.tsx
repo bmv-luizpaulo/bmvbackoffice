@@ -4,6 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { format } from "date-fns";
+import { ptBR } from 'date-fns/locale';
 import { CalendarIcon, User, RefreshCcw } from "lucide-react";
 import React from 'react';
 
@@ -255,7 +256,7 @@ export function AddTaskDialog({ isOpen, onOpenChange, onSaveTask, stages, tasks,
                                     )}
                                     >
                                     {field.value ? (
-                                        format(field.value, "PPP")
+                                        format(field.value, "PPP", { locale: ptBR })
                                     ) : (
                                         <span>Escolha uma data</span>
                                     )}
@@ -268,6 +269,7 @@ export function AddTaskDialog({ isOpen, onOpenChange, onSaveTask, stages, tasks,
                                     mode="single"
                                     selected={field.value}
                                     onSelect={field.onChange}
+                                    locale={ptBR}
                                     initialFocus
                                 />
                                 </PopoverContent>
@@ -337,7 +339,7 @@ export function AddTaskDialog({ isOpen, onOpenChange, onSaveTask, stages, tasks,
                                             )}
                                             >
                                             {field.value ? (
-                                                format(field.value, "PPP")
+                                                format(field.value, "PPP", { locale: ptBR })
                                             ) : (
                                                 <span>Escolha uma data</span>
                                             )}
@@ -350,6 +352,7 @@ export function AddTaskDialog({ isOpen, onOpenChange, onSaveTask, stages, tasks,
                                             mode="single"
                                             selected={field.value}
                                             onSelect={field.onChange}
+                                            locale={ptBR}
                                             initialFocus
                                         />
                                         </PopoverContent>
