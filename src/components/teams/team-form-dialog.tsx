@@ -1,4 +1,3 @@
-// This is a new file: src/components/teams/team-form-dialog.tsx
 'use client';
 
 import * as React from "react";
@@ -40,30 +39,25 @@ const formSchema = z.object({
   description: z.string().optional(),
 });
 
+const defaultValues = {
+  name: '',
+  description: '',
+};
+
 export function TeamFormDialog({ isOpen, onOpenChange, onSave, team }: TeamFormDialogProps) {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
-    defaultValues: {
-      name: '',
-      description: '',
-    }
+    defaultValues,
   });
 
   React.useEffect(() => {
     if (isOpen) {
-      if (team) {
-        form.reset({ 
-          name: team.name, 
-          description: team.description || '', 
-        });
-      } else {
-        form.reset({ 
-          name: '', 
-          description: '', 
-        });
-      }
+      form.reset(team ? {
+        name: team.name, 
+        description: team.description || '', 
+      } : defaultValues);
     }
-  }, [team, form, isOpen]);
+  }, [team, isOpen, form]);
 
 
   function onSubmit(values: z.infer<typeof formSchema>) {
