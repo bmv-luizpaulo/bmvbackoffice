@@ -127,6 +127,10 @@ export function UserDataTable() {
       accessorKey: "email",
       header: "Email",
     },
+     {
+      accessorKey: "phone",
+      header: "Telefone",
+    },
     {
       accessorKey: "role",
       header: "Função",

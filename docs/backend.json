@@ -23,6 +23,27 @@
           "type": "string",
           "description": "The user's role in the system.",
           "enum": ["Gestor", "Funcionário"]
+        },
+        "phone": {
+          "type": "string",
+          "description": "The user's phone number (WhatsApp)."
+        },
+        "address": {
+          "type": "object",
+          "description": "The user's full address.",
+          "properties": {
+            "street": { "type": "string" },
+            "number": { "type": "string" },
+            "complement": { "type": "string" },
+            "neighborhood": { "type": "string" },
+            "city": { "type": "string" },
+            "state": { "type": "string" },
+            "zipCode": { "type": "string" }
+          }
+        },
+        "personalDocument": {
+          "type": "string",
+          "description": "The user's personal document number (e.g., CPF)."
         }
       },
       "required": [

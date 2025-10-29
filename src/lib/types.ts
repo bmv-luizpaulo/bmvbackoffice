@@ -4,6 +4,17 @@ export type User = {
   email: string;
   avatarUrl: string;
   role?: 'Gestor' | 'Funcionário';
+  phone?: string;
+  address?: {
+    street?: string;
+    number?: string;
+    complement?: string;
+    neighborhood?: string;
+    city?: string;
+    state?: string;
+    zipCode?: string;
+  };
+  personalDocument?: string;
 };
 
 export type Contact = {
