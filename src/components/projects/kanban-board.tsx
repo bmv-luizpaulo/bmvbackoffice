@@ -12,8 +12,8 @@ import { AddProjectDialog } from './add-project-dialog';
 import { ProjectFilesDialog } from './project-files-dialog';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '../ui/command';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, doc, writeBatch, addDoc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { useCollection, useDoc, useFirestore, useMemoFirebase, useUser as useAuthUser } from '@/firebase';
+import { collection, doc, writeBatch, addDoc, updateDoc, deleteDoc, query, where } from 'firebase/firestore';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { errorEmitter } from '@/firebase/error-emitter';
 
@@ -52,6 +52,10 @@ const deleteDocumentNonBlocking = (ref: any) => {
 
 export function KanbanBoard() {
   const firestore = useFirestore();
+  const { user: authUser } = useAuthUser();
+
+  const userProfileQuery = useMemoFirebase(() => firestore && authUser ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser]);
+  const { data: userProfile, isLoading: isLoadingUserProfile } = useDoc<User>(userProfileQuery);
 
   const projectsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'projects') : null, [firestore]);
   const { data: projectsData, isLoading: isLoadingProjects } = useCollection<Project>(projectsQuery);
@@ -62,7 +66,17 @@ export function KanbanBoard() {
   const stagesQuery = useMemoFirebase(() => firestore && selectedProject ? collection(firestore, 'projects', selectedProject.id, 'stages') : null, [firestore, selectedProject]);
   const { data: stagesData, isLoading: isLoadingStages } = useCollection<Stage>(stagesQuery);
 
-  const tasksQuery = useMemoFirebase(() => firestore && selectedProject ? collection(firestore, 'projects', selectedProject.id, 'tasks') : null, [firestore, selectedProject]);
+  const tasksQuery = useMemoFirebase(() => {
+    if (!firestore || !selectedProject || !userProfile) return null;
+    
+    const tasksCollection = collection(firestore, 'projects', selectedProject.id, 'tasks');
+    
+    if (userProfile.role === 'Gestor') {
+      return tasksCollection;
+    } else {
+      return query(tasksCollection, where('assigneeId', '==', authUser?.uid));
+    }
+  }, [firestore, selectedProject, userProfile, authUser]);
   const { data: tasksData, isLoading: isLoadingTasks } = useCollection<Task>(tasksQuery);
   
   const usersQuery = useMemoFirebase(() => firestore ? collection(firestore, 'users') : null, [firestore]);
@@ -227,8 +241,8 @@ export function KanbanBoard() {
 
   const sortedStages = stagesData?.sort((a,b) => a.order - b.order) || [];
 
-  if (isLoadingProjects) {
-    return <div className="flex justify-center items-center h-full">Carregando projetos...</div>;
+  if (isLoadingProjects || isLoadingUserProfile) {
+    return <div className="flex justify-center items-center h-full">Carregando...</div>;
   }
   
   if (projects.length === 0) {
