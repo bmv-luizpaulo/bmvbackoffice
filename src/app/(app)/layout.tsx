@@ -65,7 +65,7 @@ function UserAvatar() {
     );
 }
 
-export default function AppLayout({ children }: { children: React.ReactNode }) {
+function InnerLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const auth = useAuth();
   
@@ -79,7 +79,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <FirebaseClientProvider>
       <SidebarProvider>
         <Sidebar>
           <SidebarHeader>
@@ -145,6 +144,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </main>
         </SidebarInset>
       </SidebarProvider>
+  );
+}
+
+export default function AppLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <FirebaseClientProvider>
+      <InnerLayout>{children}</InnerLayout>
     </FirebaseClientProvider>
   );
 }
