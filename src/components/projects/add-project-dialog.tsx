@@ -29,9 +29,10 @@ import { Textarea } from "../ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { Calendar } from "../ui/calendar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
-import { users } from "@/lib/data";
-import type { Project } from "@/lib/types";
+import type { Project, User as UserType } from "@/lib/types";
 import { MultiSelect } from "../ui/multi-select";
+import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
+import { collection } from "firebase/firestore";
 
 type AddProjectDialogProps = {
   isOpen: boolean;
@@ -54,6 +55,10 @@ const formSchema = z.object({
 });
 
 export function AddProjectDialog({ isOpen, onOpenChange, onAddProject }: AddProjectDialogProps) {
+  const firestore = useFirestore();
+  const usersQuery = useMemoFirebase(() => firestore ? collection(firestore, 'users') : null, [firestore]);
+  const { data: usersData } = useCollection<UserType>(usersQuery);
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -79,7 +84,7 @@ export function AddProjectDialog({ isOpen, onOpenChange, onAddProject }: AddProj
     form.reset();
   }
 
-  const userOptions = users.map(user => ({ value: user.id, label: user.name }));
+  const userOptions = usersData?.map(user => ({ value: user.id, label: user.name })) || [];
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -211,8 +216,8 @@ export function AddProjectDialog({ isOpen, onOpenChange, onAddProject }: AddProj
                                     </SelectTrigger>
                                     </FormControl>
                                     <SelectContent>
-                                    {users.map(user => (
-                                        <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>
+                                    {userOptions.map(user => (
+                                        <SelectItem key={user.value} value={user.value}>{user.label}</SelectItem>
                                     ))}
                                     </SelectContent>
                                 </Select>

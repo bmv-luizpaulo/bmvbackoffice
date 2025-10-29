@@ -1,15 +1,10 @@
 {
   "entities": {
     "User": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "User",
       "type": "object",
       "description": "Represents a user in the system.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the user."
-        },
         "name": {
           "type": "string",
           "description": "The user's full name."
@@ -31,21 +26,15 @@
         }
       },
       "required": [
-        "id",
         "name",
         "email"
       ]
     },
     "Project": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Project",
       "type": "object",
       "description": "Represents a project within the task and project funnel.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the project."
-        },
         "name": {
           "type": "string",
           "description": "Name of the project."
@@ -85,7 +74,6 @@
         }
       },
       "required": [
-        "id",
         "name",
         "description",
         "startDate",
@@ -93,15 +81,10 @@
       ]
     },
     "Task": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Task",
       "type": "object",
       "description": "Represents a task within a project.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the task."
-        },
         "name": {
           "type": "string",
           "description": "Name of the task."
@@ -140,7 +123,6 @@
         }
       },
       "required": [
-        "id",
         "name",
         "description",
         "projectId",
@@ -149,15 +131,10 @@
       ]
     },
     "Stage": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Stage",
       "type": "object",
       "description": "Represents a stage in the project funnel. Stages contain tasks.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the stage."
-        },
         "name": {
           "type": "string",
           "description": "Name of the stage."
@@ -172,7 +149,6 @@
         }
       },
       "required": [
-        "id",
         "name",
         "description",
         "order"
@@ -186,80 +162,21 @@
     ]
   },
   "firestore": {
-    "structure": [
-      {
-        "path": "/users/{userId}",
-        "definition": {
-          "entityName": "User",
-          "schema": {
-            "$ref": "#/backend/entities/User"
-          },
-          "description": "Represents a user of the application. Contains profile information.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier for the user, typically the Firebase Auth UID."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/projects/{projectId}",
-        "definition": {
-          "entityName": "Project",
-          "schema": {
-            "$ref": "#/backend/entities/Project"
-          },
-          "description": "Represents a project. Includes the 'id', 'name', 'description', 'startDate', 'endDate', 'ownerId', 'teamMembers', 'contactPhone', 'technicalDetails'.",
-          "params": [
-            {
-              "name": "projectId",
-              "description": "The unique identifier for the project."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/projects/{projectId}/stages/{stageId}",
-        "definition": {
-          "entityName": "Stage",
-          "schema": {
-            "$ref": "#/backend/entities/Stage"
-          },
-          "description": "Represents a stage within a project. Contains 'id', 'name', 'description', and 'order'.",
-          "params": [
-            {
-              "name": "projectId",
-              "description": "The unique identifier for the project."
-            },
-            {
-              "name": "stageId",
-              "description": "The unique identifier for the stage."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/projects/{projectId}/tasks/{taskId}",
-        "definition": {
-          "entityName": "Task",
-          "schema": {
-            "$ref": "#/backend/entities/Task"
-          },
-          "description": "Represents a task within a stage. Contains 'id', 'name', 'description', 'projectId', 'stageId', 'isCompleted', 'assigneeId', 'dueDate', and 'dependentTaskIds'.",
-          "params": [
-            {
-              "name": "projectId",
-              "description": "The unique identifier for the project."
-            },
-            {
-              "name": "taskId",
-              "description": "The unique identifier for the task."
-            }
-          ]
-        }
-      }
-    ],
-    "reasoning": "This design prioritizes authorization independence and QAPs. Projects, Stages, and Tasks are organized in a hierarchy, enabling straightforward ownership-based security rules. Authorization Independence is achieved by avoiding `get()` calls in security rules. The structure supports CRUD operations and enables atomic operations (transactions/batches) for related data.\n\n*   **Users**: A top-level `/users` collection stores public user data, allowing profiles to be fetched easily.\n*   **Projects**: Located at the root collection `/projects/{projectId}`. This allows listing all projects, filtering based on project properties, and securing individual projects.\n*   **Stages:** Stages related to each Project are stored in a subcollection `/projects/{projectId}/stages/{stageId}`.  This enables listing stages related to a project, filtering based on stage properties, and securing individual stages.\n*   **Tasks:** Tasks for each stage are stored in a subcollection `/projects/{projectId}/tasks/{taskId}`. This enables listing tasks related to a stage, filtering based on task properties, and securing individual tasks.\n\nThis structure facilitates conditional stage advancement as it provides easy access to tasks within each stage. Security rules can easily verify task completion status within a stage before allowing a project to advance."
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/User" },
+      "description": "Represents a user of the application. Contains profile information."
+    },
+    "/projects/{projectId}": {
+      "schema": { "$ref": "#/entities/Project" },
+      "description": "Represents a project. Includes the 'id', 'name', 'description', 'startDate', 'endDate', 'ownerId', 'teamMembers', 'contactPhone', 'technicalDetails'."
+    },
+    "/projects/{projectId}/stages/{stageId}": {
+      "schema": { "$ref": "#/entities/Stage" },
+      "description": "Represents a stage within a project. Contains 'id', 'name', 'description', and 'order'."
+    },
+    "/projects/{projectId}/tasks/{taskId}": {
+      "schema": { "$ref": "#/entities/Task" },
+      "description": "Represents a task within a stage. Contains 'id', 'name', 'description', 'projectId', 'stageId', 'isCompleted', 'assigneeId', 'dueDate', and 'dependentTaskIds'."
+    }
   }
 }

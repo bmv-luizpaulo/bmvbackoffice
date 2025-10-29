@@ -5,11 +5,9 @@ import { usePathname } from 'next/navigation';
 import {
   BarChart2,
   Users,
-  LayoutGrid,
   MessageSquare,
   PanelLeft,
   Settings,
-  User,
   FolderKanban,
 } from 'lucide-react';
 import Image from 'next/image';
@@ -36,8 +34,9 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { FirebaseClientProvider } from '@/firebase';
+import { FirebaseClientProvider, useUser } from '@/firebase';
+import { signOut } from 'firebase/auth';
+import { useAuth } from '@/firebase';
 
 const navItems = [
   { href: '/dashboard', icon: BarChart2, label: 'Painel' },
@@ -46,9 +45,38 @@ const navItems = [
   { href: '/teams', icon: Users, label: 'Equipes' },
 ];
 
+function UserAvatar() {
+    const { user } = useUser();
+
+    const getInitials = (name?: string | null) => {
+        if (!name) return 'U';
+        const names = name.split(' ');
+        if (names.length > 1) {
+            return `${names[0][0]}${names[names.length - 1][0]}`.toUpperCase();
+        }
+        return name.substring(0, 2).toUpperCase();
+    }
+
+    return (
+        <Avatar className="h-9 w-9">
+            <AvatarImage src={user?.photoURL || undefined} alt="User Avatar" />
+            <AvatarFallback>{getInitials(user?.displayName)}</AvatarFallback>
+        </Avatar>
+    );
+}
+
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const userAvatar = PlaceHolderImages.find(p => p.id === 'user1');
+  const auth = useAuth();
+  
+  const handleSignOut = async () => {
+    try {
+      await signOut(auth);
+      // O onAuthStateChanged no provider cuidará do redirecionamento
+    } catch (error) {
+      console.error("Erro ao fazer logout:", error);
+    }
+  }
 
   return (
     <FirebaseClientProvider>
@@ -99,10 +127,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-                  <Avatar className="h-9 w-9">
-                    <AvatarImage src={userAvatar?.imageUrl} alt="User Avatar" data-ai-hint={userAvatar?.imageHint} />
-                    <AvatarFallback>AT</AvatarFallback>
-                  </Avatar>
+                  <UserAvatar />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
@@ -111,9 +136,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 <DropdownMenuItem>Perfil</DropdownMenuItem>
                 <DropdownMenuItem>Faturamento</DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <Link href="/login">
-                  <DropdownMenuItem>Sair</DropdownMenuItem>
-                </Link>
+                <DropdownMenuItem onClick={handleSignOut}>Sair</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </header>

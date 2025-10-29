@@ -2,15 +2,13 @@
 
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { opportunities, STAGES } from '@/lib/data';
 import { ChartTooltipContent, ChartContainer, type ChartConfig } from '@/components/ui/chart';
 
-const chartData = STAGES.filter(stage => stage !== 'Ganha' && stage !== 'Perdida').map(stage => ({
-    name: stage,
-    total: opportunities
-        .filter(opp => opp.stage === stage)
-        .reduce((sum, opp) => sum + opp.value, 0)
-}));
+const chartData = [
+  { name: 'A Fazer', total: 0 },
+  { name: 'Em Progresso', total: 0 },
+  { name: 'Concluído', total: 0 },
+];
 
 const chartConfig = {
     total: {
@@ -23,8 +21,8 @@ export function PipelineChart() {
     return (
         <Card>
             <CardHeader>
-                <CardTitle className="font-headline">Valor do Pipeline por Estágio</CardTitle>
-                <CardDescription>Uma visão geral da distribuição de valor em seu funil de vendas.</CardDescription>
+                <CardTitle className="font-headline">Progresso das Tarefas por Etapa</CardTitle>
+                <CardDescription>Uma visão geral da distribuição de tarefas em seu funil de projetos.</CardDescription>
             </CardHeader>
             <CardContent>
                 <div className="h-[300px] w-full">
@@ -43,12 +41,12 @@ export function PipelineChart() {
                                 fontSize={12}
                                 tickLine={false}
                                 axisLine={false}
-                                tickFormatter={(value) => `$${Number(value) / 1000}k`}
+                                tickFormatter={(value) => `${value}`}
                             />
                             <Tooltip
                                 cursor={{ fill: 'hsl(var(--muted))' }}
                                 content={<ChartTooltipContent
-                                    formatter={(value) => `$${(value as number).toLocaleString()}`}
+                                    formatter={(value) => `${value} tarefas`}
                                 />}
                             />
                             <Bar dataKey="total" fill="var(--color-total)" radius={[4, 4, 0, 0]} />

@@ -2,24 +2,22 @@
 
 import { getSuggestedFollowUps } from "@/ai/flows/ai-suggested-follow-ups";
 import { generateDailyChatSummary } from "@/ai/flows/daily-chat-summary";
-import { Opportunity } from "./types";
 import { chatLogForSummary } from "./data";
+import type { Project } from "./types";
 
-export async function getFollowUpSuggestionsAction(opportunity: Opportunity) {
+export async function getFollowUpSuggestionsAction(project: Project) {
     try {
         const opportunityDetails = `
-            Título: ${opportunity.title}
-            Empresa: ${opportunity.company}
-            Valor: R$${opportunity.value.toLocaleString('pt-BR')}
-            Contatos: ${opportunity.contacts.map(c => `${c.name} (${c.role})`).join(', ')}
-            Último Contato: ${new Date(opportunity.lastContact).toLocaleDateString()}
-            Histórico: ${opportunity.history.map(h => `${h.stage} em ${new Date(h.date).toLocaleDateString()}`).join(' -> ')}
+            Título: ${project.name}
+            Descrição: ${project.description}
+            Data de Início: ${new Date(project.startDate).toLocaleDateString()}
+            Responsável: ${project.ownerId}
         `;
 
         const result = await getSuggestedFollowUps({
             opportunityDetails,
-            currentPipelineStage: opportunity.stage,
-            pastFollowUpActions: `O último contato foi em ${new Date(opportunity.lastContact).toLocaleDateString()}. A oportunidade está atualmente no estágio de ${opportunity.stage}.`
+            currentPipelineStage: "Em Progresso", // Placeholder
+            pastFollowUpActions: `O projeto foi iniciado em ${new Date(project.startDate).toLocaleDateString()}.`
         });
         
         return { success: true, data: result };
