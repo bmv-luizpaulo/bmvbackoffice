@@ -4,6 +4,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { useRouter } from "next/navigation";
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { useAuth } from "@/firebase";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -32,6 +34,7 @@ export function LoginForm() {
   const router = useRouter();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const auth = useAuth();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -41,20 +44,29 @@ export function LoginForm() {
     },
   });
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
+  async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
-    // Simulate API call
-    setTimeout(() => {
-      // In a real app, you'd validate credentials here.
-      // For this demo, any input is considered valid.
-      console.log(values);
+    try {
+      await signInWithEmailAndPassword(auth, values.email, values.password);
       toast({
         title: "Login Bem-sucedido",
         description: "Bem-vindo de volta! Redirecionando para o painel.",
       });
       router.push('/dashboard');
+    } catch (error: any) {
+      console.error("Falha no login:", error);
+      let description = "Ocorreu um erro durante o login.";
+      if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+        description = "Credenciais inválidas. Por favor, verifique seu e-mail e senha.";
+      }
+      toast({
+        variant: "destructive",
+        title: "Falha no Login",
+        description: description,
+      });
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   }
 
   return (
