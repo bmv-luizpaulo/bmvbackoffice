@@ -66,8 +66,12 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
     useCollection<Notification>(notificationsQuery);
 
   useEffect(() => {
-    const count = notifications.filter((n) => !n.isRead).length;
-    setUnreadCount(count);
+    if (notifications) {
+      const count = notifications.filter((n) => !n.isRead).length;
+      setUnreadCount(count);
+    } else {
+      setUnreadCount(0);
+    }
   }, [notifications]);
 
   const markAsRead = useCallback(
