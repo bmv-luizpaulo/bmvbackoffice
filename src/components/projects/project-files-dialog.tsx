@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useToast } from "@/hooks/use-toast";
 import type { Project, ProjectFile } from "@/lib/types";
-import { useAuth, useCollection, useFirestore, useMemoFirebase } from "@/firebase";
+import { useUser, useCollection, useFirestore, useMemoFirebase } from "@/firebase";
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
 import { collection, addDoc, serverTimestamp, query, orderBy } from "firebase/firestore";
 import { Download, File, Loader2, Trash2, UploadCloud, X } from "lucide-react";
@@ -29,7 +29,7 @@ type ProjectFilesDialogProps = {
 export function ProjectFilesDialog({ isOpen, onOpenChange, project }: ProjectFilesDialogProps) {
   const { toast } = useToast();
   const firestore = useFirestore();
-  const { user } = useAuth();
+  const { user } = useUser();
   const [isUploading, setIsUploading] = React.useState(false);
 
   const filesQuery = useMemoFirebase(() => 

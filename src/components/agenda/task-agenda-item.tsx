@@ -13,7 +13,7 @@ import { useFirestore } from '@/firebase';
 import { doc } from 'firebase/firestore';
 
 interface TaskAgendaItemProps {
-  task: Task & { dueDate: Date };
+  task: Task;
   project?: Project;
   assignee?: User;
 }

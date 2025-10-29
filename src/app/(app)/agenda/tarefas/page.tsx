@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { useAuth, useCollection, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
+import { useUser, useCollection, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, collectionGroup, doc, query, where } from 'firebase/firestore';
 import type { Task, User, Project } from '@/lib/types';
 import { Calendar } from '@/components/ui/calendar';
@@ -13,7 +13,7 @@ import { ptBR } from 'date-fns/locale';
 
 export default function TaskAgendaPage() {
   const firestore = useFirestore();
-  const { user: authUser } = useAuth();
+  const { user: authUser } = useUser();
   
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [selectedUserId, setSelectedUserId] = useState<string | 'all'>('all');
@@ -51,7 +51,7 @@ export default function TaskAgendaPage() {
   const selectedDayTasks = useMemo(() => {
     if (!selectedDate) return [];
     return tasksWithDates
-      .filter(task => isSameDay(task.dueDate!, selectedDate))
+      .filter(task => task.dueDate && isSameDay(task.dueDate, selectedDate))
       .sort((a, b) => a.dueDate!.getTime() - b.dueDate!.getTime());
   }, [tasksWithDates, selectedDate]);
   

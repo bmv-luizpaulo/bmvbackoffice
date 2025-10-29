@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Paperclip, Send } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
-import { useAuth, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { useUser, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query, where, addDoc, serverTimestamp, orderBy, getDocs, writeBatch } from 'firebase/firestore';
 
 const addDocumentNonBlocking = (ref: any, data: any) => {
@@ -18,7 +18,7 @@ const addDocumentNonBlocking = (ref: any, data: any) => {
 
 export function ChatLayout() {
   const firestore = useFirestore();
-  const { user: currentUser } = useAuth();
+  const { user: currentUser } = useUser();
   const [selectedChat, setSelectedChat] = useState<Chat | null>(null);
   const [newMessage, setNewMessage] = useState('');
 

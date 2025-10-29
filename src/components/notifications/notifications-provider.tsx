@@ -10,7 +10,7 @@ import React, {
 } from 'react';
 import {
   useFirestore,
-  useAuth,
+  useUser,
   useCollection,
   useMemoFirebase,
 } from '@/firebase';
@@ -47,7 +47,7 @@ const NotificationsContext = createContext<NotificationsContextType | undefined>
 
 export function NotificationsProvider({ children }: { children: ReactNode }) {
   const firestore = useFirestore();
-  const { user } = useAuth();
+  const { user } = useUser();
   const [unreadCount, setUnreadCount] = useState(0);
 
   const notificationsQuery = useMemoFirebase(
