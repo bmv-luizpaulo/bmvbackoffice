@@ -1,5 +1,41 @@
 {
   "entities": {
+    "User": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "User",
+      "type": "object",
+      "description": "Represents a user in the system.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the user."
+        },
+        "name": {
+          "type": "string",
+          "description": "The user's full name."
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "The user's email address."
+        },
+        "avatarUrl": {
+          "type": "string",
+          "format": "uri",
+          "description": "URL for the user's avatar image."
+        },
+        "role": {
+          "type": "string",
+          "description": "The user's role in the system.",
+          "enum": ["Gestor", "Funcionário"]
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "email"
+      ]
+    },
     "Project": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Project",
@@ -152,6 +188,22 @@
   "firestore": {
     "structure": [
       {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "User",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "Represents a user of the application. Contains profile information.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user, typically the Firebase Auth UID."
+            }
+          ]
+        }
+      },
+      {
         "path": "/projects/{projectId}",
         "definition": {
           "entityName": "Project",
@@ -208,6 +260,6 @@
         }
       }
     ],
-    "reasoning": "This design prioritizes authorization independence and QAPs. Projects, Stages, and Tasks are organized in a hierarchy, enabling straightforward ownership-based security rules. Authorization Independence is achieved by avoiding `get()` calls in security rules. The structure supports CRUD operations and enables atomic operations (transactions/batches) for related data.\n\n*   **Projects**: Located at the root collection `/projects/{projectId}`. This allows listing all projects, filtering based on project properties, and securing individual projects.\n*   **Stages:** Stages related to each Project are stored in a subcollection `/projects/{projectId}/stages/{stageId}`.  This enables listing stages related to a project, filtering based on stage properties, and securing individual stages.\n*   **Tasks:** Tasks for each stage are stored in a subcollection `/projects/{projectId}/tasks/{taskId}`. This enables listing tasks related to a stage, filtering based on task properties, and securing individual tasks.\n\nThis structure facilitates conditional stage advancement as it provides easy access to tasks within each stage. Security rules can easily verify task completion status within a stage before allowing a project to advance."
+    "reasoning": "This design prioritizes authorization independence and QAPs. Projects, Stages, and Tasks are organized in a hierarchy, enabling straightforward ownership-based security rules. Authorization Independence is achieved by avoiding `get()` calls in security rules. The structure supports CRUD operations and enables atomic operations (transactions/batches) for related data.\n\n*   **Users**: A top-level `/users` collection stores public user data, allowing profiles to be fetched easily.\n*   **Projects**: Located at the root collection `/projects/{projectId}`. This allows listing all projects, filtering based on project properties, and securing individual projects.\n*   **Stages:** Stages related to each Project are stored in a subcollection `/projects/{projectId}/stages/{stageId}`.  This enables listing stages related to a project, filtering based on stage properties, and securing individual stages.\n*   **Tasks:** Tasks for each stage are stored in a subcollection `/projects/{projectId}/tasks/{taskId}`. This enables listing tasks related to a stage, filtering based on task properties, and securing individual tasks.\n\nThis structure facilitates conditional stage advancement as it provides easy access to tasks within each stage. Security rules can easily verify task completion status within a stage before allowing a project to advance."
   }
 }
