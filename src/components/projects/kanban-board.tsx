@@ -12,8 +12,42 @@ import { AddProjectDialog } from './add-project-dialog';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '../ui/command';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, doc, writeBatch } from 'firebase/firestore';
-import { addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { collection, doc, writeBatch, addDoc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { FirestorePermissionError } from '@/firebase/errors';
+import { errorEmitter } from '@/firebase/error-emitter';
+
+const addDocumentNonBlocking = (ref: any, data: any) => {
+    return addDoc(ref, data).catch(err => {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+            path: ref.path,
+            operation: 'create',
+            requestResourceData: data,
+        }));
+        throw err;
+    });
+};
+
+const updateDocumentNonBlocking = (ref: any, data: any) => {
+    return updateDoc(ref, data).catch(err => {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+            path: ref.path,
+            operation: 'update',
+            requestResourceData: data,
+        }));
+        throw err;
+    });
+};
+
+const deleteDocumentNonBlocking = (ref: any) => {
+    return deleteDoc(ref).catch(err => {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+            path: ref.path,
+            operation: 'delete',
+        }));
+        throw err;
+    });
+};
+
 
 export function KanbanBoard() {
   const firestore = useFirestore();

@@ -34,9 +34,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import type { User } from "@/lib/types";
 import { UserFormDialog } from "./user-form-dialog";
-import { addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase";
 import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
-import { collection, doc } from "firebase/firestore";
+import { collection, doc, addDoc, updateDoc, deleteDoc } from "firebase/firestore";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -47,6 +46,40 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import { FirestorePermissionError } from "@/firebase/errors";
+import { errorEmitter } from "@/firebase/error-emitter";
+
+const addDocumentNonBlocking = (ref: any, data: any) => {
+    return addDoc(ref, data).catch(err => {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+            path: ref.path,
+            operation: 'create',
+            requestResourceData: data,
+        }));
+        throw err;
+    });
+};
+
+const updateDocumentNonBlocking = (ref: any, data: any) => {
+    return updateDoc(ref, data).catch(err => {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+            path: ref.path,
+            operation: 'update',
+            requestResourceData: data,
+        }));
+        throw err;
+    });
+};
+
+const deleteDocumentNonBlocking = (ref: any) => {
+    return deleteDoc(ref).catch(err => {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+            path: ref.path,
+            operation: 'delete',
+        }));
+        throw err;
+    });
+};
 
 export function UserDataTable() {
   const firestore = useFirestore();
