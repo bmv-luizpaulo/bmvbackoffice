@@ -59,7 +59,7 @@ const convertTimestampsToISO = (data: any): any => {
 
 const getQueryPath = (query: CollectionReference<DocumentData> | Query<DocumentData> | null | undefined): string => {
     if (!query) return '';
-    if (query.type === 'collection') {
+    if ((query as CollectionReference).path) {
         return (query as CollectionReference).path;
     }
     // This is a more robust way to get the path from a query object.
@@ -136,8 +136,10 @@ export function useCollection<T = any>(
         
         // TEMPORARY WORKAROUND: Do not throw a global error for specific collections
         // This is to prevent the app from breaking while we work on security rules.
-        const collectionsToWarn = ['users', 'contacts', 'teams'];
-        if (collectionsToWarn.includes(path)) {
+        const collectionsToWarn = ['users', 'contacts', 'teams', 'notifications'];
+        const collectionName = path.split('/').pop() || '';
+        
+        if (collectionsToWarn.includes(collectionName)) {
            console.warn(`Firestore permission error on '${path}' collection was caught but not thrown globally. This is a temporary measure.`);
         } else {
           // trigger global error propagation
