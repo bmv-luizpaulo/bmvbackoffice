@@ -56,6 +56,20 @@ const convertTimestampsToISO = (data: any): any => {
   return data;
 };
 
+const getQueryPath = (query: CollectionReference<DocumentData> | Query<DocumentData>): string => {
+    if (query.type === 'collection') {
+        return (query as CollectionReference).path;
+    }
+    // This is a more robust way to get the path from a query object.
+    // It accesses a non-public property, which can be risky, but it's a common workaround.
+    const internalQuery = (query as any)._query;
+    if (internalQuery && internalQuery.path && typeof internalQuery.path.canonicalString === 'function') {
+        return internalQuery.path.canonicalString();
+    }
+    // Fallback if the internal structure changes
+    return '(path-not-retrievable)';
+}
+
 
 /**
  * React hook to subscribe to a Firestore collection or query in real-time.
@@ -88,6 +102,16 @@ export function useCollection<T = any>(
       setError(null);
       return;
     }
+    
+    // Defensive check: Ensure the path is not empty, which causes permission errors.
+    const path = getQueryPath(memoizedTargetRefOrQuery);
+    if (!path || path.trim() === '' || path.includes('//')) {
+        // Invalid path, so we don't proceed with the query.
+        // This can happen during initial render if dependencies aren't ready.
+        setData(null);
+        setIsLoading(false);
+        return;
+    }
 
     setIsLoading(true);
     setError(null);
@@ -107,23 +131,6 @@ export function useCollection<T = any>(
         setIsLoading(false);
       },
       (error: FirestoreError) => {
-        // This logic extracts the path from either a ref or a query
-        let path: string;
-        if(memoizedTargetRefOrQuery.type === 'collection') {
-            path = (memoizedTargetRefOrQuery as CollectionReference).path;
-        } else {
-            // This is a more robust way to get the path from a query object.
-            // It accesses a non-public property, which can be risky, but it's a common workaround.
-            const internalQuery = (memoizedTargetRefOrQuery as any)._query;
-            if (internalQuery && internalQuery.path && typeof internalQuery.path.canonicalString === 'function') {
-                path = internalQuery.path.canonicalString();
-            } else {
-                // Fallback if the internal structure changes
-                path = '(path-not-retrievable)';
-            }
-        }
-        
-
         const contextualError = new FirestorePermissionError({
           operation: 'list',
           path,
