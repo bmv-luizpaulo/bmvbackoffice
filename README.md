@@ -7,7 +7,7 @@ O **BMV Nexus** é uma plataforma integrada de gestão de projetos, tarefas, con
 1.  **Painel de Controle (Dashboard):**
     *   **Visão Geral:** Centraliza os principais indicadores de desempenho (KPIs), como projetos ativos, tarefas abertas e valor total de projetos.
     *   **Análise de Tarefas:** Exibe um gráfico que ilustra a distribuição de tarefas por etapa (A Fazer, Em Progresso, Concluído).
-    *   **Colaboração com IA:** Apresenta um resumo diário das conversas de chat, gerado por inteligência artificial.
+    *   **Colaboração com IA:** Apresenta um resumo diário das conversas de chat entre usuários, gerado por inteligência artificial.
 
 2.  **Funil de Projetos (Kanban):**
     *   **Gestão Visual:** Um quadro Kanban interativo onde você pode arrastar e soltar tarefas entre as etapas do projeto.
