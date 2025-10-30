@@ -1,4 +1,3 @@
-// THIS IS A NEW FILE
 'use client';
 
 import * as React from "react";
@@ -23,6 +22,7 @@ import type { User as UserProfile } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 import { getCepInfoAction } from "@/lib/actions";
+import { Skeleton } from "../ui/skeleton";
 
 const profileFormSchema = z.object({
   name: z.string().min(1, "O nome é obrigatório."),
