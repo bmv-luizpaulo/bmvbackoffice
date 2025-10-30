@@ -37,13 +37,14 @@ import { formatCPF, formatPhone } from "@/lib/masks";
 type UserFormDialogProps = {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
-  onSave: (user: Omit<User, 'id' | 'avatarUrl'>) => void;
+  onSave: (user: Omit<User, 'id' | 'avatarUrl'>, password?: string) => void;
   user?: User | null;
 };
 
 const formSchema = z.object({
   name: z.string().min(1, "O nome é obrigatório."),
   email: z.string().email("O e-mail é inválido."),
+  password: z.string().optional(),
   role: z.enum(['Gestor', 'Usuario']),
   phone: z.string().optional(),
   personalDocument: z.string().optional(),
@@ -57,11 +58,21 @@ const formSchema = z.object({
     zipCode: z.string().optional(),
   }).optional(),
   teamIds: z.array(z.string()).optional(),
+}).refine(data => {
+    // Se o user não existe (estamos criando), a senha é obrigatória
+    if (!formSchema.partial().parse(data)._unknown) {
+        return !!data.password && data.password.length >= 6;
+    }
+    return true;
+}, {
+    message: "A senha deve ter pelo menos 6 caracteres.",
+    path: ["password"],
 });
 
 const defaultValues = {
     name: '',
     email: '',
+    password: '',
     role: 'Usuario' as 'Gestor' | 'Usuario',
     phone: '',
     personalDocument: '',
@@ -84,7 +95,13 @@ export function UserFormDialog({ isOpen, onOpenChange, onSave, user }: UserFormD
   const [isCepLoading, setIsCepLoading] = React.useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
+    resolver: zodResolver(formSchema.refine(data => !user || (!!data.password ? data.password.length >= 6 : true), {
+        message: "A senha deve ter pelo menos 6 caracteres.",
+        path: ["password"],
+    }).refine(data => !!user || (!!data.password && data.password.length > 0), {
+        message: "A senha é obrigatória para novos usuários.",
+        path: ["password"],
+    })),
     defaultValues,
   });
 
@@ -107,6 +124,7 @@ export function UserFormDialog({ isOpen, onOpenChange, onSave, user }: UserFormD
             zipCode: user.address?.zipCode || '',
           },
           teamIds: user.teamIds || [],
+          password: '', // Senha não é preenchida na edição
         });
       } else {
         form.reset(defaultValues);
@@ -136,7 +154,8 @@ export function UserFormDialog({ isOpen, onOpenChange, onSave, user }: UserFormD
   };
 
   function onSubmit(values: z.infer<typeof formSchema>) {
-    onSave(values);
+    const { password, ...userData } = values;
+    onSave(userData, user ? undefined : password); // Só passa a senha na criação
     onOpenChange(false);
   }
 
@@ -151,7 +170,7 @@ export function UserFormDialog({ isOpen, onOpenChange, onSave, user }: UserFormD
         <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 max-h-[80vh] overflow-y-auto p-1">
                 <div className="space-y-2">
-                    <h3 className="text-lg font-medium">Informações Pessoais</h3>
+                    <h3 className="text-lg font-medium">Informações Pessoais e de Acesso</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <FormField
                             control={form.control}
@@ -173,12 +192,27 @@ export function UserFormDialog({ isOpen, onOpenChange, onSave, user }: UserFormD
                                 <FormItem>
                                 <FormLabel>Endereço de E-mail</FormLabel>
                                 <FormControl>
-                                    <Input type="email" placeholder="Ex: joao.silva@empresa.com" {...field} />
+                                    <Input type="email" placeholder="Ex: joao.silva@empresa.com" {...field} disabled={!!user} />
                                 </FormControl>
                                 <FormMessage />
                                 </FormItem>
                             )}
                         />
+                        {!user && (
+                             <FormField
+                                control={form.control}
+                                name="password"
+                                render={({ field }) => (
+                                    <FormItem>
+                                    <FormLabel>Senha</FormLabel>
+                                    <FormControl>
+                                        <Input type="password" placeholder="Mínimo 6 caracteres" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        )}
                         <FormField
                             control={form.control}
                             name="phone"
@@ -188,6 +222,7 @@ export function UserFormDialog({ isOpen, onOpenChange, onSave, user }: UserFormD
                                 <FormControl>
                                      <Input 
                                       {...field}
+                                      value={field.value || ''}
                                       onChange={(e) => {
                                         field.onChange(formatPhone(e.target.value))
                                       }}
@@ -206,6 +241,7 @@ export function UserFormDialog({ isOpen, onOpenChange, onSave, user }: UserFormD
                                 <FormControl>
                                      <Input 
                                       {...field}
+                                      value={field.value || ''}
                                       onChange={(e) => {
                                         field.onChange(formatCPF(e.target.value))
                                       }}
@@ -233,7 +269,8 @@ export function UserFormDialog({ isOpen, onOpenChange, onSave, user }: UserFormD
                                   <div className="relative">
                                     <Input 
                                       placeholder="XXXXX-XXX" 
-                                      {...field} 
+                                      {...field}
+                                      value={field.value || ''}
                                       onBlur={(e) => {
                                         field.onBlur();
                                         handleCepLookup(e.target.value);
@@ -253,7 +290,7 @@ export function UserFormDialog({ isOpen, onOpenChange, onSave, user }: UserFormD
                                 <FormItem className="col-span-2">
                                 <FormLabel>Rua</FormLabel>
                                 <FormControl>
-                                    <Input placeholder="Rua das Flores" {...field} />
+                                    <Input placeholder="Rua das Flores" {...field} value={field.value || ''} />
                                 </FormControl>
                                 <FormMessage />
                                 </FormItem>
@@ -266,7 +303,7 @@ export function UserFormDialog({ isOpen, onOpenChange, onSave, user }: UserFormD
                                 <FormItem>
                                 <FormLabel>Número</FormLabel>
                                 <FormControl>
-                                    <Input placeholder="123" {...field} />
+                                    <Input placeholder="123" {...field} value={field.value || ''} />
                                 </FormControl>
                                 <FormMessage />
                                 </FormItem>
@@ -279,7 +316,7 @@ export function UserFormDialog({ isOpen, onOpenChange, onSave, user }: UserFormD
                                 <FormItem className="col-span-2">
                                 <FormLabel>Complemento</FormLabel>
                                 <FormControl>
-                                    <Input placeholder="Apto 4B" {...field} />
+                                    <Input placeholder="Apto 4B" {...field} value={field.value || ''} />
                                 </FormControl>
                                 <FormMessage />
                                 </FormItem>
@@ -292,7 +329,7 @@ export function UserFormDialog({ isOpen, onOpenChange, onSave, user }: UserFormD
                                 <FormItem>
                                 <FormLabel>Bairro</FormLabel>
                                 <FormControl>
-                                    <Input placeholder="Centro" {...field} />
+                                    <Input placeholder="Centro" {...field} value={field.value || ''} />
                                 </FormControl>
                                 <FormMessage />
                                 </FormItem>
@@ -305,7 +342,7 @@ export function UserFormDialog({ isOpen, onOpenChange, onSave, user }: UserFormD
                                 <FormItem>
                                 <FormLabel>Cidade</FormLabel>
                                 <FormControl>
-                                    <Input placeholder="São Paulo" {...field} />
+                                    <Input placeholder="São Paulo" {...field} value={field.value || ''} />
                                 </FormControl>
                                 <FormMessage />
                                 </FormItem>
@@ -318,7 +355,7 @@ export function UserFormDialog({ isOpen, onOpenChange, onSave, user }: UserFormD
                                 <FormItem>
                                 <FormLabel>Estado</FormLabel>
                                 <FormControl>
-                                    <Input placeholder="SP" {...field} />
+                                    <Input placeholder="SP" {...field} value={field.value || ''} />
                                 </FormControl>
                                 <FormMessage />
                                 </FormItem>

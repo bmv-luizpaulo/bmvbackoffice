@@ -34,8 +34,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import type { User } from "@/lib/types";
 import dynamic from "next/dynamic";
-import { useFirestore, useCollection, useMemoFirebase, useUser as useAuthUser } from "@/firebase";
-import { collection, doc, addDoc, updateDoc, deleteDoc } from "firebase/firestore";
+import { useAuth, useFirestore, useCollection, useMemoFirebase, useUser as useAuthUser } from "@/firebase";
+import { collection, doc, setDoc, updateDoc, deleteDoc } from "firebase/firestore";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -49,19 +49,9 @@ import {
 import { FirestorePermissionError } from "@/firebase/errors";
 import { errorEmitter } from "@/firebase/error-emitter";
 import { useToast } from "@/hooks/use-toast"
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth";
 
 const UserFormDialog = dynamic(() => import('./user-form-dialog').then(m => m.UserFormDialog), { ssr: false });
-
-const addDocumentNonBlocking = (ref: any, data: any) => {
-    return addDoc(ref, data).catch(err => {
-        errorEmitter.emit('permission-error', new FirestorePermissionError({
-            path: ref.path,
-            operation: 'create',
-            requestResourceData: data,
-        }));
-        throw err;
-    });
-};
 
 const updateDocumentNonBlocking = (ref: any, data: any) => {
     return updateDoc(ref, data).catch(err => {
@@ -86,6 +76,7 @@ const deleteDocumentNonBlocking = (ref: any) => {
 
 export function UserDataTable() {
   const firestore = useFirestore();
+  const auth = useAuth();
   const { user: currentUser } = useAuthUser();
   const { toast } = useToast();
   
@@ -100,24 +91,52 @@ export function UserDataTable() {
   const [selectedUser, setSelectedUser] = React.useState<User | null>(null);
   const [emailFilter, setEmailFilter] = React.useState("");
 
-  const handleSaveUser = (userData: Omit<User, 'id' | 'avatarUrl'>) => {
-    if (!firestore) return;
-    
+  const handleSaveUser = async (userData: Omit<User, 'id' | 'avatarUrl'>, password?: string) => {
+    if (!firestore || !auth) return;
+
     if (selectedUser) {
-      // Update
-      const userRef = doc(firestore, 'users', selectedUser.id);
-      updateDocumentNonBlocking(userRef, userData);
-      toast({ title: "Usuário Atualizado", description: `As informações de ${userData.name} foram salvas.` });
-    } else {
-      // Create
-      const newUserData = {
-          ...userData,
-          avatarUrl: `https://picsum.photos/seed/${Math.random()}/200/200`
-      }
-      addDocumentNonBlocking(collection(firestore, 'users'), newUserData);
-      toast({ title: "Usuário Criado", description: `${userData.name} foi adicionado ao sistema.` });
+        // Update
+        const userRef = doc(firestore, 'users', selectedUser.id);
+        updateDocumentNonBlocking(userRef, userData);
+        toast({ title: "Usuário Atualizado", description: `As informações de ${userData.name} foram salvas.` });
+    } else if (password) {
+        // Create
+        const currentUserEmail = auth.currentUser?.email;
+        const currentUserPassword = prompt("Para criar um novo usuário, por favor, confirme sua senha:"); // Isso não é seguro para produção!
+
+        if (!currentUserEmail || !currentUserPassword) {
+            toast({ variant: 'destructive', title: "Ação cancelada", description: "Senha não fornecida." });
+            return;
+        }
+
+        try {
+            // 1. Create the new user in Firebase Auth
+            const userCredential = await createUserWithEmailAndPassword(auth, userData.email, password);
+            const newUserId = userCredential.user.uid;
+
+            // 2. Create the user profile in Firestore
+            const newUserProfile = {
+                ...userData,
+                id: newUserId,
+                avatarUrl: `https://picsum.photos/seed/${newUserId}/200/200`
+            };
+            await setDoc(doc(firestore, "users", newUserId), newUserProfile);
+            
+            toast({ title: "Usuário Criado", description: `${userData.name} foi adicionado ao sistema.` });
+
+        } catch (error: any) {
+            console.error("Erro ao criar usuário:", error);
+            toast({ variant: 'destructive', title: "Erro ao Criar Usuário", description: error.message });
+        } finally {
+            // 3. Re-authenticate the admin user
+            await signInWithEmailAndPassword(auth, currentUserEmail, currentUserPassword).catch(reauthError => {
+                console.error("Erro ao reautenticar o gestor:", reauthError);
+                toast({ variant: 'destructive', title: "Erro de Sessão", description: "Falha ao restaurar sua sessão. Por favor, faça login novamente." });
+                // Potentially force a sign-out here
+            });
+        }
     }
-  };
+};
 
   const handleDeleteUser = () => {
     if (!firestore || !selectedUser) return;
