@@ -135,7 +135,7 @@ export function useCollection<T = any>(
         
         // TEMPORARY WORKAROUND: Do not throw a global error for specific collections
         // This is to prevent the app from breaking while we work on security rules.
-        const collectionsToWarn = ['users', 'contacts', 'teams', 'notifications', 'chats', 'seals', 'products', 'checklists'];
+        const collectionsToWarn = ['users', 'contacts', 'teams', 'seals', 'products', 'checklists', 'notifications'];
         
         let collectionName = path;
         // Handle subcollections like 'users/abc/notifications'
@@ -161,5 +161,3 @@ export function useCollection<T = any>(
   
   return { data, isLoading, error };
 }
-
-    
