@@ -16,9 +16,9 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import type { User } from "firebase/auth";
-import { useFirestore, useDoc } from "@/firebase";
-import { doc, updateDoc } from "firebase/firestore";
-import type { User as UserProfile } from "@/lib/types";
+import { useFirestore, useDoc, useCollection } from "@/firebase";
+import { collection, doc, updateDoc } from "firebase/firestore";
+import type { User as UserProfile, Role } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Shield } from "lucide-react";
 import { getCepInfoAction } from "@/lib/actions";
@@ -30,7 +30,7 @@ import { cn } from "@/lib/utils";
 const profileFormSchema = z.object({
   name: z.string().min(1, "O nome é obrigatório."),
   email: z.string().email(),
-  role: z.string().optional(),
+  roleId: z.string().optional(),
   phone: z.string().optional(),
   personalDocument: z.string().optional(),
   address: z.object({
@@ -61,12 +61,16 @@ export function ProfileSettings({ user }: ProfileSettingsProps) {
   );
   const { data: userProfile, isLoading: isLoadingProfile } = useDoc<UserProfile>(userProfileRef);
 
+  const rolesQuery = React.useMemo(() => firestore ? collection(firestore, 'roles') : null, [firestore]);
+  const { data: roles, isLoading: isLoadingRoles } = useCollection<Role>(rolesQuery);
+  const userRole = React.useMemo(() => roles?.find(r => r.id === userProfile?.roleId), [roles, userProfile]);
+
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
     defaultValues: {
       name: '',
       email: '',
-      role: '',
+      roleId: '',
       phone: '',
       personalDocument: '',
       address: {
@@ -86,7 +90,7 @@ export function ProfileSettings({ user }: ProfileSettingsProps) {
       form.reset({
         name: userProfile.name || '',
         email: userProfile.email || '',
-        role: userProfile.role || 'Não definido',
+        roleId: userProfile.roleId || 'Não definido',
         phone: userProfile.phone || '',
         personalDocument: userProfile.personalDocument || '',
         address: {
@@ -127,7 +131,7 @@ export function ProfileSettings({ user }: ProfileSettingsProps) {
     if (!userProfileRef) return;
     try {
       // Don't update email and role from this form
-      const { email, role, ...updatableData } = data;
+      const { email, roleId, ...updatableData } = data;
       await updateDoc(userProfileRef, {
         ...updatableData
       });
@@ -147,7 +151,7 @@ export function ProfileSettings({ user }: ProfileSettingsProps) {
 
   const { isSubmitting } = form.formState;
 
-  if (isLoadingProfile) {
+  if (isLoadingProfile || isLoadingRoles) {
     return <Card>
         <CardHeader>
           <Skeleton className="h-6 w-24" />
@@ -174,10 +178,10 @@ export function ProfileSettings({ user }: ProfileSettingsProps) {
                 Atualize suas informações pessoais e de contato.
               </CardDescription>
             </div>
-            {userProfile?.role && (
-                <Badge variant={userProfile.role === 'Gestor' ? 'default' : 'secondary'} className="flex items-center gap-2">
+            {userRole && (
+                <Badge variant={userRole.isManager ? 'default' : 'secondary'} className="flex items-center gap-2">
                     <Shield className="h-4 w-4"/>
-                    <span>{userProfile.role}</span>
+                    <span>{userRole.name}</span>
                 </Badge>
             )}
           </CardHeader>
@@ -363,5 +367,3 @@ export function ProfileSettings({ user }: ProfileSettingsProps) {
     </Form>
   );
 }
-
-    

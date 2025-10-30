@@ -63,8 +63,10 @@ export function KanbanBoard() {
   const { user: authUser } = useAuthUser();
   const { createNotification } = useNotifications();
 
-  const userProfileQuery = React.useMemo(() => firestore && authUser ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser]);
+  const userProfileQuery = React.useMemo(() => firestore && authUser?.uid ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser?.uid]);
   const { data: userProfile, isLoading: isLoadingUserProfile } = useDoc<User>(userProfileQuery);
+  const userRole = userProfile?.roleId;
+
 
   const projectsQuery = React.useMemo(() => firestore ? collection(firestore, 'projects') : null, [firestore]);
   const { data: projectsData, isLoading: isLoadingProjects } = useCollection<Project>(projectsQuery);
@@ -82,20 +84,21 @@ export function KanbanBoard() {
     return true;
   };
 
-  const stagesQuery = React.useMemo(() => firestore && selectedProject ? collection(firestore, 'projects', selectedProject.id, 'stages') : null, [firestore, selectedProject]);
+  const stagesQuery = React.useMemo(() => firestore && selectedProject ? collection(firestore, 'projects', selectedProject.id, 'stages') : null, [firestore, selectedProject?.id]);
   const { data: stagesData, isLoading: isLoadingStages } = useCollection<Stage>(stagesQuery);
 
   const tasksQuery = React.useMemo(() => {
-    if (!firestore || !selectedProject || !userProfile) return null;
+    if (!firestore || !selectedProject?.id || !userRole || !authUser?.uid) return null;
     
     const tasksCollection = collection(firestore, 'projects', selectedProject.id, 'tasks');
     
-    if (userProfile.role === 'Gestor') {
+    if (userRole === 'Gestor' || userRole === 'Desenvolvedor') {
       return tasksCollection;
     } else {
       return query(tasksCollection, where('assigneeId', '==', authUser?.uid));
     }
-  }, [firestore, selectedProject, userProfile, authUser]);
+  }, [firestore, selectedProject?.id, userRole, authUser?.uid]);
+
   const { data: tasksData, isLoading: isLoadingTasks } = useCollection<Task>(tasksQuery);
   
   const usersQuery = React.useMemo(() => firestore ? collection(firestore, 'users') : null, [firestore]);
@@ -143,7 +146,7 @@ export function KanbanBoard() {
         setSelectedProject(match);
       }
     }
-  }, [projectsData]);
+  }, [projectsData, selectedProject]);
 
   const handleSelectProject = useCallback((project: Project) => {
     setSelectedProject(project);
@@ -225,7 +228,7 @@ export function KanbanBoard() {
   }
 
   const handleUpdateTaskStatus = useCallback((taskId: string, updates: Partial<Omit<Task, 'id'>>) => {
-      if (!firestore || !selectedProject || !userProfile) return;
+      if (!firestore || !selectedProject || !authUser) return;
       const taskRef = doc(firestore, 'projects', selectedProject.id, 'tasks', taskId);
       updateDocumentNonBlocking(taskRef, updates);
 
@@ -250,7 +253,7 @@ export function KanbanBoard() {
           title: "Tarefa Atualizada",
           description: "O status da tarefa foi atualizado."
       });
-  }, [firestore, selectedProject, userProfile, tasksData, authUser, createNotification, toast]);
+  }, [firestore, selectedProject, tasksData, authUser, createNotification, toast]);
 
   const handleDeleteTask = useCallback((taskId: string) => {
       if (!firestore || !selectedProject) return;
@@ -439,5 +442,3 @@ export function KanbanBoard() {
     </>
   );
 }
-
-    

@@ -19,18 +19,20 @@ export default function TaskAgendaPage() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [selectedUserId, setSelectedUserId] = useState<string | 'all'>('all');
 
-  const userProfileQuery = React.useMemo(() => firestore && authUser?.uid ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser]);
+  const userProfileQuery = React.useMemo(() => firestore && authUser?.uid ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser?.uid]);
   const { data: userProfile } = useDoc<User>(userProfileQuery);
-  
+  const userRole = userProfile?.roleId;
+
   const allUsersQuery = React.useMemo(() => firestore ? collection(firestore, 'users') : null, [firestore]);
   const { data: allUsers } = useCollection<User>(allUsersQuery);
 
   const tasksQuery = React.useMemo(() => {
-    if (!firestore || !userProfile || !authUser?.uid) return null;
+    if (!firestore || !userRole || !authUser?.uid) return null;
 
     const tasksCollection = collectionGroup(firestore, 'tasks');
     
-    if (userProfile.role === 'Gestor') {
+    // A role lookup is required, but this is a temporary workaround.
+    if (userRole === 'Gestor' || userRole === 'Desenvolvedor') {
       if (selectedUserId === 'all') {
         return tasksCollection;
       }
@@ -38,7 +40,7 @@ export default function TaskAgendaPage() {
     }
     
     return query(tasksCollection, where('assigneeId', '==', authUser.uid));
-  }, [firestore, userProfile, selectedUserId, authUser]);
+  }, [firestore, userRole, selectedUserId, authUser?.uid]);
   const { data: tasksData, isLoading: isLoadingTasks } = useCollection<Task>(tasksQuery);
   
   const projectsQuery = React.useMemo(() => firestore ? collection(firestore, 'projects') : null, [firestore]);
@@ -60,7 +62,7 @@ export default function TaskAgendaPage() {
       .sort((a, b) => a.dueDateObj!.getTime() - b.dueDateObj!.getTime());
   }, [tasksWithDates, selectedDate]);
   
-  const isGestor = userProfile?.role === 'Gestor';
+  const isGestor = userRole === 'Gestor' || userRole === 'Desenvolvedor';
 
   return (
     <div className="space-y-6">
@@ -145,5 +147,3 @@ export default function TaskAgendaPage() {
     </div>
   );
 }
-
-    
