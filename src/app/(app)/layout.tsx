@@ -89,9 +89,8 @@ function InnerLayout({ children }: { children: React.ReactNode }) {
       <SidebarProvider>
         <Sidebar collapsible="icon">
           <SidebarHeader>
-            <div className="flex items-center gap-2">
-              <Image src="/image/BMV.png" alt="BMV Logo" width={24} height={24} className="text-primary" />
-              <h1 className="font-headline text-xl font-semibold">BMV Nexus</h1>
+            <div className="flex items-center justify-center p-2">
+              <Image src="/image/BMV.png" alt="BMV Logo" width={40} height={40} className="text-primary group-data-[collapsible=icon]:w-8 group-data-[collapsible=icon]:h-8 transition-all" />
             </div>
           </SidebarHeader>
           <SidebarContent>
