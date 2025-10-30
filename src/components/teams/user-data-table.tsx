@@ -92,7 +92,7 @@ export function UserDataTable() {
   const [emailFilter, setEmailFilter] = React.useState("");
 
   const handleSaveUser = async (userData: Omit<User, 'id' | 'avatarUrl'>, password?: string) => {
-    if (!firestore || !auth) return;
+    if (!firestore || !auth || !auth.currentUser) return;
 
     if (selectedUser) {
         // Update
@@ -101,11 +101,12 @@ export function UserDataTable() {
         toast({ title: "Usuário Atualizado", description: `As informações de ${userData.name} foram salvas.` });
     } else if (password) {
         // Create
-        const currentUserEmail = auth.currentUser?.email;
-        const currentUserPassword = prompt("Para criar um novo usuário, por favor, confirme sua senha:"); // Isso não é seguro para produção!
+        const adminUserEmail = auth.currentUser.email;
+        // This is not secure for production. It's a temporary workaround for the demo environment.
+        const adminPassword = prompt("Para criar um novo usuário, por favor, confirme sua senha de Gestor:");
 
-        if (!currentUserEmail || !currentUserPassword) {
-            toast({ variant: 'destructive', title: "Ação cancelada", description: "Senha não fornecida." });
+        if (!adminUserEmail || !adminPassword) {
+            toast({ variant: 'destructive', title: "Ação cancelada", description: "Senha de gestor não fornecida." });
             return;
         }
 
@@ -118,7 +119,7 @@ export function UserDataTable() {
             const newUserProfile = {
                 ...userData,
                 id: newUserId,
-                avatarUrl: `https://picsum.photos/seed/${newUserId}/200/200`
+                avatarUrl: `https://picsum.photos/seed/${newUserId}/200`
             };
             await setDoc(doc(firestore, "users", newUserId), newUserProfile);
             
@@ -126,13 +127,16 @@ export function UserDataTable() {
 
         } catch (error: any) {
             console.error("Erro ao criar usuário:", error);
-            toast({ variant: 'destructive', title: "Erro ao Criar Usuário", description: error.message });
+            const errorMessage = error.code === 'auth/email-already-in-use' 
+                ? 'Este e-mail já está em uso por outra conta.' 
+                : error.message;
+            toast({ variant: 'destructive', title: "Erro ao Criar Usuário", description: errorMessage });
         } finally {
-            // 3. Re-authenticate the admin user
-            await signInWithEmailAndPassword(auth, currentUserEmail, currentUserPassword).catch(reauthError => {
+            // 3. Re-authenticate the admin user to restore their session
+            await signInWithEmailAndPassword(auth, adminUserEmail, adminPassword).catch(reauthError => {
                 console.error("Erro ao reautenticar o gestor:", reauthError);
                 toast({ variant: 'destructive', title: "Erro de Sessão", description: "Falha ao restaurar sua sessão. Por favor, faça login novamente." });
-                // Potentially force a sign-out here
+                // Potentially force a sign-out here if re-auth fails
             });
         }
     }
@@ -226,11 +230,14 @@ export function UserDataTable() {
       },
     },
   ], [currentUser?.uid]);
+  
+  const filteredUsers = React.useMemo(() => {
+    return (users || []).filter(user => user.email?.toLowerCase().includes(emailFilter.toLowerCase()));
+  }, [users, emailFilter]);
 
-  const dataMemo = React.useMemo(() => users || [], [users]);
 
   const table = useReactTable({
-    data: dataMemo,
+    data: filteredUsers,
     columns,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
@@ -245,18 +252,14 @@ export function UserDataTable() {
     },
   });
 
-  React.useEffect(() => {
-    table.getColumn("email")?.setFilterValue(emailFilter);
-  }, [emailFilter, table]);
-
   return (
     <div>
        <div className="flex items-center justify-between py-4">
         <Input
           placeholder="Filtrar por e-mail..."
-          value={(table.getColumn("email")?.getFilterValue() as string) ?? ""}
+          value={emailFilter}
           onChange={(event) =>
-            table.getColumn("email")?.setFilterValue(event.target.value)
+            setEmailFilter(event.target.value)
           }
           className="max-w-sm"
         />
