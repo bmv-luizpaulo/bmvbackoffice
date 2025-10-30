@@ -12,6 +12,9 @@ import { isSameDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import React from 'react';
 
+// Opt out of static prerendering; this page relies on client-only Firebase hooks
+export const dynamic = 'force-dynamic';
+
 export default function TaskAgendaPage() {
   const firestore = useFirestore();
   const { user: authUser } = useUser();
