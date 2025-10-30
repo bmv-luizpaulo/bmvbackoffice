@@ -41,7 +41,8 @@ type UserFormDialogProps = {
   user?: User | null;
 };
 
-const formSchema = z.object({
+// Base schema for user data
+const baseFormSchema = z.object({
   name: z.string().min(1, "O nome é obrigatório."),
   email: z.string().email("O e-mail é inválido."),
   password: z.string().optional(),
@@ -58,16 +59,8 @@ const formSchema = z.object({
     zipCode: z.string().optional(),
   }).optional(),
   teamIds: z.array(z.string()).optional(),
-}).refine(data => {
-    // Se o user não existe (estamos criando), a senha é obrigatória
-    if (!formSchema.partial().parse(data)._unknown) {
-        return !!data.password && data.password.length >= 6;
-    }
-    return true;
-}, {
-    message: "A senha deve ter pelo menos 6 caracteres.",
-    path: ["password"],
 });
+
 
 const defaultValues = {
     name: '',
@@ -94,14 +87,17 @@ export function UserFormDialog({ isOpen, onOpenChange, onSave, user }: UserFormD
   const { data: teamsData } = useCollection<Team>(teamsQuery);
   const [isCepLoading, setIsCepLoading] = React.useState(false);
 
+  // Dynamically create schema based on whether we are creating or editing
+  const formSchema = user
+    ? baseFormSchema // Password optional for edits
+    : baseFormSchema.refine(data => !!data.password && data.password.length >= 6, {
+        message: "A senha é obrigatória e deve ter pelo menos 6 caracteres.",
+        path: ["password"],
+      });
+
+
   const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema.refine(data => !user || (!!data.password ? data.password.length >= 6 : true), {
-        message: "A senha deve ter pelo menos 6 caracteres.",
-        path: ["password"],
-    }).refine(data => !!user || (!!data.password && data.password.length > 0), {
-        message: "A senha é obrigatória para novos usuários.",
-        path: ["password"],
-    })),
+    resolver: zodResolver(formSchema),
     defaultValues,
   });
 
