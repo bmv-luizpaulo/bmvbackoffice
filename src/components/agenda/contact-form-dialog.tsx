@@ -28,6 +28,7 @@ import { Separator } from "../ui/separator";
 import type { Contact } from "@/lib/types";
 import { Loader2 } from "lucide-react";
 import { getCepInfoAction } from "@/lib/actions";
+import { formatPhone } from "@/lib/masks";
 
 type ContactFormDialogProps = {
   isOpen: boolean;
@@ -201,7 +202,12 @@ export function ContactFormDialog({ isOpen, onOpenChange, onSave, contact, type 
                                 <FormItem>
                                 <FormLabel>Telefone</FormLabel>
                                 <FormControl>
-                                    <Input placeholder="(XX) XXXXX-XXXX" {...field} />
+                                     <Input 
+                                      {...field}
+                                      onChange={(e) => {
+                                        field.onChange(formatPhone(e.target.value))
+                                      }}
+                                    />
                                 </FormControl>
                                 <FormMessage />
                                 </FormItem>

@@ -31,6 +31,7 @@ import { collection } from "firebase/firestore";
 import { MultiSelect } from "../ui/multi-select";
 import { Loader2, Users } from "lucide-react";
 import { getCepInfoAction } from "@/lib/actions";
+import { formatCPF, formatPhone } from "@/lib/masks";
 
 
 type UserFormDialogProps = {
@@ -185,7 +186,12 @@ export function UserFormDialog({ isOpen, onOpenChange, onSave, user }: UserFormD
                                 <FormItem>
                                 <FormLabel>Telefone (WhatsApp)</FormLabel>
                                 <FormControl>
-                                    <Input placeholder="(XX) XXXXX-XXXX" {...field} />
+                                     <Input 
+                                      {...field}
+                                      onChange={(e) => {
+                                        field.onChange(formatPhone(e.target.value))
+                                      }}
+                                    />
                                 </FormControl>
                                 <FormMessage />
                                 </FormItem>
@@ -198,7 +204,12 @@ export function UserFormDialog({ isOpen, onOpenChange, onSave, user }: UserFormD
                                 <FormItem>
                                 <FormLabel>Documento (CPF)</FormLabel>
                                 <FormControl>
-                                    <Input placeholder="XXX.XXX.XXX-XX" {...field} />
+                                     <Input 
+                                      {...field}
+                                      onChange={(e) => {
+                                        field.onChange(formatCPF(e.target.value))
+                                      }}
+                                    />
                                 </FormControl>
                                 <FormMessage />
                                 </FormItem>
