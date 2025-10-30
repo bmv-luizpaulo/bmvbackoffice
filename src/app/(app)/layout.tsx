@@ -7,14 +7,12 @@ import {
   Users,
   MessageSquare,
   Settings,
-  FolderKanban,
   BookUser,
   Calendar,
-  Briefcase,
   Archive,
   ListChecks,
   Building2,
-  Award, // Adicionado
+  Award,
 } from 'lucide-react';
 import Image from 'next/image';
 import { ThemeProvider } from "next-themes"
@@ -51,7 +49,6 @@ import {
   NotificationsProvider,
 } from '@/components/notifications/notifications-provider';
 import { NotificationBell } from '@/components/notifications/notification-bell';
-import { Badge } from '@/components/ui/badge';
 
 const navSections = [
     {
