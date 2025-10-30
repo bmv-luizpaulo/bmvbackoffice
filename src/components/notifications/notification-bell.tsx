@@ -31,11 +31,16 @@ export function NotificationBell() {
         <Button
           variant="ghost"
           size="icon"
-          className="relative h-8 w-8 rounded-full"
+          className="relative h-9 w-9 rounded-full"
         >
           <Bell />
           {unreadCount > 0 && (
-            <span className="absolute top-0 right-0 block h-2.5 w-2.5 rounded-full bg-destructive ring-2 ring-background" />
+            <Badge
+              variant="destructive"
+              className="absolute -top-1 -right-1 h-5 w-5 justify-center rounded-full p-0 text-xs"
+            >
+              {unreadCount}
+            </Badge>
           )}
         </Button>
       </PopoverTrigger>
