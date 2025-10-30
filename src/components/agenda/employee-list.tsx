@@ -24,14 +24,14 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import type { User } from "@/lib/types";
-import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
+import { useFirestore, useCollection } from "@/firebase";
 import { collection } from "firebase/firestore";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 
 
 export function EmployeeList() {
   const firestore = useFirestore();
-  const usersCollection = useMemoFirebase(() => firestore ? collection(firestore, 'users') : null, [firestore]);
+  const usersCollection = React.useMemo(() => firestore ? collection(firestore, 'users') : null, [firestore]);
   const { data: users, isLoading } = useCollection<User>(usersCollection);
 
   const [sorting, setSorting] = React.useState<SortingState>([]);
@@ -160,3 +160,5 @@ export function EmployeeList() {
     </div>
   )
 }
+
+    

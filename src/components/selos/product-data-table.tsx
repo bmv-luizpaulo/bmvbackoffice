@@ -34,7 +34,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import type { Product } from "@/lib/types";
 import { ProductFormDialog } from "./product-form-dialog";
-import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
+import { useFirestore, useCollection } from "@/firebase";
 import { collection, doc } from "firebase/firestore";
 import {
   AlertDialog,
@@ -51,7 +51,7 @@ import { addDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlo
 
 export function ProductDataTable() {
   const firestore = useFirestore();
-  const productsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'products') : null, [firestore]);
+  const productsQuery = React.useMemo(() => firestore ? collection(firestore, 'products') : null, [firestore]);
   const { data: productsData, isLoading } = useCollection<Product>(productsQuery);
   const data = React.useMemo(() => productsData ?? [], [productsData]);
   const { toast } = useToast();
@@ -260,3 +260,5 @@ export function ProductDataTable() {
     </div>
   )
 }
+
+    

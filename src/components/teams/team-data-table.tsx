@@ -34,7 +34,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import type { Team, User } from "@/lib/types";
 import dynamic from "next/dynamic";
-import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
+import { useFirestore, useCollection } from "@/firebase";
 import { collection, doc } from "firebase/firestore";
 import {
   AlertDialog,
@@ -54,11 +54,11 @@ const TeamFormDialog = dynamic(() => import('./team-form-dialog').then(m => m.Te
 
 export function TeamDataTable() {
   const firestore = useFirestore();
-  const teamsCollection = useMemoFirebase(() => firestore ? collection(firestore, 'teams') : null, [firestore]);
+  const teamsCollection = React.useMemo(() => firestore ? collection(firestore, 'teams') : null, [firestore]);
   const { data: teamsData, isLoading: isLoadingTeams } = useCollection<Team>(teamsCollection);
   const data = React.useMemo(() => teamsData ?? [], [teamsData]);
 
-  const usersCollection = useMemoFirebase(() => firestore ? collection(firestore, 'users') : null, [firestore]);
+  const usersCollection = React.useMemo(() => firestore ? collection(firestore, 'users') : null, [firestore]);
   const { data: users, isLoading: isLoadingUsers } = useCollection<User>(usersCollection);
 
   const [sorting, setSorting] = React.useState<SortingState>([]);
@@ -322,3 +322,5 @@ export function TeamDataTable() {
     </div>
   )
 }
+
+    

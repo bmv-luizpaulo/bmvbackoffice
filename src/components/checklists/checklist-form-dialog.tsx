@@ -1,4 +1,3 @@
-// THIS IS A NEW FILE
 'use client';
 
 import * as React from "react";
@@ -148,3 +147,5 @@ export function ChecklistFormDialog({ isOpen, onOpenChange, onSave, checklist, t
     </Dialog>
   );
 }
+
+    

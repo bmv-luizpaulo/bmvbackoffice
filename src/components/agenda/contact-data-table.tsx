@@ -34,7 +34,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import type { Contact } from "@/lib/types";
-import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
+import { useFirestore, useCollection } from "@/firebase";
 import { collection, doc, query, where, orderBy, limit as fbLimit } from "firebase/firestore";
 import {
   AlertDialog,
@@ -57,7 +57,7 @@ interface ContactDataTableProps {
 export function ContactDataTable({ type }: ContactDataTableProps) {
   const firestore = useFirestore();
   const [pageSize, setPageSize] = React.useState<number>(50);
-  const contactsQuery = useMemoFirebase(
+  const contactsQuery = React.useMemo(
     () =>
       firestore
         ? query(
@@ -309,3 +309,5 @@ export function ContactDataTable({ type }: ContactDataTableProps) {
     </div>
   )
 }
+
+    

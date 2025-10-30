@@ -12,7 +12,6 @@ import {
 } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
-import { firebaseMemoSet } from '@/firebase/provider';
 
 /** Utility type to add an 'id' field to a given type T. */
 export type WithId<T> = T & { id: string };
@@ -78,7 +77,7 @@ const getQueryPath = (query: CollectionReference<DocumentData> | Query<DocumentD
  * Handles nullable references/queries.
  * 
  *
- * IMPORTANT! YOU MUST MEMOIZE the inputted memoizedTargetRefOrQuery or BAD THINGS WILL HAPPEN
+ * IMPORTANT! YOU MUST MEMOIZE the inputted targetRefOrQuery or BAD THINGS WILL HAPPEN
  * use useMemo to memoize it per React guidence.  Also make sure that it's dependencies are stable
  * references
  *  
@@ -88,7 +87,7 @@ const getQueryPath = (query: CollectionReference<DocumentData> | Query<DocumentD
  * @returns {UseCollectionResult<T>} Object with data, isLoading, error.
  */
 export function useCollection<T = any>(
-    memoizedTargetRefOrQuery: (CollectionReference<DocumentData> | Query<DocumentData>)  | null | undefined,
+    targetRefOrQuery: (CollectionReference<DocumentData> | Query<DocumentData>)  | null | undefined,
 ): UseCollectionResult<T> {
   type ResultItemType = WithId<T>;
   type StateDataType = ResultItemType[] | null;
@@ -98,9 +97,9 @@ export function useCollection<T = any>(
   const [error, setError] = useState<FirestoreError | Error | null>(null);
 
   useEffect(() => {
-    const path = getQueryPath(memoizedTargetRefOrQuery);
+    const path = getQueryPath(targetRefOrQuery);
     
-    if (!memoizedTargetRefOrQuery || !path || path.trim() === '' || path.includes('//')) {
+    if (!targetRefOrQuery || !path || path.trim() === '' || path.includes('//')) {
       setData(null);
       setIsLoading(false);
       setError(null);
@@ -112,7 +111,7 @@ export function useCollection<T = any>(
     setError(null);
 
     const unsubscribe = onSnapshot(
-      memoizedTargetRefOrQuery,
+      targetRefOrQuery,
       (snapshot: QuerySnapshot<DocumentData>) => {
         const results: ResultItemType[] = [];
         for (const doc of snapshot.docs) {
@@ -136,13 +135,16 @@ export function useCollection<T = any>(
         
         // TEMPORARY WORKAROUND: Do not throw a global error for specific collections
         // This is to prevent the app from breaking while we work on security rules.
-        const collectionsToWarn = ['users', 'contacts', 'teams', 'notifications', 'chats', 'seals', 'products'];
+        const collectionsToWarn = ['users', 'contacts', 'teams', 'notifications', 'chats', 'seals', 'products', 'checklists'];
         
         let collectionName = path;
         // Handle subcollections like 'users/abc/notifications'
         if (path.includes('/')) {
             const parts = path.split('/');
-            collectionName = parts.length % 2 === 1 ? parts[parts.length - 1] : parts[parts.length - 2];
+            if (parts.length > 1) {
+                // If path is like 'a/b/c', and c is a docId, collection is b. If path is like 'a/b', collection is b.
+                collectionName = parts.length % 2 === 1 ? parts[parts.length - 2] : parts[parts.length - 1];
+            }
         }
         
         if (collectionsToWarn.includes(collectionName)) {
@@ -155,14 +157,9 @@ export function useCollection<T = any>(
     );
 
     return () => unsubscribe();
-  }, [memoizedTargetRefOrQuery]); // Re-run if the target query/reference changes.
+  }, [targetRefOrQuery]); // Re-run if the target query/reference changes.
   
-  if (memoizedTargetRefOrQuery) {
-    const isObject = typeof memoizedTargetRefOrQuery === 'object' && memoizedTargetRefOrQuery !== null;
-    if (isObject && !firebaseMemoSet.has(memoizedTargetRefOrQuery as object)) {
-      const path = getQueryPath(memoizedTargetRefOrQuery);
-      console.warn(`Query for path "${path}" was not properly memoized using useMemoFirebase. Proceeding anyway.`);
-    }
-  }
   return { data, isLoading, error };
 }
+
+    

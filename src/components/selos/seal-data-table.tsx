@@ -36,7 +36,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import type { Seal, Product, Contact, User } from "@/lib/types";
-import { useFirestore, useCollection, useMemoFirebase, useUser } from "@/firebase";
+import { useFirestore, useCollection, useUser } from "@/firebase";
 import { collection, doc, query, orderBy, limit as fbLimit } from "firebase/firestore";
 import {
   AlertDialog,
@@ -64,20 +64,20 @@ export function SealDataTable() {
 
 
   const [pageSize, setPageSize] = React.useState<number>(50);
-  const sealsQuery = useMemoFirebase(
+  const sealsQuery = React.useMemo(
     () => firestore ? query(collection(firestore, 'seals'), orderBy('issueDate', 'desc'), fbLimit(pageSize)) : null,
     [firestore, pageSize]
   );
   const { data: sealsData, isLoading: isLoadingSeals } = useCollection<Seal>(sealsQuery);
   const data = React.useMemo(() => sealsData ?? [], [sealsData]);
 
-  const productsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'products') : null, [firestore]);
+  const productsQuery = React.useMemo(() => firestore ? collection(firestore, 'products') : null, [firestore]);
   const { data: products } = useCollection<Product>(productsQuery);
 
-  const contactsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'contacts') : null, [firestore]);
+  const contactsQuery = React.useMemo(() => firestore ? collection(firestore, 'contacts') : null, [firestore]);
   const { data: contacts } = useCollection<Contact>(contactsQuery);
   
-  const usersQuery = useMemoFirebase(() => firestore ? collection(firestore, 'users') : null, [firestore]);
+  const usersQuery = React.useMemo(() => firestore ? collection(firestore, 'users') : null, [firestore]);
   const { data: usersData } = useCollection<User>(usersQuery);
   const usersMap = React.useMemo(() => new Map(usersData?.map(u => [u.id, u])), [usersData]);
 
@@ -429,4 +429,5 @@ export function SealDataTable() {
   )
 }
 
+    
     

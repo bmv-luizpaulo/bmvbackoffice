@@ -4,7 +4,7 @@ import * as React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, ListChecks, Trash2, Edit } from "lucide-react";
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { useCollection, useFirestore } from '@/firebase';
 import { collection, doc, orderBy, query } from 'firebase/firestore';
 import type { Checklist, ChecklistItem, Team } from '@/lib/types';
 import { addDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
@@ -25,14 +25,14 @@ export default function ChecklistsPage() {
   const [checklistToEdit, setChecklistToEdit] = React.useState<Checklist | null>(null);
   const [newItemText, setNewItemText] = React.useState('');
 
-  const checklistsQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'checklists'), orderBy('name')) : null, [firestore]);
+  const checklistsQuery = React.useMemo(() => firestore ? query(collection(firestore, 'checklists'), orderBy('name')) : null, [firestore]);
   const { data: checklists, isLoading: isLoadingChecklists } = useCollection<Checklist>(checklistsQuery);
   
-  const teamsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'teams') : null, [firestore]);
+  const teamsQuery = React.useMemo(() => firestore ? collection(firestore, 'teams') : null, [firestore]);
   const { data: teams } = useCollection<Team>(teamsQuery);
   const teamsMap = React.useMemo(() => new Map(teams?.map(t => [t.id, t.name])), [teams]);
 
-  const itemsQuery = useMemoFirebase(() => firestore && selectedChecklist ? query(collection(firestore, `checklists/${selectedChecklist.id}/items`), orderBy('order')) : null, [firestore, selectedChecklist]);
+  const itemsQuery = React.useMemo(() => firestore && selectedChecklist ? query(collection(firestore, `checklists/${selectedChecklist.id}/items`), orderBy('order')) : null, [firestore, selectedChecklist]);
   const { data: checklistItems, isLoading: isLoadingItems } = useCollection<ChecklistItem>(itemsQuery);
 
   React.useEffect(() => {
@@ -238,3 +238,5 @@ export default function ChecklistsPage() {
     </div>
   );
 }
+
+    

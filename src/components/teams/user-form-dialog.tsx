@@ -26,7 +26,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import type { User, Team } from "@/lib/types";
 import { Separator } from "../ui/separator";
-import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
+import { useCollection, useFirestore } from "@/firebase";
 import { collection } from "firebase/firestore";
 import { MultiSelect } from "../ui/multi-select";
 import { Loader2, Users } from "lucide-react";
@@ -83,7 +83,7 @@ const defaultValues = {
 
 export function UserFormDialog({ isOpen, onOpenChange, onSave, user }: UserFormDialogProps) {
   const firestore = useFirestore();
-  const teamsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'teams') : null, [firestore]);
+  const teamsQuery = React.useMemo(() => firestore ? collection(firestore, 'teams') : null, [firestore]);
   const { data: teamsData } = useCollection<Team>(teamsQuery);
   const [isCepLoading, setIsCepLoading] = React.useState(false);
 
@@ -417,3 +417,5 @@ export function UserFormDialog({ isOpen, onOpenChange, onSave, user }: UserFormD
     </Dialog>
   );
 }
+
+    

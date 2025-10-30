@@ -185,21 +185,6 @@ export const useFirebaseApp = (): FirebaseApp => {
   return firebaseApp;
 };
 
-// Global registry to track memoized Firebase SDK objects without mutating them
-export const firebaseMemoSet = new WeakSet<object>();
-
-export function useMemoFirebase<T>(factory: () => T, deps: DependencyList): T {
-  const memoized = useMemo(factory, deps);
-  if (typeof memoized === 'object' && memoized !== null) {
-    try {
-      firebaseMemoSet.add(memoized as object);
-    } catch {
-      // Ignore if object cannot be added (shouldn't happen for objects)
-    }
-  }
-  return memoized as T;
-}
-
 /**
  * Hook specifically for accessing the authenticated user's state.
  * This provides the User object, loading status, and any auth errors.
@@ -209,3 +194,5 @@ export const useUser = (): UserHookResult => { // Renamed from useAuthUser
   const { user, isUserLoading, userError } = useFirebase(); // Leverages the main hook
   return { user, isUserLoading, userError };
 };
+
+    

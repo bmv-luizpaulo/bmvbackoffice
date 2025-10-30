@@ -68,3 +68,5 @@ export function PipelineChart({ data = [], isLoading }: PipelineChartProps) {
         </Card>
     )
 }
+
+    

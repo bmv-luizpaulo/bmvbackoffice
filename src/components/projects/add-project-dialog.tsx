@@ -32,8 +32,9 @@ import { Calendar } from "../ui/calendar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import type { Project, User as UserType } from "@/lib/types";
 import { MultiSelect } from "../ui/multi-select";
-import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
+import { useCollection, useFirestore } from "@/firebase";
 import { collection } from "firebase/firestore";
+import React from "react";
 
 type AddProjectDialogProps = {
   isOpen: boolean;
@@ -57,7 +58,7 @@ const formSchema = z.object({
 
 export function AddProjectDialog({ isOpen, onOpenChange, onAddProject }: AddProjectDialogProps) {
   const firestore = useFirestore();
-  const usersQuery = useMemoFirebase(() => firestore ? collection(firestore, 'users') : null, [firestore]);
+  const usersQuery = React.useMemo(() => firestore ? collection(firestore, 'users') : null, [firestore]);
   const { data: usersData } = useCollection<UserType>(usersQuery);
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -285,3 +286,5 @@ export function AddProjectDialog({ isOpen, onOpenChange, onAddProject }: AddProj
     </Dialog>
   );
 }
+
+    

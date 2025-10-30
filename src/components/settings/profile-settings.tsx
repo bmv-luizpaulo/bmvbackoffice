@@ -16,7 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import type { User } from "firebase/auth";
-import { useFirestore, useDoc, useMemoFirebase } from "@/firebase";
+import { useFirestore, useDoc } from "@/firebase";
 import { doc, updateDoc } from "firebase/firestore";
 import type { User as UserProfile } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
@@ -55,7 +55,7 @@ export function ProfileSettings({ user }: ProfileSettingsProps) {
   const { toast } = useToast();
   const [isCepLoading, setIsCepLoading] = React.useState(false);
 
-  const userProfileRef = useMemoFirebase(() => 
+  const userProfileRef = React.useMemo(() => 
     firestore && user ? doc(firestore, 'users', user.uid) : null,
     [firestore, user]
   );
@@ -363,3 +363,5 @@ export function ProfileSettings({ user }: ProfileSettingsProps) {
     </Form>
   );
 }
+
+    

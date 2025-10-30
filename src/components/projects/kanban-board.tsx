@@ -16,11 +16,12 @@ const AddProjectDialog = dynamic(() => import('./add-project-dialog').then(m => 
 const ProjectFilesDialog = dynamic(() => import('./project-files-dialog').then(m => m.ProjectFilesDialog), { ssr: false, loading: () => <LoadingFallback /> });
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '../ui/command';
-import { useCollection, useDoc, useFirestore, useMemoFirebase, useUser as useAuthUser } from '@/firebase';
+import { useCollection, useDoc, useFirestore, useUser as useAuthUser } from '@/firebase';
 import { collection, doc, writeBatch, addDoc, updateDoc, deleteDoc, query, where } from 'firebase/firestore';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { useNotifications } from '../notifications/notifications-provider';
+import React from 'react';
 
 const AiFollowUpSuggestions = dynamic(() => import('./ai-follow-up-suggestions').then(m => m.AiFollowUpSuggestions), { ssr: false });
 
@@ -62,10 +63,10 @@ export function KanbanBoard() {
   const { user: authUser } = useAuthUser();
   const { createNotification } = useNotifications();
 
-  const userProfileQuery = useMemoFirebase(() => firestore && authUser ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser]);
+  const userProfileQuery = React.useMemo(() => firestore && authUser ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser]);
   const { data: userProfile, isLoading: isLoadingUserProfile } = useDoc<User>(userProfileQuery);
 
-  const projectsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'projects') : null, [firestore]);
+  const projectsQuery = React.useMemo(() => firestore ? collection(firestore, 'projects') : null, [firestore]);
   const { data: projectsData, isLoading: isLoadingProjects } = useCollection<Project>(projectsQuery);
 
   const [projects, setProjects] = useState<Project[]>([]);
@@ -81,10 +82,10 @@ export function KanbanBoard() {
     return true;
   };
 
-  const stagesQuery = useMemoFirebase(() => firestore && selectedProject ? collection(firestore, 'projects', selectedProject.id, 'stages') : null, [firestore, selectedProject]);
+  const stagesQuery = React.useMemo(() => firestore && selectedProject ? collection(firestore, 'projects', selectedProject.id, 'stages') : null, [firestore, selectedProject]);
   const { data: stagesData, isLoading: isLoadingStages } = useCollection<Stage>(stagesQuery);
 
-  const tasksQuery = useMemoFirebase(() => {
+  const tasksQuery = React.useMemo(() => {
     if (!firestore || !selectedProject || !userProfile) return null;
     
     const tasksCollection = collection(firestore, 'projects', selectedProject.id, 'tasks');
@@ -97,7 +98,7 @@ export function KanbanBoard() {
   }, [firestore, selectedProject, userProfile, authUser]);
   const { data: tasksData, isLoading: isLoadingTasks } = useCollection<Task>(tasksQuery);
   
-  const usersQuery = useMemoFirebase(() => firestore ? collection(firestore, 'users') : null, [firestore]);
+  const usersQuery = React.useMemo(() => firestore ? collection(firestore, 'users') : null, [firestore]);
   const { data: usersData } = useCollection<User>(usersQuery);
   const usersMap = useMemo(() => new Map(usersData?.map(user => [user.id, user])), [usersData]);
   
@@ -438,3 +439,5 @@ export function KanbanBoard() {
     </>
   );
 }
+
+    

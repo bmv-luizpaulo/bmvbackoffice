@@ -30,7 +30,7 @@ import { Textarea } from "../ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import type { Stage, Task, User as UserType } from "@/lib/types";
 import { MultiSelect } from "../ui/multi-select";
-import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
+import { useCollection, useFirestore } from "@/firebase";
 import { collection } from "firebase/firestore";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { Calendar } from "../ui/calendar";
@@ -71,7 +71,7 @@ const formSchema = z.object({
 
 export function AddTaskDialog({ isOpen, onOpenChange, onSaveTask, stages, tasks, projectId, taskToEdit }: AddTaskDialogProps) {
   const firestore = useFirestore();
-  const usersQuery = useMemoFirebase(() => firestore ? collection(firestore, 'users') : null, [firestore]);
+  const usersQuery = React.useMemo(() => firestore ? collection(firestore, 'users') : null, [firestore]);
   const { data: usersData } = useCollection<UserType>(usersQuery);
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -346,7 +346,7 @@ export function AddTaskDialog({ isOpen, onOpenChange, onSaveTask, stages, tasks,
                                             <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                                             </Button>
                                         </FormControl>
-                                        </PopoverTrigger>
+                                        </PopoverContent>
                                         <PopoverContent className="w-auto p-0" align="start">
                                         <Calendar
                                             mode="single"
@@ -376,3 +376,5 @@ export function AddTaskDialog({ isOpen, onOpenChange, onSaveTask, stages, tasks,
     </Dialog>
   );
 }
+
+    

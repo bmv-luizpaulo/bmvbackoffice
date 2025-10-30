@@ -34,7 +34,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import type { User } from "@/lib/types";
 import dynamic from "next/dynamic";
-import { useAuth, useFirestore, useCollection, useMemoFirebase, useUser as useAuthUser } from "@/firebase";
+import { useAuth, useFirestore, useCollection, useUser as useAuthUser } from "@/firebase";
 import { collection, doc, setDoc } from "firebase/firestore";
 import {
   AlertDialog,
@@ -58,7 +58,7 @@ export function UserDataTable() {
   const { user: currentUser } = useAuthUser();
   const { toast } = useToast();
   
-  const usersCollection = useMemoFirebase(() => firestore ? collection(firestore, 'users') : null, [firestore]);
+  const usersCollection = React.useMemo(() => firestore ? collection(firestore, 'users') : null, [firestore]);
   const { data: usersData, isLoading } = useCollection<User>(usersCollection);
   const data = React.useMemo(() => usersData ?? [], [usersData]);
 
@@ -339,3 +339,5 @@ export function UserDataTable() {
     </div>
   )
 }
+
+    
