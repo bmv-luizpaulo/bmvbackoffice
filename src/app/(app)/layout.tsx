@@ -160,7 +160,7 @@ function InnerLayout({ children }: { children: React.ReactNode }) {
         <Sidebar collapsible="icon">
           <SidebarHeader>
             <div className="flex items-center justify-center p-2">
-              <Image src="/image/BMV.png" alt="BMV Logo" width={40} height={40} className="text-primary group-data-[collapsible=icon]:w-8 group-data-[collapsible=icon]:h-8 transition-all" />
+              <Image src="/image/BMV.png" alt="BMV Logo" width={120} height={40} className="text-primary group-data-[collapsible=icon]:w-10 group-data-[collapsible=icon]:h-10 transition-all" />
             </div>
           </SidebarHeader>
           <SidebarContent>
