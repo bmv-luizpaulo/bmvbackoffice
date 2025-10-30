@@ -328,6 +328,57 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["title", "message", "link", "isRead", "createdAt"]
+    },
+    "Product": {
+      "title": "Product",
+      "type": "object",
+      "description": "Represents a product that can be associated with a seal.",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Name of the product."
+        },
+        "description": {
+          "type": "string",
+          "description": "Description of the product."
+        },
+        "sku": {
+          "type": "string",
+          "description": "Stock Keeping Unit."
+        }
+      },
+      "required": ["name"]
+    },
+    "Seal": {
+      "title": "Seal",
+      "type": "object",
+      "description": "Represents a certification seal issued to a contact for a specific product.",
+      "properties": {
+        "productId": {
+          "type": "string",
+          "description": "Reference to the Product."
+        },
+        "contactId": {
+          "type": "string",
+          "description": "Reference to the Contact (client)."
+        },
+        "issueDate": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Date the seal was issued."
+        },
+        "expiryDate": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Date the seal expires."
+        },
+        "status": {
+          "type": "string",
+          "description": "Current status of the seal.",
+          "enum": ["Solicitado", "Ativo", "Vencido", "Em Renovação"]
+        }
+      },
+      "required": ["productId", "contactId", "issueDate", "expiryDate", "status"]
     }
   },
   "auth": {
@@ -376,6 +427,14 @@
     "/chats/{chatId}/messages/{messageId}": {
       "schema": { "$ref": "#/entities/Message" },
       "description": "Contains all messages for a given chat."
+    },
+    "/products/{productId}": {
+        "schema": { "$ref": "#/entities/Product" },
+        "description": "Stores all products that can be certified with a seal."
+    },
+    "/seals/{sealId}": {
+        "schema": { "$ref": "#/entities/Seal" },
+        "description": "Stores all certification seals issued."
     }
   }
 }

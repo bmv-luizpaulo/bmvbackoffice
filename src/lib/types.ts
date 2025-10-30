@@ -127,3 +127,19 @@ export type Notification = {
   isRead: boolean;
   createdAt: string; // ISO string
 };
+
+export type Product = {
+    id: string;
+    name: string;
+    description?: string;
+    sku?: string;
+};
+
+export type Seal = {
+    id: string;
+    productId: string;
+    contactId: string;
+    issueDate: string;
+    expiryDate: string;
+    status: 'Solicitado' | 'Ativo' | 'Vencido' | 'Em Renovação';
+};
