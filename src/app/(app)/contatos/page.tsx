@@ -3,7 +3,6 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ContactDataTable } from "@/components/agenda/contact-data-table";
-import { EmployeeList } from "@/components/agenda/employee-list";
 
 export default function ContatosPage() {
   return (
@@ -11,15 +10,14 @@ export default function ContatosPage() {
       <header>
         <h1 className="font-headline text-3xl font-bold tracking-tight">Agenda de Contatos</h1>
         <p className="text-muted-foreground">
-          Gerencie seus clientes, fornecedores, parceiros e usuários em um só lugar.
+          Gerencie seus clientes, fornecedores e parceiros em um só lugar.
         </p>
       </header>
       <Tabs defaultValue="clientes">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="clientes">Clientes</TabsTrigger>
           <TabsTrigger value="fornecedores">Fornecedores</TabsTrigger>
           <TabsTrigger value="parceiros">Parceiros</TabsTrigger>
-          <TabsTrigger value="funcionarios">Usuários</TabsTrigger>
         </TabsList>
         <TabsContent value="clientes">
             <Card>
@@ -51,17 +49,6 @@ export default function ContatosPage() {
                 </CardHeader>
                 <CardContent>
                     <ContactDataTable type="parceiro" />
-                </CardContent>
-            </Card>
-        </TabsContent>
-        <TabsContent value="funcionarios">
-             <Card>
-                <CardHeader>
-                    <CardTitle>Usuários</CardTitle>
-                    <CardDescription>Lista de todos os usuários cadastrados no sistema.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <EmployeeList />
                 </CardContent>
             </Card>
         </TabsContent>
