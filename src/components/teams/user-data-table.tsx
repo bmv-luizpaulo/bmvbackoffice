@@ -227,10 +227,7 @@ export function UserDataTable() {
   });
 
   React.useEffect(() => {
-    const h = setTimeout(() => {
-      table.getColumn("email")?.setFilterValue(emailFilter);
-    }, 300);
-    return () => clearTimeout(h);
+    table.getColumn("email")?.setFilterValue(emailFilter);
   }, [emailFilter, table]);
 
   return (
@@ -238,8 +235,10 @@ export function UserDataTable() {
        <div className="flex items-center justify-between py-4">
         <Input
           placeholder="Filtrar por e-mail..."
-          value={emailFilter}
-          onChange={(event) => setEmailFilter(event.target.value)}
+          value={(table.getColumn("email")?.getFilterValue() as string) ?? ""}
+          onChange={(event) =>
+            table.getColumn("email")?.setFilterValue(event.target.value)
+          }
           className="max-w-sm"
         />
         <Button onClick={() => {setSelectedUser(null); setIsFormOpen(true)}}>Adicionar Usuário</Button>
