@@ -61,13 +61,10 @@ const getQueryPath = (query: CollectionReference<DocumentData> | Query<DocumentD
     if ((query as CollectionReference).path) {
         return (query as CollectionReference).path;
     }
-    // This is a more robust way to get the path from a query object.
-    // It accesses a non-public property, which can be risky, but it's a common workaround.
     const internalQuery = (query as any)._query;
     if (internalQuery && internalQuery.path && typeof internalQuery.path.canonicalString === 'function') {
         return internalQuery.path.canonicalString();
     }
-    // Fallback if the internal structure changes
     return '(path-not-retrievable)';
 }
 
@@ -93,52 +90,42 @@ export function useCollection<T = any>(
   type StateDataType = ResultItemType[] | null;
 
   const [data, setData] = useState<StateDataType>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<FirestoreError | Error | null>(null);
 
   useEffect(() => {
-    const path = getQueryPath(targetRefOrQuery);
-    
-    if (!targetRefOrQuery || !path || path.trim() === '' || path.includes('//')) {
+    if (!targetRefOrQuery) {
       setData(null);
       setIsLoading(false);
       setError(null);
       return;
     }
-    
 
     setIsLoading(true);
-    setError(null);
-
+    
     const unsubscribe = onSnapshot(
       targetRefOrQuery,
       (snapshot: QuerySnapshot<DocumentData>) => {
-        const results: ResultItemType[] = [];
-        for (const doc of snapshot.docs) {
+        const results: ResultItemType[] = snapshot.docs.map(doc => {
            const docData = doc.data() as T;
            const dataWithConvertedTimestamps = convertTimestampsToISO(docData);
-           results.push({ ...dataWithConvertedTimestamps, id: doc.id });
-        }
+           return { ...dataWithConvertedTimestamps, id: doc.id };
+        });
         setData(results);
         setError(null);
         setIsLoading(false);
       },
       (error: FirestoreError) => {
-        const contextualError = new FirestorePermissionError({
-          operation: 'list',
-          path,
-        })
-
-        setError(contextualError)
-        setData(null)
-        setIsLoading(false)
-        
-        console.warn(`Firestore permission error on '${path}' was caught but not thrown globally. This is a temporary measure.`);
+        const path = getQueryPath(targetRefOrQuery);
+        console.error(`Firestore permission error on path: '${path}'.`, error);
+        setError(error);
+        setData(null);
+        setIsLoading(false);
       }
     );
 
     return () => unsubscribe();
-  }, [targetRefOrQuery]); // Re-run if the target query/reference changes.
+  }, [targetRefOrQuery]);
   
   return { data, isLoading, error };
 }

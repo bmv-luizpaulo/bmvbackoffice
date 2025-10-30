@@ -46,20 +46,22 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
 import { addDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase/non-blocking-updates"
+import { useToast } from "@/hooks/use-toast"
 
 const TeamFormDialog = dynamic(() => import('./team-form-dialog').then(m => m.TeamFormDialog), { ssr: false });
 
 export function TeamDataTable() {
   const firestore = useFirestore();
-  const teamsCollection = React.useMemo(() => firestore ? collection(firestore, 'teams') : null, [firestore]);
-  const { data: teamsData, isLoading: isLoadingTeams } = useCollection<Team>(teamsCollection);
-  const data = React.useMemo(() => teamsData ?? [], [teamsData]);
+  const { toast } = useToast();
+  
+  const teamsQuery = React.useMemo(() => firestore ? collection(firestore, 'teams') : null, [firestore]);
+  const { data: teamsData, isLoading: isLoadingTeams } = useCollection<Team>(teamsQuery);
+  
+  const usersQuery = React.useMemo(() => firestore ? collection(firestore, 'users') : null, [firestore]);
+  const { data: users, isLoading: isLoadingUsers } = useCollection<User>(usersQuery);
 
-  const usersCollection = React.useMemo(() => firestore ? collection(firestore, 'users') : null, [firestore]);
-  const { data: users, isLoading: isLoadingUsers } = useCollection<User>(usersCollection);
+  const data = React.useMemo(() => teamsData ?? [], [teamsData]);
 
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
@@ -71,19 +73,18 @@ export function TeamDataTable() {
   const isLoading = isLoadingTeams || isLoadingUsers;
 
   const usersByTeam = React.useMemo(() => {
-    if (!users) return new Map<string, User[]>();
-
+    if (!users || !teamsData) return new Map<string, User[]>();
     const map = new Map<string, User[]>();
+    teamsData.forEach(team => map.set(team.id, []));
     users.forEach(user => {
         user.teamIds?.forEach(teamId => {
-            if (!map.has(teamId)) {
-                map.set(teamId, []);
+            if (map.has(teamId)) {
+                map.get(teamId)!.push(user);
             }
-            map.get(teamId)!.push(user);
         });
     });
     return map;
-  }, [users]);
+  }, [users, teamsData]);
 
   const handleEditClick = React.useCallback((team: Team) => {
     setSelectedTeam(team);
@@ -95,35 +96,38 @@ export function TeamDataTable() {
     setIsAlertOpen(true);
   }, []);
 
-  const handleSaveTeam = React.useCallback((teamData: Omit<Team, 'id'>) => {
+  const handleSaveTeam = React.useCallback((teamData: Omit<Team, 'id'>, teamId?: string) => {
     if (!firestore) return;
     
-    if (selectedTeam) {
-      // Update
-      const teamRef = doc(firestore, 'teams', selectedTeam.id);
+    if (teamId) {
+      const teamRef = doc(firestore, 'teams', teamId);
       updateDocumentNonBlocking(teamRef, teamData);
+      toast({ title: "Equipe Atualizada", description: `A equipe "${teamData.name}" foi atualizada.`});
     } else {
-      // Create
       addDocumentNonBlocking(collection(firestore, 'teams'), teamData);
+      toast({ title: "Equipe Criada", description: `A equipe "${teamData.name}" foi criada com sucesso.`});
     }
-  }, [firestore, selectedTeam]);
+  }, [firestore, toast]);
 
   const handleDeleteTeam = React.useCallback(() => {
     if (!firestore || !selectedTeam) return;
     const teamRef = doc(firestore, 'teams', selectedTeam.id);
     deleteDocumentNonBlocking(teamRef);
+    toast({ title: "Equipe Excluída", description: `A equipe "${selectedTeam.name}" foi removida.`, variant: 'destructive' });
     setIsAlertOpen(false);
     setSelectedTeam(null);
-  }, [firestore, selectedTeam]);
+  }, [firestore, selectedTeam, toast]);
 
   const columns: ColumnDef<Team>[] = React.useMemo(() => [
     {
       accessorKey: "name",
       header: "Nome da Equipe",
+      cell: ({ row }) => <span className="font-medium">{row.original.name}</span>,
     },
     {
       accessorKey: "description",
       header: "Descrição",
+      cell: ({ row }) => <p className="text-muted-foreground max-w-xs truncate">{row.original.description}</p>
     },
     {
       id: "members",
@@ -136,36 +140,14 @@ export function TeamDataTable() {
             return <span className="text-muted-foreground text-xs">Sem membros</span>;
         }
 
+        const displayMembers = members.slice(0, 3);
+        const remainingCount = members.length - displayMembers.length;
+
         return (
-             <TooltipProvider>
-                <div className="flex -space-x-2">
-                    {members.slice(0, 5).map(member => (
-                        <Tooltip key={member.id}>
-                            <TooltipTrigger asChild>
-                                <Avatar className="h-8 w-8 border-2 border-background">
-                                    <AvatarImage src={member.avatarUrl} alt={member.name}/>
-                                    <AvatarFallback>{member.name.charAt(0)}</AvatarFallback>
-                                </Avatar>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                                <p>{member.name}</p>
-                            </TooltipContent>
-                        </Tooltip>
-                    ))}
-                    {members.length > 5 && (
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                <Avatar className="h-8 w-8 border-2 border-background">
-                                    <AvatarFallback>+{members.length - 5}</AvatarFallback>
-                                </Avatar>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                                <p>{members.slice(5).map(m => m.name).join(', ')}</p>
-                            </TooltipContent>
-                        </Tooltip>
-                    )}
-                </div>
-            </TooltipProvider>
+            <div className="flex flex-col text-sm text-muted-foreground">
+                {displayMembers.map(m => <span key={m.id} className="truncate">{m.name}</span>)}
+                {remainingCount > 0 && <span>+ {remainingCount} outro(s)</span>}
+            </div>
         );
       }
     },
@@ -174,29 +156,31 @@ export function TeamDataTable() {
       cell: ({ row }) => {
         const team = row.original
         return (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0">
-                <span className="sr-only">Abrir menu</span>
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuLabel>Ações</DropdownMenuLabel>
-              <DropdownMenuItem onClick={() => handleEditClick(team)}>
-                <Pencil className="mr-2 h-4 w-4" />
-                Editar
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem 
-                className="text-red-600"
-                onClick={() => handleDeleteClick(team)}
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                Excluir
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <div className="text-right">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="h-8 w-8 p-0">
+                  <span className="sr-only">Abrir menu</span>
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>Ações</DropdownMenuLabel>
+                <DropdownMenuItem onClick={() => handleEditClick(team)}>
+                  <Pencil className="mr-2 h-4 w-4" />
+                  Editar
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem 
+                  className="text-red-600 focus:text-red-500 focus:bg-red-50"
+                  onClick={() => handleDeleteClick(team)}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Excluir
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         )
       },
     },
@@ -268,7 +252,7 @@ export function TeamDataTable() {
             ) : (
               <TableRow>
                 <TableCell colSpan={columns.length} className="h-24 text-center">
-                  {isLoading ? "Carregando equipes..." : "Nenhum resultado."}
+                  {isLoading ? "Carregando equipes..." : "Nenhuma equipe encontrada."}
                 </TableCell>
               </TableRow>
             )}
@@ -314,7 +298,7 @@ export function TeamDataTable() {
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel onClick={() => setSelectedTeam(null)}>Cancelar</AlertDialogCancel>
-              <AlertDialogAction onClick={handleDeleteTeam}>Excluir</AlertDialogAction>
+              <AlertDialogAction onClick={handleDeleteTeam} className="bg-destructive hover:bg-destructive/90">Excluir</AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
@@ -322,5 +306,3 @@ export function TeamDataTable() {
     </div>
   )
 }
-
-    

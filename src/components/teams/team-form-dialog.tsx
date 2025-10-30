@@ -30,7 +30,7 @@ import type { Team } from "@/lib/types";
 type TeamFormDialogProps = {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
-  onSave: (team: Omit<Team, 'id'>) => void;
+  onSave: (team: Omit<Team, 'id'>, teamId?: string) => void;
   team?: Team | null;
 };
 
@@ -65,7 +65,7 @@ export function TeamFormDialog({ isOpen, onOpenChange, onSave, team }: TeamFormD
 
 
   function onSubmit(values: z.infer<typeof formSchema>) {
-    onSave(values);
+    onSave(values, team?.id);
     onOpenChange(false);
   }
   
@@ -119,5 +119,3 @@ export function TeamFormDialog({ isOpen, onOpenChange, onSave, team }: TeamFormD
     </Dialog>
   );
 }
-
-    
