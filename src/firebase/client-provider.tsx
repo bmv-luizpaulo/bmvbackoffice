@@ -8,10 +8,10 @@ interface FirebaseClientProviderProps {
   children: ReactNode;
 }
 
-export function FirebaseClientProvider({ children }: FirebaseClientProviderProps) {
-  // initializeFirebase now just returns the singleton instances.
-  const { firebaseApp, auth, firestore } = initializeFirebase();
+// Get services once at the module level.
+const { firebaseApp, auth, firestore } = initializeFirebase();
 
+export function FirebaseClientProvider({ children }: FirebaseClientProviderProps) {
   return (
     <FirebaseProvider
       firebaseApp={firebaseApp}
