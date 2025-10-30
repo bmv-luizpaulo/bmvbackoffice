@@ -62,9 +62,19 @@ export function KanbanBoard() {
 
   const projectsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'projects') : null, [firestore]);
   const { data: projectsData, isLoading: isLoadingProjects } = useCollection<Project>(projectsQuery);
-  
+
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+
+  const areProjectsEqual = (a: Project[], b: Project[]) => {
+    if (a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i++) {
+      if (a[i].id !== b[i].id) return false;
+      // compare key fields that might change ordering when updated
+      if (a[i].name !== b[i].name) return false;
+    }
+    return true;
+  };
 
   const stagesQuery = useMemoFirebase(() => firestore && selectedProject ? collection(firestore, 'projects', selectedProject.id, 'stages') : null, [firestore, selectedProject]);
   const { data: stagesData, isLoading: isLoadingStages } = useCollection<Stage>(stagesQuery);
@@ -96,20 +106,28 @@ export function KanbanBoard() {
   const { toast } = useToast();
 
   useEffect(() => {
-    if (projectsData) {
-      const sortedProjects = [...projectsData].sort((a, b) => a.name.localeCompare(b.name));
-      setProjects(sortedProjects);
-      if (!selectedProject && sortedProjects.length > 0) {
-        setSelectedProject(sortedProjects[0]);
-      } else if (selectedProject) {
-        // refresh selected project data
-        const refreshedProject = sortedProjects.find(p => p.id === selectedProject.id);
-        if(refreshedProject) setSelectedProject(refreshedProject);
-        else if(sortedProjects.length > 0) setSelectedProject(sortedProjects[0]);
-        else setSelectedProject(null);
+    if (!projectsData) return;
+
+    const nextSorted = [...projectsData].sort((a, b) => a.name.localeCompare(b.name));
+    // Only update if order/content actually changed
+    setProjects(prev => (areProjectsEqual(prev, nextSorted) ? prev : nextSorted));
+
+    // Initialize selection
+    if (!selectedProject) {
+      if (nextSorted.length > 0) setSelectedProject(nextSorted[0]);
+      return;
+    }
+
+    // Keep selectedProject in sync only when its data actually changed or was removed
+    const match = nextSorted.find(p => p.id === selectedProject.id);
+    if (!match) {
+      setSelectedProject(nextSorted[0] ?? null);
+    } else {
+      if (match.name !== selectedProject.name) {
+        setSelectedProject(match);
       }
     }
-  }, [projectsData, selectedProject]);
+  }, [projectsData]);
 
   const handleSelectProject = (project: Project) => {
     setSelectedProject(project);

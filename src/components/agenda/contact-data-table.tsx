@@ -35,7 +35,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import type { Contact } from "@/lib/types";
 import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
-import { collection, doc, query, where } from "firebase/firestore";
+import { collection, doc, query, where, orderBy, limit as fbLimit } from "firebase/firestore";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -56,11 +56,25 @@ interface ContactDataTableProps {
 
 export function ContactDataTable({ type }: ContactDataTableProps) {
   const firestore = useFirestore();
-  const contactsQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'contacts'), where('type', '==', type)) : null, [firestore, type]);
+  const [pageSize, setPageSize] = React.useState<number>(50);
+  const contactsQuery = useMemoFirebase(
+    () =>
+      firestore
+        ? query(
+            collection(firestore, 'contacts'),
+            where('type', '==', type),
+            orderBy('name'),
+            fbLimit(pageSize)
+          )
+        : null,
+    [firestore, type, pageSize]
+  );
   const { data: contacts, isLoading } = useCollection<Contact>(contactsQuery);
 
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
+  const [nameFilter, setNameFilter] = React.useState<string>('');
+  const deferredNameFilter = (React as any).useDeferredValue ? (React as any).useDeferredValue(nameFilter) : nameFilter;
   
   const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [isAlertOpen, setIsAlertOpen] = React.useState(false);
@@ -161,21 +175,24 @@ export function ContactDataTable({ type }: ContactDataTableProps) {
     getSortedRowModel: getSortedRowModel(),
     onColumnFiltersChange: setColumnFilters,
     getFilteredRowModel: getFilteredRowModel(),
+    initialState: { pagination: { pageSize: 10 } },
     state: {
       sorting,
       columnFilters,
     },
   });
 
+  React.useEffect(() => {
+    table.getColumn('name')?.setFilterValue(deferredNameFilter);
+  }, [deferredNameFilter, table]);
+
   return (
     <div>
        <div className="flex items-center justify-between py-4">
         <Input
           placeholder="Filtrar por nome..."
-          value={(table.getColumn("name")?.getFilterValue() as string) ?? ""}
-          onChange={(event) =>
-            table.getColumn("name")?.setFilterValue(event.target.value)
-          }
+          value={nameFilter}
+          onChange={(event) => setNameFilter(event.target.value)}
           className="max-w-sm"
         />
         <Button onClick={() => {setSelectedContact(null); setIsFormOpen(true)}}>Adicionar {typeLabel}</Button>
@@ -224,7 +241,19 @@ export function ContactDataTable({ type }: ContactDataTableProps) {
           </TableBody>
         </Table>
       </div>
-      <div className="flex items-center justify-end space-x-2 py-4">
+      <div className="flex flex-wrap items-center justify-between gap-2 py-4">
+        <div className="text-sm text-muted-foreground">
+          {contacts ? `${Math.min(contacts.length, pageSize)} de ${pageSize}${contacts.length < pageSize ? '' : '+'}` : ''}
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setPageSize((s) => Math.min(s + 50, 1000))}
+            disabled={isLoading}
+          >
+            Carregar mais
+          </Button>
         <Button
           variant="outline"
           size="sm"
@@ -241,6 +270,7 @@ export function ContactDataTable({ type }: ContactDataTableProps) {
         >
           Próximo
         </Button>
+        </div>
       </div>
 
       {isFormOpen && (

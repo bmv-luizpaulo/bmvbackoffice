@@ -1,5 +1,6 @@
 'use client';
 
+import React, { memo } from 'react';
 import { useDroppable } from '@dnd-kit/core';
 import type { Stage, Task, User } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
@@ -15,7 +16,7 @@ type KanbanColumnProps = {
   onEditTask: (task: Task) => void;
 };
 
-export function KanbanColumn({ stage, tasks, onUpdateTask, onDeleteTask, onEditTask }: KanbanColumnProps) {
+function KanbanColumnComponent({ stage, tasks, onUpdateTask, onDeleteTask, onEditTask }: KanbanColumnProps) {
   const { setNodeRef, isOver } = useDroppable({ id: stage.id });
 
   return (
@@ -65,3 +66,24 @@ export function KanbanColumn({ stage, tasks, onUpdateTask, onDeleteTask, onEditT
     </div>
   );
 }
+
+const areEqual = (prev: KanbanColumnProps, next: KanbanColumnProps) => {
+  if (
+    prev.stage.id !== next.stage.id ||
+    prev.stage.name !== next.stage.name ||
+    prev.stage.description !== next.stage.description
+  ) return false;
+  if (prev.tasks.length !== next.tasks.length) return false;
+  for (let i = 0; i < prev.tasks.length; i++) {
+    const a = prev.tasks[i];
+    const b = next.tasks[i];
+    if (a.id !== b.id) return false;
+    if ((a.isLocked ? 1 : 0) !== (b.isLocked ? 1 : 0)) return false;
+    const aAssignee = (a as any).assignee?.id || (a as any).assigneeId || '';
+    const bAssignee = (b as any).assignee?.id || (b as any).assigneeId || '';
+    if (aAssignee !== bAssignee) return false;
+  }
+  return true;
+};
+
+export const KanbanColumn = memo(KanbanColumnComponent, areEqual);

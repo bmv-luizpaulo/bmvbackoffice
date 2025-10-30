@@ -15,7 +15,6 @@ import {
   Award,
 } from 'lucide-react';
 import Image from 'next/image';
-import { ThemeProvider } from "next-themes";
 
 import {
   SidebarProvider,
@@ -237,16 +236,9 @@ function InnerLayout({ children }: { children: React.ReactNode }) {
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <FirebaseClientProvider>
-      <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
-        <NotificationsProvider>
-          <InnerLayout>{children}</InnerLayout>
-        </NotificationsProvider>
-      </ThemeProvider>
+      <NotificationsProvider>
+        <InnerLayout>{children}</InnerLayout>
+      </NotificationsProvider>
     </FirebaseClientProvider>
   );
 }

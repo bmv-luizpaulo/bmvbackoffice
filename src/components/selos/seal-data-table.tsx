@@ -37,7 +37,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import type { Seal, Product, Contact, User } from "@/lib/types";
 import { useFirestore, useCollection, useMemoFirebase, useUser } from "@/firebase";
-import { collection, doc } from "firebase/firestore";
+import { collection, doc, query, orderBy, limit as fbLimit } from "firebase/firestore";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -63,7 +63,11 @@ export function SealDataTable() {
   const { createNotification } = useNotifications();
 
 
-  const sealsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'seals') : null, [firestore]);
+  const [pageSize, setPageSize] = React.useState<number>(50);
+  const sealsQuery = useMemoFirebase(
+    () => firestore ? query(collection(firestore, 'seals'), orderBy('issueDate', 'desc'), fbLimit(pageSize)) : null,
+    [firestore, pageSize]
+  );
   const { data: seals, isLoading: isLoadingSeals } = useCollection<Seal>(sealsQuery);
 
   const productsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'products') : null, [firestore]);
@@ -81,6 +85,10 @@ export function SealDataTable() {
 
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
+  const [productFilter, setProductFilter] = React.useState<string>('');
+  const [contactFilter, setContactFilter] = React.useState<string>('');
+  const deferredProductFilter = (React as any).useDeferredValue ? (React as any).useDeferredValue(productFilter) : productFilter;
+  const deferredContactFilter = (React as any).useDeferredValue ? (React as any).useDeferredValue(contactFilter) : contactFilter;
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
   
   const [isFormOpen, setIsFormOpen] = React.useState(false);
@@ -242,6 +250,7 @@ export function SealDataTable() {
     onColumnFiltersChange: setColumnFilters,
     getFilteredRowModel: getFilteredRowModel(),
     onColumnVisibilityChange: setColumnVisibility,
+    initialState: { pagination: { pageSize: 10 } },
     state: {
       sorting,
       columnFilters,
@@ -249,25 +258,29 @@ export function SealDataTable() {
     },
   });
 
+  React.useEffect(() => {
+    table.getColumn('productId')?.setFilterValue(deferredProductFilter);
+  }, [deferredProductFilter, table]);
+
+  React.useEffect(() => {
+    table.getColumn('contactId')?.setFilterValue(deferredContactFilter);
+  }, [deferredContactFilter, table]);
+
   return (
     <div>
        <div className="flex items-center justify-between py-4 gap-4">
         <div className="flex items-center gap-2">
             <Input
-            placeholder="Filtrar por produto..."
-            value={(table.getColumn("productId")?.getFilterValue() as string) ?? ""}
-            onChange={(event) =>
-                table.getColumn("productId")?.setFilterValue(event.target.value)
-            }
-            className="max-w-sm"
+              placeholder="Filtrar por produto..."
+              value={productFilter}
+              onChange={(e) => setProductFilter(e.target.value)}
+              className="max-w-sm"
             />
             <Input
-            placeholder="Filtrar por cliente..."
-            value={(table.getColumn("contactId")?.getFilterValue() as string) ?? ""}
-            onChange={(event) =>
-                table.getColumn("contactId")?.setFilterValue(event.target.value)
-            }
-            className="max-w-sm"
+              placeholder="Filtrar por cliente..."
+              value={contactFilter}
+              onChange={(e) => setContactFilter(e.target.value)}
+              className="max-w-sm"
             />
         </div>
         <div className="flex items-center gap-2">
@@ -351,7 +364,19 @@ export function SealDataTable() {
           </TableBody>
         </Table>
       </div>
-      <div className="flex items-center justify-end space-x-2 py-4">
+      <div className="flex flex-wrap items-center justify-between gap-2 py-4">
+        <div className="text-sm text-muted-foreground">
+          {seals ? `${Math.min(seals.length, pageSize)} de ${pageSize}${seals.length < pageSize ? '' : '+'}` : ''}
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setPageSize((s) => Math.min(s + 50, 1000))}
+            disabled={isLoading}
+          >
+            Carregar mais
+          </Button>
         <Button
           variant="outline"
           size="sm"
@@ -368,6 +393,7 @@ export function SealDataTable() {
         >
           Próximo
         </Button>
+        </div>
       </div>
 
       {isFormOpen && <SealFormDialog 

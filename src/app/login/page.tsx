@@ -13,12 +13,13 @@ export default function LoginPage() {
           src="https://images.unsplash.com/photo-1497215728101-856f4ea42174?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3wzODE4MDB8MHwxfGFsbHx8fHx8fHx8fDE3MjM2OTIzNTV8&ixlib=rb-4.0.3&q=80&w=1080"
           alt="Escritório moderno e colaborativo"
           fill
+          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 100vw, 100vw"
           className="absolute inset-0 -z-10 h-full w-full object-cover"
           data-ai-hint="modern office"
         />
         <div className="absolute inset-0 -z-10 bg-black/60" />
         <div className="w-full max-w-5xl">
-          <Card className="w-full bg-background/90 backdrop-blur-sm">
+          <Card className="w-full bg-background/85 backdrop-blur-[2px] md:backdrop-blur-sm">
             <div className="grid items-stretch md:grid-cols-2">
               <CardHeader className="flex items-center justify-center p-10 md:p-10 border-b md:border-b-0 md:border-r border-border">
                 <div className="relative flex flex-col items-center justify-center gap-4 text-center overflow-hidden">
