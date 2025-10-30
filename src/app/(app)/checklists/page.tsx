@@ -9,12 +9,14 @@ import { collection, doc, orderBy, query } from 'firebase/firestore';
 import type { Checklist, ChecklistItem, Team } from '@/lib/types';
 import { addDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useToast } from '@/hooks/use-toast';
-import dynamic from 'next/dynamic';
+import NextDynamic from 'next/dynamic';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
-const ChecklistFormDialog = dynamic(() => import('@/components/checklists/checklist-form-dialog').then(m => m.ChecklistFormDialog));
+export const dynamic = 'force-dynamic';
+
+const ChecklistFormDialog = NextDynamic(() => import('@/components/checklists/checklist-form-dialog').then(m => m.ChecklistFormDialog));
 
 export default function ChecklistsPage() {
   const firestore = useFirestore();
