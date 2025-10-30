@@ -43,7 +43,7 @@ export function getSdks(firebaseApp: FirebaseApp) {
       // Auto-detect in prod environments
       experimentalAutoDetectLongPolling: isProd,
       ignoreUndefinedProperties: true,
-    } as any);
+    });
   } catch {
     firestore = getFirestore(firebaseApp);
   }
