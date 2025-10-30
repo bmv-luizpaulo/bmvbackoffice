@@ -63,14 +63,14 @@ const navSections = [
     {
         name: 'Comercial',
         items: [
-            { href: '/projects', icon: ListChecks, label: 'Tarefas' }, // Alterado
             { href: '/contatos', icon: BookUser, label: 'Contatos' },
-            { href: '/selos', icon: Award, label: 'Selos' }, // Adicionado
+            { href: '/selos', icon: Award, label: 'Selos' },
         ]
     },
     {
         name: 'Operacional',
         items: [
+            { href: '/projects', icon: ListChecks, label: 'Tarefas' },
             { href: '/assets', icon: Building2, label: 'Ativos' },
             { href: '/contracts', icon: Archive, label: 'Contratos' },
             { href: '/checklists', icon: ListChecks, label: 'Checklists' },
