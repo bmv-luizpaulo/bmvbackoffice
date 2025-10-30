@@ -62,6 +62,16 @@ export function ProductDataTable() {
   const [isAlertOpen, setIsAlertOpen] = React.useState(false);
   const [selectedProduct, setSelectedProduct] = React.useState<Product | null>(null);
 
+  const handleEditClick = React.useCallback((product: Product) => {
+    setSelectedProduct(product);
+    setIsFormOpen(true);
+  }, []);
+
+  const handleDeleteClick = React.useCallback((product: Product) => {
+    setSelectedProduct(product);
+    setIsAlertOpen(true);
+  }, []);
+
   const handleSaveProduct = React.useCallback((productData: Omit<Product, 'id'>) => {
     if (!firestore) return;
     
@@ -115,14 +125,14 @@ export function ProductDataTable() {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>Ações</DropdownMenuLabel>
-              <DropdownMenuItem onClick={() => {setSelectedProduct(product); setIsFormOpen(true)}}>
+              <DropdownMenuItem onClick={() => handleEditClick(product)}>
                 <Pencil className="mr-2 h-4 w-4" />
                 Editar
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem 
                 className="text-red-600"
-                onClick={() => {setSelectedProduct(product); setIsAlertOpen(true)}}
+                onClick={() => handleDeleteClick(product)}
               >
                 <Trash2 className="mr-2 h-4 w-4" />
                 Excluir
@@ -132,7 +142,7 @@ export function ProductDataTable() {
         )
       },
     },
-  ], []);
+  ], [handleEditClick, handleDeleteClick]);
 
   const table = useReactTable({
     data: products || [],

@@ -84,6 +84,16 @@ export function TeamDataTable() {
     return map;
   }, [users]);
 
+  const handleEditClick = React.useCallback((team: Team) => {
+    setSelectedTeam(team);
+    setIsFormOpen(true);
+  }, []);
+
+  const handleDeleteClick = React.useCallback((team: Team) => {
+    setSelectedTeam(team);
+    setIsAlertOpen(true);
+  }, []);
+
   const handleSaveTeam = React.useCallback((teamData: Omit<Team, 'id'>) => {
     if (!firestore) return;
     
@@ -172,14 +182,14 @@ export function TeamDataTable() {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>Ações</DropdownMenuLabel>
-              <DropdownMenuItem onClick={() => {setSelectedTeam(team); setIsFormOpen(true)}}>
+              <DropdownMenuItem onClick={() => handleEditClick(team)}>
                 <Pencil className="mr-2 h-4 w-4" />
                 Editar
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem 
                 className="text-red-600"
-                onClick={() => {setSelectedTeam(team); setIsAlertOpen(true)}}
+                onClick={() => handleDeleteClick(team)}
               >
                 <Trash2 className="mr-2 h-4 w-4" />
                 Excluir
@@ -189,7 +199,7 @@ export function TeamDataTable() {
         )
       },
     },
-  ], [usersByTeam]);
+  ], [usersByTeam, handleEditClick, handleDeleteClick]);
 
   const table = useReactTable({
     data: teams || [],

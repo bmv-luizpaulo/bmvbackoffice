@@ -79,6 +79,16 @@ export function SealDataTable() {
 
   const isLoading = isLoadingSeals;
 
+  const handleEditClick = React.useCallback((seal: Seal) => {
+    setSelectedSeal(seal);
+    setIsFormOpen(true);
+  }, []);
+
+  const handleDeleteClick = React.useCallback((seal: Seal) => {
+    setSelectedSeal(seal);
+    setIsAlertOpen(true);
+  }, []);
+
   const handleSaveSeal = React.useCallback((sealData: Omit<Seal, 'id'>) => {
     if (!firestore) return;
     
@@ -176,14 +186,14 @@ export function SealDataTable() {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>Ações</DropdownMenuLabel>
-              <DropdownMenuItem onClick={() => {setSelectedSeal(seal); setIsFormOpen(true)}}>
+              <DropdownMenuItem onClick={() => handleEditClick(seal)}>
                 <Pencil className="mr-2 h-4 w-4" />
                 Editar
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem 
                 className="text-red-600"
-                onClick={() => {setSelectedSeal(seal); setIsAlertOpen(true)}}
+                onClick={() => handleDeleteClick(seal)}
               >
                 <Trash2 className="mr-2 h-4 w-4" />
                 Excluir
@@ -193,7 +203,7 @@ export function SealDataTable() {
         )
       },
     },
-  ], [productsMap, contactsMap, handleSaveSeal, handleDeleteSeal]);
+  ], [productsMap, contactsMap, handleEditClick, handleDeleteClick]);
 
   const table = useReactTable({
     data: seals || [],

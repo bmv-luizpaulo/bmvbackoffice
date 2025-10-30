@@ -68,6 +68,16 @@ export function UserDataTable() {
   const [isAlertOpen, setIsAlertOpen] = React.useState(false);
   const [selectedUser, setSelectedUser] = React.useState<User | null>(null);
 
+  const handleEditClick = React.useCallback((user: User) => {
+    setSelectedUser(user);
+    setIsFormOpen(true);
+  }, []);
+
+  const handleDeleteClick = React.useCallback((user: User) => {
+    setSelectedUser(user);
+    setIsAlertOpen(true);
+  }, []);
+
   const handleSaveUser = React.useCallback(async (userData: Omit<User, 'id' | 'avatarUrl'>, password?: string) => {
     if (!firestore || !auth || !auth.currentUser) return;
 
@@ -171,7 +181,7 @@ export function UserDataTable() {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>Ações</DropdownMenuLabel>
-              <DropdownMenuItem onClick={() => {setSelectedUser(user); setIsFormOpen(true)}}>
+              <DropdownMenuItem onClick={() => handleEditClick(user)}>
                 <Pencil className="mr-2 h-4 w-4" />
                 Editar
               </DropdownMenuItem>
@@ -195,7 +205,7 @@ export function UserDataTable() {
 
               <DropdownMenuItem
                 className="text-red-600"
-                onClick={() => {setSelectedUser(user); setIsAlertOpen(true)}}
+                onClick={() => handleDeleteClick(user)}
                 disabled={isCurrentUser}
               >
                 <Trash2 className="mr-2 h-4 w-4" />
@@ -206,7 +216,7 @@ export function UserDataTable() {
         )
       },
     },
-  ], [currentUser?.uid, handleRoleChange]);
+  ], [currentUser?.uid, handleRoleChange, handleEditClick, handleDeleteClick]);
 
   const table = useReactTable({
     data: users || [],

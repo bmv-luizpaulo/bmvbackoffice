@@ -47,7 +47,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { addDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase/non-blocking-updates"
+import { updateDocumentNonBlocking, deleteDocumentNonBlocking, addDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 
 interface ContactDataTableProps {
     type: 'cliente' | 'fornecedor' | 'parceiro';
@@ -64,6 +64,16 @@ export function ContactDataTable({ type }: ContactDataTableProps) {
   const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [isAlertOpen, setIsAlertOpen] = React.useState(false);
   const [selectedContact, setSelectedContact] = React.useState<Contact | null>(null);
+
+  const handleEditClick = React.useCallback((contact: Contact) => {
+    setSelectedContact(contact);
+    setIsFormOpen(true);
+  }, []);
+
+  const handleDeleteClick = React.useCallback((contact: Contact) => {
+    setSelectedContact(contact);
+    setIsAlertOpen(true);
+  }, []);
 
   const handleSaveContact = React.useCallback((contactData: Omit<Contact, 'id' | 'type'>) => {
     if (!firestore) return;
@@ -122,14 +132,14 @@ export function ContactDataTable({ type }: ContactDataTableProps) {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>Ações</DropdownMenuLabel>
-              <DropdownMenuItem onClick={() => {setSelectedContact(contact); setIsFormOpen(true)}}>
+              <DropdownMenuItem onClick={() => handleEditClick(contact)}>
                 <Pencil className="mr-2 h-4 w-4" />
                 Editar
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem 
                 className="text-red-600"
-                onClick={() => {setSelectedContact(contact); setIsAlertOpen(true)}}
+                onClick={() => handleDeleteClick(contact)}
               >
                 <Trash2 className="mr-2 h-4 w-4" />
                 Excluir
@@ -139,7 +149,7 @@ export function ContactDataTable({ type }: ContactDataTableProps) {
         )
       },
     },
-  ], []);
+  ], [handleEditClick, handleDeleteClick]);
 
   const table = useReactTable({
     data: contacts || [],
