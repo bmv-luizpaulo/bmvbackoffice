@@ -136,11 +136,17 @@ export function useCollection<T = any>(
         
         // TEMPORARY WORKAROUND: Do not throw a global error for specific collections
         // This is to prevent the app from breaking while we work on security rules.
-        const collectionsToWarn = ['users', 'contacts', 'teams', 'notifications'];
-        const collectionName = path.split('/').pop() || '';
+        const collectionsToWarn = ['users', 'contacts', 'teams', 'notifications', 'chats'];
+        
+        let collectionName = path;
+        // Handle subcollections like 'users/abc/notifications'
+        if (path.includes('/')) {
+            const parts = path.split('/');
+            collectionName = parts.length % 2 === 1 ? parts[parts.length - 1] : parts[parts.length - 2];
+        }
         
         if (collectionsToWarn.includes(collectionName)) {
-           console.warn(`Firestore permission error on '${path}' collection was caught but not thrown globally. This is a temporary measure.`);
+           console.warn(`Firestore permission error on '${path}' was caught but not thrown globally. This is a temporary measure.`);
         } else {
           // trigger global error propagation
           errorEmitter.emit('permission-error', contextualError);
