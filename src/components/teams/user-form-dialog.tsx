@@ -89,15 +89,27 @@ export function UserFormDialog({ isOpen, onOpenChange, onSave, user }: UserFormD
 
   React.useEffect(() => {
     if (isOpen) {
-      form.reset(user ? {
-        name: user.name,
-        email: user.email,
-        role: user.role || 'Funcionário',
-        phone: user.phone || '',
-        personalDocument: user.personalDocument || '',
-        address: user.address || {},
-        teamIds: user.teamIds || [],
-      } : defaultValues);
+      if (user) {
+        form.reset({
+          name: user.name || '',
+          email: user.email || '',
+          role: user.role || 'Funcionário',
+          phone: user.phone || '',
+          personalDocument: user.personalDocument || '',
+          address: {
+            street: user.address?.street || '',
+            number: user.address?.number || '',
+            complement: user.address?.complement || '',
+            neighborhood: user.address?.neighborhood || '',
+            city: user.address?.city || '',
+            state: user.address?.state || '',
+            zipCode: user.address?.zipCode || '',
+          },
+          teamIds: user.teamIds || [],
+        });
+      } else {
+        form.reset(defaultValues);
+      }
     }
   }, [user, isOpen, form]);
 

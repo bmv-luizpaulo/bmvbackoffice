@@ -64,18 +64,34 @@ export function ProfileSettings({ user }: ProfileSettingsProps) {
       email: '',
       phone: '',
       personalDocument: '',
-      address: {},
+      address: {
+        street: '',
+        number: '',
+        complement: '',
+        neighborhood: '',
+        city: '',
+        state: '',
+        zipCode: '',
+      },
     },
   });
 
   React.useEffect(() => {
     if (userProfile) {
       form.reset({
-        name: userProfile.name,
-        email: userProfile.email,
+        name: userProfile.name || '',
+        email: userProfile.email || '',
         phone: userProfile.phone || '',
         personalDocument: userProfile.personalDocument || '',
-        address: userProfile.address || {},
+        address: {
+            street: userProfile.address?.street || '',
+            number: userProfile.address?.number || '',
+            complement: userProfile.address?.complement || '',
+            neighborhood: userProfile.address?.neighborhood || '',
+            city: userProfile.address?.city || '',
+            state: userProfile.address?.state || '',
+            zipCode: userProfile.address?.zipCode || '',
+        },
       });
     }
   }, [userProfile, form]);

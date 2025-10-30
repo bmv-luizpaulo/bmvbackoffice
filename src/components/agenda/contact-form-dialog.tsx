@@ -77,23 +77,39 @@ export function ContactFormDialog({ isOpen, onOpenChange, onSave, contact, type 
 
   React.useEffect(() => {
     if (isOpen) {
-        if (contact) {
-            form.reset({ 
-                name: contact.name, 
-                email: contact.email, 
-                phone: contact.phone || '',
-                companyName: contact.companyName || '',
-                address: contact.address || {},
-            });
-            } else {
-            form.reset({ 
-                name: '', 
-                email: '', 
-                phone: '',
-                companyName: '',
-                address: {},
-            });
-        }
+      if (contact) {
+        form.reset({
+          name: contact.name || '',
+          email: contact.email || '',
+          phone: contact.phone || '',
+          companyName: contact.companyName || '',
+          address: {
+            street: contact.address?.street || '',
+            number: contact.address?.number || '',
+            complement: contact.address?.complement || '',
+            neighborhood: contact.address?.neighborhood || '',
+            city: contact.address?.city || '',
+            state: contact.address?.state || '',
+            zipCode: contact.address?.zipCode || '',
+          },
+        });
+      } else {
+        form.reset({
+          name: '',
+          email: '',
+          phone: '',
+          companyName: '',
+          address: {
+            street: '',
+            number: '',
+            complement: '',
+            neighborhood: '',
+            city: '',
+            state: '',
+            zipCode: '',
+          },
+        });
+      }
     }
   }, [contact, form, isOpen]);
 
