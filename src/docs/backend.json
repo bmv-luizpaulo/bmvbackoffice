@@ -50,6 +50,10 @@
             "items": {
                 "type": "string"
             }
+        },
+        "_tokenRefreshed": {
+          "type": "number",
+          "description": "A timestamp used to trigger client-side token refreshes."
         }
       },
       "required": [
@@ -227,6 +231,10 @@
         "isManager": {
             "type": "boolean",
             "description": "Indicates if this role has manager-level privileges."
+        },
+        "isDev": {
+            "type": "boolean",
+            "description": "Indicates if this role has developer-level privileges."
         }
       },
       "required": ["name"]
@@ -426,6 +434,10 @@
     "providers": [
       "password",
       "anonymous"
+    ],
+    "customClaims": [
+      "isManager",
+      "isDev"
     ]
   },
   "firestore": {
@@ -491,3 +503,5 @@
     }
   }
 }
+
+    

@@ -2,9 +2,10 @@
 
 import React, { DependencyList, createContext, useContext, ReactNode, useMemo, useState, useEffect } from 'react';
 import { FirebaseApp } from 'firebase/app';
-import { Firestore, doc, getDoc, setDoc, collection, addDoc, serverTimestamp, getDocs, query, where, writeBatch } from 'firebase/firestore';
+import { Firestore, doc, getDoc, setDoc, collection, addDoc, serverTimestamp, getDocs, query, where, writeBatch, onSnapshot } from 'firebase/firestore';
 import { Auth, User, onAuthStateChanged } from 'firebase/auth';
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener'
+import type { User as UserProfile } from '@/lib/types';
 
 interface FirebaseProviderProps {
   children: ReactNode;
@@ -98,23 +99,18 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
                  }
             }
         }
-        
-        // Assign dev role to specific user
-        if (user.uid === 'lxm9BGJOYqOw9ODiAKP6xp4nKTV2' && devRoleId) {
-             const devUserRef = doc(firestore, 'users', 'lxm9BGJOYqOw9ODiAKP6xp4nKTV2');
-             batch.update(devUserRef, { roleId: devRoleId });
-        }
 
         const userRef = doc(firestore, "users", user.uid);
         const userSnap = await getDoc(userRef);
 
         if (!userSnap.exists()) {
-          const newUserProfile = {
+          const isDevUser = user.uid === 'lxm9BGJOYqOw9ODiAKP6xp4nKTV2';
+          const newUserProfile: Partial<UserProfile> = {
             id: user.uid,
             name: user.displayName || user.email || "Novo Usuário",
             email: user.email,
             avatarUrl: user.photoURL || `https://picsum.photos/seed/${user.uid}/200`,
-            roleId: gestorRoleId, // First user is a manager by default
+            roleId: isDevUser ? devRoleId : gestorRoleId, // Assign Dev or Gestor role
           };
           batch.set(userRef, newUserProfile);
 
@@ -161,6 +157,24 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
 
     return () => unsubscribe();
   }, [auth, firestore]);
+
+  // Effect to force token refresh when claims might have changed
+  useEffect(() => {
+    if (userAuthState.user) {
+      const userDocRef = doc(firestore, 'users', userAuthState.user.uid);
+      const unsubscribe = onSnapshot(userDocRef, (doc) => {
+        const data = doc.data() as UserProfile;
+        // The Cloud Function updates `_tokenRefreshed`. When it changes, force a token refresh.
+        if (data && data._tokenRefreshed) {
+            console.log("Detected role change, forcing token refresh...");
+            userAuthState.user?.getIdToken(true); // true forces a refresh
+        }
+      });
+
+      return () => unsubscribe();
+    }
+  }, [userAuthState.user, firestore]);
+
 
   // Memoize the context value
   const contextValue = useMemo((): FirebaseContextState => {
@@ -236,4 +250,5 @@ export const useUser = (): UserHookResult => { // Renamed from useAuthUser
   const { user, isUserLoading, userError } = useFirebase(); // Leverages the main hook
   return { user, isUserLoading, userError };
 };
+
     

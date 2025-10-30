@@ -24,41 +24,44 @@ export const processUserRoleChange = functions.firestore
 
     const roleId = userData.roleId;
 
-    // If roleId is not set, we can't determine claims.
-    if (!roleId) {
-      functions.logger.log(`User ${userId} has no roleId. Setting default claims.`);
-      try {
-        await admin.auth().setCustomUserClaims(userId, { isManager: false, isDev: false });
-        return { result: `Custom claims set to default for user ${userId}` };
-      } catch (error) {
-        functions.logger.error(`Error setting default claims for user ${userId}:`, error);
-        return null;
-      }
+    let isManager = false;
+    let isDev = false;
+
+    if (roleId) {
+        try {
+            const roleDoc = await db.collection('roles').doc(roleId).get();
+            if (roleDoc.exists) {
+                const roleData = roleDoc.data();
+                isManager = roleData?.isManager === true;
+                isDev = roleData?.isDev === true;
+                functions.logger.log(`Role for ${userId} found: ${roleData?.name}. isManager=${isManager}, isDev=${isDev}`);
+            } else {
+                functions.logger.warn(`Role document with ID ${roleId} not found for user ${userId}. Using default claims.`);
+            }
+        } catch (error) {
+            functions.logger.error(`Error fetching role for user ${userId}:`, error);
+        }
+    } else {
+        functions.logger.log(`User ${userId} has no roleId. Using default claims.`);
     }
+      
+    const claims = { isManager, isDev };
 
     try {
-      const roleDoc = await db.collection('roles').doc(roleId).get();
-      let isManager = false;
-      let isDev = false;
+        // Set the custom claims on the user's auth token.
+        await admin.auth().setCustomUserClaims(userId, claims);
+        
+        // Update a field in the user's Firestore document to signal the client to refresh the token.
+        await db.collection('users').doc(userId).set({
+            _tokenRefreshed: admin.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
 
-      if (roleDoc.exists) {
-        const roleData = roleDoc.data();
-        isManager = roleData?.isManager === true;
-        isDev = roleData?.isDev === true;
-        functions.logger.log(`Role for ${userId} found: ${roleData?.name}. isManager=${isManager}, isDev=${isDev}`);
-      } else {
-        functions.logger.warn(`Role document with ID ${roleId} not found for user ${userId}.`);
-      }
-      
-      const claims = { isManager, isDev };
-
-      // Set the custom claims on the user's auth token.
-      await admin.auth().setCustomUserClaims(userId, claims);
-
-      functions.logger.log(`Successfully set custom claims for user ${userId}:`, claims);
-      return { result: `Custom claims updated for user ${userId}` };
+        functions.logger.log(`Successfully set custom claims for user ${userId}:`, claims);
+        return { result: `Custom claims updated for user ${userId}` };
     } catch (error) {
-      functions.logger.error(`Error processing user role change for ${userId}:`, error);
-      return null;
+        functions.logger.error(`Error setting custom claims or updating user doc for ${userId}:`, error);
+        return null;
     }
   });
+
+    
