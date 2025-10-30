@@ -54,26 +54,28 @@ const formSchema = z.object({
   }).optional(),
 });
 
+const defaultValues = {
+  name: '',
+  email: '',
+  phone: '',
+  companyName: '',
+  address: {
+    street: '',
+    number: '',
+    complement: '',
+    neighborhood: '',
+    city: '',
+    state: '',
+    zipCode: '',
+  },
+};
+
 export function ContactFormDialog({ isOpen, onOpenChange, onSave, contact, type }: ContactFormDialogProps) {
   const [isCepLoading, setIsCepLoading] = React.useState(false);
   
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
-    defaultValues: {
-      name: '',
-      email: '',
-      phone: '',
-      companyName: '',
-      address: {
-        street: '',
-        number: '',
-        complement: '',
-        neighborhood: '',
-        city: '',
-        state: '',
-        zipCode: '',
-      },
-    }
+    defaultValues: defaultValues
   });
 
   React.useEffect(() => {
@@ -95,21 +97,7 @@ export function ContactFormDialog({ isOpen, onOpenChange, onSave, contact, type 
           },
         });
       } else {
-        form.reset({
-          name: '',
-          email: '',
-          phone: '',
-          companyName: '',
-          address: {
-            street: '',
-            number: '',
-            complement: '',
-            neighborhood: '',
-            city: '',
-            state: '',
-            zipCode: '',
-          },
-        });
+        form.reset(defaultValues);
       }
     }
   }, [contact, form, isOpen]);

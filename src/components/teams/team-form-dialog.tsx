@@ -52,10 +52,14 @@ export function TeamFormDialog({ isOpen, onOpenChange, onSave, team }: TeamFormD
 
   React.useEffect(() => {
     if (isOpen) {
-      form.reset(team ? {
-        name: team.name, 
-        description: team.description || '', 
-      } : defaultValues);
+      if (team) {
+         form.reset({
+          name: team.name, 
+          description: team.description || '', 
+        });
+      } else {
+        form.reset(defaultValues);
+      }
     }
   }, [team, isOpen, form]);
 

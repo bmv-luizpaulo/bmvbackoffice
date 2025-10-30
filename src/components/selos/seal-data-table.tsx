@@ -145,6 +145,11 @@ export function SealDataTable() {
     setIsAlertOpen(false);
     setSelectedSeal(null);
   }, [firestore, selectedSeal, toast]);
+  
+  const handleAddNewClick = React.useCallback(() => {
+    setSelectedSeal(null);
+    setIsFormOpen(true);
+  }, []);
 
   const columns: ColumnDef<Seal>[] = React.useMemo(() => [
     {
@@ -260,11 +265,11 @@ export function SealDataTable() {
 
   React.useEffect(() => {
     table.getColumn('productId')?.setFilterValue(deferredProductFilter);
-  }, [deferredProductFilter]);
+  }, [deferredProductFilter, table]);
 
   React.useEffect(() => {
     table.getColumn('contactId')?.setFilterValue(deferredContactFilter);
-  }, [deferredContactFilter]);
+  }, [deferredContactFilter, table]);
 
   return (
     <div>
@@ -317,7 +322,7 @@ export function SealDataTable() {
                     })}
                 </DropdownMenuContent>
             </DropdownMenu>
-            <Button onClick={() => {setSelectedSeal(null); setIsFormOpen(true)}}>Adicionar Selo</Button>
+            <Button onClick={handleAddNewClick}>Adicionar Selo</Button>
         </div>
       </div>
       <div className="rounded-md border">

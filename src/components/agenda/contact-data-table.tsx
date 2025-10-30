@@ -113,6 +113,11 @@ export function ContactDataTable({ type }: ContactDataTableProps) {
     setSelectedContact(null);
   }, [firestore, selectedContact]);
   
+  const handleAddNewClick = React.useCallback(() => {
+    setSelectedContact(null);
+    setIsFormOpen(true);
+  }, []);
+  
   const typeLabel = React.useMemo(() => type.charAt(0).toUpperCase() + type.slice(1), [type]);
 
   const columns: ColumnDef<Contact>[] = React.useMemo(() => [
@@ -195,7 +200,7 @@ export function ContactDataTable({ type }: ContactDataTableProps) {
           onChange={(event) => setNameFilter(event.target.value)}
           className="max-w-sm"
         />
-        <Button onClick={() => {setSelectedContact(null); setIsFormOpen(true)}}>Adicionar {typeLabel}</Button>
+        <Button onClick={handleAddNewClick}>Adicionar {typeLabel}</Button>
       </div>
       <div className="rounded-md border">
         <Table>
