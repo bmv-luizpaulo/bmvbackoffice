@@ -35,9 +35,8 @@ import {
 } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import type { Seal, Product, Contact } from "@/lib/types";
-import { SealFormDialog } from "./seal-form-dialog";
-import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
+import type { Seal, Product, Contact, User } from "@/lib/types";
+import { useFirestore, useCollection, useMemoFirebase, useUser } from "@/firebase";
 import { collection, doc } from "firebase/firestore";
 import {
   AlertDialog,
@@ -52,10 +51,17 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "../ui/badge";
 import { addDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase/non-blocking-updates"
+import { useNotifications } from "../notifications/notifications-provider";
+import dynamic from "next/dynamic";
+
+const SealFormDialog = dynamic(() => import('./seal-form-dialog').then(m => m.SealFormDialog), { ssr: false });
 
 export function SealDataTable() {
   const firestore = useFirestore();
   const { toast } = useToast();
+  const { user: authUser } = useUser();
+  const { createNotification } = useNotifications();
+
 
   const sealsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'seals') : null, [firestore]);
   const { data: seals, isLoading: isLoadingSeals } = useCollection<Seal>(sealsQuery);
@@ -65,6 +71,10 @@ export function SealDataTable() {
 
   const contactsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'contacts') : null, [firestore]);
   const { data: contacts } = useCollection<Contact>(contactsQuery);
+  
+  const usersQuery = useMemoFirebase(() => firestore ? collection(firestore, 'users') : null, [firestore]);
+  const { data: usersData } = useCollection<User>(usersQuery);
+  const usersMap = React.useMemo(() => new Map(usersData?.map(u => [u.id, u])), [usersData]);
 
   const productsMap = React.useMemo(() => new Map(products?.map(p => [p.id, p.name])), [products]);
   const contactsMap = React.useMemo(() => new Map(contacts?.map(c => [c.id, c.name])), [contacts]);
@@ -89,18 +99,35 @@ export function SealDataTable() {
     setIsAlertOpen(true);
   }, []);
 
-  const handleSaveSeal = React.useCallback((sealData: Omit<Seal, 'id'>) => {
-    if (!firestore) return;
+  const handleSaveSeal = React.useCallback((sealData: Omit<Seal, 'id'>, sealId?: string) => {
+    if (!firestore || !authUser) return;
     
-    if (selectedSeal) {
-      const sealRef = doc(firestore, 'seals', selectedSeal.id);
+    if (sealId) {
+      const sealRef = doc(firestore, 'seals', sealId);
       updateDocumentNonBlocking(sealRef, sealData);
       toast({ title: "Selo Atualizado", description: "O selo foi atualizado com sucesso." });
     } else {
       addDocumentNonBlocking(collection(firestore, 'seals'), sealData);
       toast({ title: "Selo Adicionado", description: "O novo selo foi cadastrado." });
     }
-  }, [firestore, selectedSeal, toast]);
+
+    const expiryDate = new Date(sealData.expiryDate);
+    const daysLeft = differenceInDays(expiryDate, new Date());
+    if (daysLeft <= 30 && daysLeft >= 0) {
+      const productName = productsMap.get(sealData.productId) || 'desconhecido';
+      const contactName = contactsMap.get(sealData.contactId) || 'desconhecido';
+
+      // Find a manager to notify
+      const manager = usersData?.find(u => u.role === 'Gestor');
+      const notifyUserId = manager?.id || authUser.uid;
+
+      createNotification(notifyUserId, {
+        title: 'Renovação de Selo Próxima',
+        message: `Selo para ${productName} (${contactName}) vence em ${daysLeft + 1} dias.`,
+        link: `/selos`,
+      });
+    }
+  }, [firestore, authUser, toast, createNotification, productsMap, contactsMap, usersData]);
 
   const handleDeleteSeal = React.useCallback(() => {
     if (!firestore || !selectedSeal) return;
@@ -343,16 +370,16 @@ export function SealDataTable() {
         </Button>
       </div>
 
-      <SealFormDialog 
+      {isFormOpen && <SealFormDialog 
         isOpen={isFormOpen}
         onOpenChange={setIsFormOpen}
         onSave={handleSaveSeal}
         seal={selectedSeal}
         products={products || []}
         contacts={contacts || []}
-      />
+      />}
       
-      <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
+      {isAlertOpen && <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
             <AlertDialogContent>
               <AlertDialogHeader>
                 <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
@@ -365,7 +392,7 @@ export function SealDataTable() {
                 <AlertDialogAction onClick={handleDeleteSeal}>Excluir</AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
-      </AlertDialog>
+      </AlertDialog>}
     </div>
   )
 }

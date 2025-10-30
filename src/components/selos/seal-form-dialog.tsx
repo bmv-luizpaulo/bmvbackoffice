@@ -35,7 +35,7 @@ import type { Seal, Product, Contact } from "@/lib/types";
 type SealFormDialogProps = {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
-  onSave: (seal: Omit<Seal, 'id'>) => void;
+  onSave: (seal: Omit<Seal, 'id'>, sealId?: string) => void;
   seal?: Seal | null;
   products: Product[];
   contacts: Contact[];
@@ -91,7 +91,7 @@ export function SealFormDialog({ isOpen, onOpenChange, onSave, seal, products, c
         issueDate: values.issueDate.toISOString(),
         expiryDate: values.expiryDate.toISOString(),
     };
-    onSave(sealData);
+    onSave(sealData, seal?.id);
     onOpenChange(false);
   }
   

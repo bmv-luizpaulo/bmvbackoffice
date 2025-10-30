@@ -2,15 +2,16 @@
 
 import { useMemo } from 'react';
 import { KpiCard } from "@/components/dashboard/kpi-card";
-import { CheckCircle, Target, FolderKanban, ListChecks } from "lucide-react";
+import { CheckCircle, Target, FolderKanban, ListChecks, Award } from "lucide-react";
 import { PipelineChart } from "@/components/dashboard/pipeline-chart";
 import { ChatSummary } from "@/components/dashboard/chat-summary";
 import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { collection, collectionGroup } from "firebase/firestore";
-import type { Project, Task, Stage } from '@/lib/types';
+import type { Project, Task, Stage, Seal } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { differenceInDays, isPast } from 'date-fns';
 
 
 function KpiSkeleton() {
@@ -40,10 +41,13 @@ export default function DashboardPage() {
   const stagesQuery = useMemoFirebase(() => firestore && projectsData && projectsData.length > 0 ? collectionGroup(firestore, 'stages') : null, [firestore, projectsData]);
   const { data: stagesData, isLoading: isLoadingStages } = useCollection<Stage>(stagesQuery);
 
+  const sealsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'seals') : null, [firestore]);
+  const { data: sealsData, isLoading: isLoadingSeals } = useCollection<Seal>(sealsQuery);
 
-  const { activeProjects, completedProjects, openTasks, tasksByStage, totalTasks } = useMemo(() => {
-    if (!projectsData || !tasksData || !stagesData) {
-      return { activeProjects: 0, completedProjects: 0, openTasks: 0, tasksByStage: [], totalTasks: 0 };
+
+  const { activeProjects, completedProjects, openTasks, tasksByStage, totalTasks, expiringSeals } = useMemo(() => {
+    if (!projectsData || !tasksData || !stagesData || !sealsData) {
+      return { activeProjects: 0, completedProjects: 0, openTasks: 0, tasksByStage: [], totalTasks: 0, expiringSeals: 0 };
     }
 
     const tasksPerProject = tasksData.reduce((acc, task) => {
@@ -80,16 +84,22 @@ export default function DashboardPage() {
     
     const totalTasks = tasksData.length;
 
+    const expiringSealsCount = sealsData.filter(seal => {
+        const expiryDate = new Date(seal.expiryDate);
+        return isPast(expiryDate) || differenceInDays(expiryDate, new Date()) <= 30;
+    }).length;
+
     return {
       activeProjects: projectsData.length,
       completedProjects: completedProjectsCount,
       openTasks: openTasksCount,
       tasksByStage: chartData,
       totalTasks: totalTasks,
+      expiringSeals: expiringSealsCount,
     };
-  }, [projectsData, tasksData, stagesData]);
+  }, [projectsData, tasksData, stagesData, sealsData]);
 
-  const isLoading = isLoadingProjects || isLoadingTasks || isLoadingStages;
+  const isLoading = isLoadingProjects || isLoadingTasks || isLoadingStages || isLoadingSeals;
 
   return (
     <div className="flex flex-col gap-6">
@@ -133,11 +143,11 @@ export default function DashboardPage() {
                   description="Total de tarefas não concluídas"
                   icon={<Target className="text-amber-500"/>}
                 />
-                <KpiCard 
-                  title="Total de Tarefas" 
-                  value={totalTasks.toString()}
-                  description="Soma de todas as tarefas do sistema"
-                  icon={<ListChecks className="text-blue-500"/>}
+                 <KpiCard 
+                  title="Selos Expirando" 
+                  value={expiringSeals.toString()}
+                  description="Selos vencidos ou vencendo em 30 dias"
+                  icon={<Award className="text-red-500"/>}
                 />
               </>
             )}
