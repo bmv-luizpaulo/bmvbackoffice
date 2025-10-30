@@ -4,6 +4,8 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Building2 } from "lucide-react";
 
+export const dynamic = 'force-dynamic';
+
 export default function AssetsPage() {
   return (
     <div className="space-y-6">
