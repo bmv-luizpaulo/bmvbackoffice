@@ -27,7 +27,6 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from "../ui/textarea";
 import type { Role } from "@/lib/types";
 import { Switch } from "../ui/switch";
-import { Shield, Code } from "lucide-react";
 
 type RoleFormDialogProps = {
   isOpen: boolean;
@@ -120,7 +119,7 @@ export function RoleFormDialog({ isOpen, onOpenChange, onSave, role }: RoleFormD
                     render={({ field }) => (
                         <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
                             <div className="space-y-0.5">
-                                <FormLabel className="flex items-center gap-2"><Shield className="h-4 w-4"/>Permissão de Gestor</FormLabel>
+                                <FormLabel className="flex items-center gap-2">Permissão de Gestor</FormLabel>
                                 <FormMessage />
                                 <p className="text-xs text-muted-foreground">
                                     Concede acesso de visualização a todos os dados do sistema.
@@ -141,7 +140,7 @@ export function RoleFormDialog({ isOpen, onOpenChange, onSave, role }: RoleFormD
                     render={({ field }) => (
                         <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
                             <div className="space-y-0.5">
-                                <FormLabel className="flex items-center gap-2"><Code className="h-4 w-4"/>Permissão de Desenvolvedor</FormLabel>
+                                <FormLabel className="flex items-center gap-2">Permissão de Desenvolvedor</FormLabel>
                                 <FormMessage />
                                 <p className="text-xs text-muted-foreground">
                                     Concede acesso total de leitura e escrita em todo o sistema.
