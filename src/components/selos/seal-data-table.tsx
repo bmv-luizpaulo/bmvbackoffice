@@ -193,7 +193,7 @@ export function SealDataTable() {
         )
       },
     },
-  ], [productsMap, contactsMap]);
+  ], [productsMap, contactsMap, handleSaveSeal, handleDeleteSeal]);
 
   const table = useReactTable({
     data: seals || [],
