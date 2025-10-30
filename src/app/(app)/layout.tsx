@@ -10,6 +10,10 @@ import {
   FolderKanban,
   BookUser,
   Calendar,
+  Briefcase,
+  Archive,
+  ListChecks,
+  Building2,
 } from 'lucide-react';
 import Image from 'next/image';
 import { ThemeProvider } from "next-themes"
@@ -25,6 +29,9 @@ import {
   SidebarFooter,
   SidebarTrigger,
   SidebarInset,
+  SidebarGroup,
+  SidebarGroupLabel,
+  SidebarSeparator,
 } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import {
@@ -44,14 +51,38 @@ import {
 } from '@/components/notifications/notifications-provider';
 import { NotificationBell } from '@/components/notifications/notification-bell';
 
-const navItems = [
-  { href: '/dashboard', icon: BarChart2, label: 'Painel' },
-  { href: '/projects', icon: FolderKanban, label: 'Projetos' },
-  { href: '/agenda/tarefas', icon: Calendar, label: 'Agenda' },
-  { href: '/contatos', icon: BookUser, label: 'Contatos' },
-  { href: '/chat', icon: MessageSquare, label: 'Chat' },
-  { href: '/teams', icon: Users, label: 'Usuários & Equipes' },
-];
+const navSections = [
+    {
+        name: 'Geral',
+        items: [
+            { href: '/dashboard', icon: BarChart2, label: 'Painel' },
+        ]
+    },
+    {
+        name: 'Comercial',
+        items: [
+            { href: '/projects', icon: Briefcase, label: 'Projetos' },
+            { href: '/contatos', icon: BookUser, label: 'Contatos' },
+        ]
+    },
+    {
+        name: 'Operacional',
+        items: [
+            { href: '/assets', icon: Building2, label: 'Ativos' },
+            { href: '/contracts', icon: Archive, label: 'Contratos' },
+            { href: '/checklists', icon: ListChecks, label: 'Checklists' },
+        ]
+    },
+    {
+        name: 'Equipe',
+        items: [
+            { href: '/agenda/tarefas', icon: Calendar, label: 'Agenda' },
+            { href: '/chat', icon: MessageSquare, label: 'Chat' },
+            { href: '/teams', icon: Users, label: 'Usuários & Equipes' },
+        ]
+    }
+]
+
 
 function UserAvatar() {
     const { user } = useUser();
@@ -95,20 +126,26 @@ function InnerLayout({ children }: { children: React.ReactNode }) {
             </div>
           </SidebarHeader>
           <SidebarContent>
-            <SidebarMenu>
-              {navItems.map((item) => (
-                <SidebarMenuItem key={item.href}>
-                  <Link href={item.href}>
-                    <SidebarMenuButton
-                      isActive={pathname.startsWith(item.href)}
-                      tooltip={item.label}
-                    >
-                      <item.icon />
-                      <span>{item.label}</span>
-                    </SidebarMenuButton>
-                  </Link>
-                </SidebarMenuItem>
-              ))}
+             <SidebarMenu>
+                 {navSections.map((section, index) => (
+                    <SidebarGroup key={section.name}>
+                        {index > 0 && <SidebarSeparator />}
+                        <SidebarGroupLabel>{section.name}</SidebarGroupLabel>
+                        {section.items.map((item) => (
+                            <SidebarMenuItem key={item.href}>
+                                <Link href={item.href}>
+                                    <SidebarMenuButton
+                                    isActive={pathname.startsWith(item.href)}
+                                    tooltip={item.label}
+                                    >
+                                    <item.icon />
+                                    <span>{item.label}</span>
+                                    </SidebarMenuButton>
+                                </Link>
+                            </SidebarMenuItem>
+                        ))}
+                    </SidebarGroup>
+                ))}
             </SidebarMenu>
           </SidebarContent>
           <SidebarFooter>
