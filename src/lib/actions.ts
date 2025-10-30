@@ -1,20 +1,35 @@
 'use server';
 
-import { getSuggestedFollowUps } from "@/ai/flows/ai-suggested-follow-ups";
+import { getSuggestedFollowUps, SuggestedFollowUpsInput } from "@/ai/flows/ai-suggested-follow-ups";
 import { generateDailyChatSummary } from "@/ai/flows/daily-chat-summary";
-import { chatLogForSummary } from "./data";
-import type { Project } from "./types";
-import { getDocs, collection, query, where } from 'firebase/firestore';
+import { getDocs, collection } from 'firebase/firestore';
 import { initializeFirebase } from "@/firebase";
+import type { Project, Task } from "./types";
+import { unstable_noStore as noStore } from 'next/cache';
+
+// This is a placeholder for a real chat log fetching mechanism
+const getChatLogForDay = async (): Promise<string> => {
+    return `
+      Brenda Chen para Alex Thompson [10:05 AM]: Oi Alex, enviei a proposta para o Projeto Phoenix. Eles devem analisar até o final do dia de sexta-feira.
+      Alex Thompson para Brenda Chen [10:07 AM]: Ótimo, obrigado Brenda. Mantenha-me informado sobre o feedback deles.
+      Carlos Diaz para Alex Thompson [2:35 PM]: A negociação com a Global Solutions está esquentando. Eles estão pedindo um desconto de 15%. Acho que podemos chegar a 10%.
+      Alex Thompson para Carlos Diaz [2:40 PM]: 10% parece razoável. Vamos formalizar isso. Bom trabalho.
+      Diana Evans para Alex Thompson [11:05 AM]: Acabei de ter uma ótima ligação inicial com a MarketBoost. Eles estão muito interessados na plataforma de automação. Agendando uma demonstração para a próxima semana.
+      Alex Thompson para Diana Evans [11:10 AM]: Excelentes notícias, Diana! Me avise se precisar de apoio para a demonstração.
+    `.trim();
+};
+
 
 export async function getFollowUpSuggestionsAction(project: Project) {
+    noStore();
     try {
         const { firestore } = initializeFirebase();
         const tasksCollection = collection(firestore, `projects/${project.id}/tasks`);
         const tasksSnapshot = await getDocs(tasksCollection);
-        const tasks = tasksSnapshot.docs.map(doc => doc.data());
+        const tasks = tasksSnapshot.docs.map(doc => doc.data() as Task);
 
         const openTasks = tasks.filter(task => !task.isCompleted).map(task => `- ${task.name}`).join('\n');
+        const completedTasks = tasks.filter(task => task.isCompleted).map(task => `- ${task.name}`).join('\n');
 
         const opportunityDetails = `
             Título do Projeto: ${project.name}
@@ -23,12 +38,20 @@ export async function getFollowUpSuggestionsAction(project: Project) {
             Tarefas Abertas: 
             ${openTasks || 'Nenhuma'}
         `;
+        
+        const pastFollowUpActions = `
+            O projeto foi iniciado em ${new Date(project.startDate).toLocaleDateString()}.
+            Tarefas já concluídas:
+            ${completedTasks || 'Nenhuma'}
+        `;
 
-        const result = await getSuggestedFollowUps({
+        const input: SuggestedFollowUpsInput = {
             opportunityDetails,
             currentPipelineStage: "Em Andamento", 
-            pastFollowUpActions: `O projeto foi iniciado em ${new Date(project.startDate).toLocaleDateString()}.`
-        });
+            pastFollowUpActions
+        };
+        
+        const result = await getSuggestedFollowUps(input);
         
         return { success: true, data: result };
     } catch (error) {
@@ -38,10 +61,13 @@ export async function getFollowUpSuggestionsAction(project: Project) {
 }
 
 export async function getChatSummaryAction() {
+    noStore();
     try {
-        const result = await generateDailyChatSummary({
-            chatLog: chatLogForSummary
-        });
+        const chatLog = await getChatLogForDay();
+        if (!chatLog) {
+             return { success: true, data: { summary: "Nenhuma conversa registrada hoje." } };
+        }
+        const result = await generateDailyChatSummary({ chatLog });
         return { success: true, data: result };
     } catch (error) {
         console.error("Erro ao gerar resumo do chat:", error);
@@ -64,6 +90,7 @@ type ViaCepResponse = {
 };
 
 export async function getCepInfoAction(cep: string): Promise<{ success: boolean; data?: Partial<ViaCepResponse>; error?: string }> {
+    noStore();
     const cepDigits = cep.replace(/\D/g, '');
     if (cepDigits.length !== 8) {
         return { success: false, error: "CEP inválido." };

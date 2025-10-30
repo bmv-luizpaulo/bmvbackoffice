@@ -1,6 +1,5 @@
 'use client';
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { ProfileSettings } from "@/components/settings/profile-settings";
 import { ThemeSettings } from "@/components/settings/theme-settings";

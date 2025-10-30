@@ -1,4 +1,4 @@
-// This is a new file: src/lib/masks.ts
+'use client';
 
 export function formatCPF(value: string) {
   if (!value) return "";
