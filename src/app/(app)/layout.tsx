@@ -14,6 +14,7 @@ import {
   Archive,
   ListChecks,
   Building2,
+  Award, // Adicionado
 } from 'lucide-react';
 import Image from 'next/image';
 import { ThemeProvider } from "next-themes"
@@ -50,6 +51,7 @@ import {
   NotificationsProvider,
 } from '@/components/notifications/notifications-provider';
 import { NotificationBell } from '@/components/notifications/notification-bell';
+import { Badge } from '@/components/ui/badge';
 
 const navSections = [
     {
@@ -61,8 +63,9 @@ const navSections = [
     {
         name: 'Comercial',
         items: [
-            { href: '/projects', icon: Briefcase, label: 'Projetos' },
+            { href: '/projects', icon: ListChecks, label: 'Tarefas' }, // Alterado
             { href: '/contatos', icon: BookUser, label: 'Contatos' },
+            { href: '/selos', icon: Award, label: 'Selos' }, // Adicionado
         ]
     },
     {
