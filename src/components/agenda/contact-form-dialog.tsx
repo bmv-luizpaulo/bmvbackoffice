@@ -1,4 +1,3 @@
-// This is a new file: src/components/agenda/contact-form-dialog.tsx
 'use client';
 
 import * as React from "react";
@@ -27,6 +26,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Separator } from "../ui/separator";
 import type { Contact } from "@/lib/types";
+import { Loader2 } from "lucide-react";
+import { getCepInfoAction } from "@/lib/actions";
 
 type ContactFormDialogProps = {
   isOpen: boolean;
@@ -53,6 +54,7 @@ const formSchema = z.object({
 });
 
 export function ContactFormDialog({ isOpen, onOpenChange, onSave, contact, type }: ContactFormDialogProps) {
+  const [isCepLoading, setIsCepLoading] = React.useState(false);
   
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -95,6 +97,26 @@ export function ContactFormDialog({ isOpen, onOpenChange, onSave, contact, type 
     }
   }, [contact, form, isOpen]);
 
+  const handleCepLookup = async (cep: string) => {
+    const cepDigits = cep.replace(/\D/g, '');
+    if (cepDigits.length !== 8) {
+      return;
+    }
+
+    setIsCepLoading(true);
+    const result = await getCepInfoAction(cep);
+    if (result.success && result.data) {
+      const { logradouro, bairro, localidade, uf } = result.data;
+      if (logradouro) form.setValue('address.street', logradouro, { shouldValidate: true });
+      if (bairro) form.setValue('address.neighborhood', bairro, { shouldValidate: true });
+      if (localidade) form.setValue('address.city', localidade, { shouldValidate: true });
+      if (uf) form.setValue('address.state', uf, { shouldValidate: true });
+      form.setFocus('address.number');
+    } else {
+      // Optional: show a toast message with result.error
+    }
+    setIsCepLoading(false);
+  };
 
   function onSubmit(values: z.infer<typeof formSchema>) {
     onSave(values);
@@ -184,7 +206,17 @@ export function ContactFormDialog({ isOpen, onOpenChange, onSave, contact, type 
                                 <FormItem>
                                 <FormLabel>CEP</FormLabel>
                                 <FormControl>
-                                    <Input placeholder="XXXXX-XXX" {...field} />
+                                  <div className="relative">
+                                    <Input 
+                                      placeholder="XXXXX-XXX" 
+                                      {...field} 
+                                      onBlur={(e) => {
+                                        field.onBlur();
+                                        handleCepLookup(e.target.value);
+                                      }}
+                                    />
+                                    {isCepLoading && <Loader2 className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin"/>}
+                                  </div>
                                 </FormControl>
                                 <FormMessage />
                                 </FormItem>
