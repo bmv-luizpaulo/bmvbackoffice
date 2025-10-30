@@ -24,7 +24,7 @@ export default function LoginPage() {
                 <div className="relative flex flex-col items-center justify-center gap-4 text-center overflow-hidden">
                   <div className="flex items-center justify-center gap-4">
                      <Image src="/image/BMV.png" alt="BMV Logo" width={200} height={200} className="rounded-md z-10" />
-                     <h1 className="font-headline text-5xl md:text-6xl font-bold tracking-tight text-black animate-slide-in-from-left delay-300">Nexus</h1>
+                     <h1 className="font-headline text-5xl md:text-6xl font-bold tracking-tight text-black animate-slide-in-from-left delay-1000">Nexus</h1>
                   </div>
                 </div>
               </CardHeader>
