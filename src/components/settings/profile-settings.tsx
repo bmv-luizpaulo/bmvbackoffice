@@ -20,10 +20,12 @@ import { useFirestore, useDoc, useMemoFirebase } from "@/firebase";
 import { doc, updateDoc } from "firebase/firestore";
 import type { User as UserProfile } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2 } from "lucide-react";
+import { Loader2, Shield } from "lucide-react";
 import { getCepInfoAction } from "@/lib/actions";
 import { Skeleton } from "../ui/skeleton";
 import { formatCPF, formatPhone } from "@/lib/masks";
+import { Badge } from "../ui/badge";
+import { cn } from "@/lib/utils";
 
 const profileFormSchema = z.object({
   name: z.string().min(1, "O nome é obrigatório."),
@@ -165,11 +167,19 @@ export function ProfileSettings({ user }: ProfileSettingsProps) {
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)}>
         <Card>
-          <CardHeader>
-            <CardTitle>Perfil</CardTitle>
-            <CardDescription>
-              Atualize suas informações pessoais e de contato.
-            </CardDescription>
+          <CardHeader className="flex-row items-start justify-between">
+            <div>
+              <CardTitle>Perfil</CardTitle>
+              <CardDescription>
+                Atualize suas informações pessoais e de contato.
+              </CardDescription>
+            </div>
+            {userProfile?.role && (
+                <Badge variant={userProfile.role === 'Gestor' ? 'default' : 'secondary'} className="flex items-center gap-2">
+                    <Shield className="h-4 w-4"/>
+                    <span>{userProfile.role}</span>
+                </Badge>
+            )}
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -192,19 +202,6 @@ export function ProfileSettings({ user }: ProfileSettingsProps) {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Email</FormLabel>
-                    <FormControl>
-                      <Input {...field} disabled />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-               <FormField
-                control={form.control}
-                name="role"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Nível de Acesso</FormLabel>
                     <FormControl>
                       <Input {...field} disabled />
                     </FormControl>
