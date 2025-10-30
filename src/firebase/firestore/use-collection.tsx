@@ -117,10 +117,17 @@ export function useCollection<T = any>(
       },
       (error: FirestoreError) => {
         const path = getQueryPath(targetRefOrQuery);
-        console.error(`Firestore permission error on path: '${path}'.`, error);
-        setError(error);
+        const contextualError = new FirestorePermissionError({
+          operation: 'list',
+          path,
+        });
+
+        setError(contextualError);
         setData(null);
         setIsLoading(false);
+
+        // trigger global error propagation
+        errorEmitter.emit('permission-error', contextualError);
       }
     );
 
