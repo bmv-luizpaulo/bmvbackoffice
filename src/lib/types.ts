@@ -143,3 +143,17 @@ export type Seal = {
     expiryDate: string;
     status: 'Solicitado' | 'Ativo' | 'Vencido' | 'Em Renovação';
 };
+
+export type Checklist = {
+  id: string;
+  name: string;
+  description?: string;
+  teamId: string;
+};
+
+export type ChecklistItem = {
+  id: string;
+  checklistId: string;
+  description: string;
+  order: number;
+};

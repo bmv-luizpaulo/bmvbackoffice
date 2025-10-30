@@ -379,6 +379,28 @@
         }
       },
       "required": ["productId", "contactId", "issueDate", "expiryDate", "status"]
+    },
+    "Checklist": {
+      "title": "Checklist",
+      "type": "object",
+      "description": "Represents a standardized checklist for a team.",
+      "properties": {
+        "name": { "type": "string", "description": "The name of the checklist." },
+        "description": { "type": "string", "description": "A brief description of the checklist's purpose." },
+        "teamId": { "type": "string", "description": "The ID of the team this checklist is for." }
+      },
+      "required": ["name", "teamId"]
+    },
+    "ChecklistItem": {
+      "title": "ChecklistItem",
+      "type": "object",
+      "description": "Represents a single step or item within a checklist.",
+      "properties": {
+        "checklistId": { "type": "string", "description": "The ID of the parent checklist." },
+        "description": { "type": "string", "description": "The text of the checklist item/step." },
+        "order": { "type": "number", "description": "The numerical order of the item in the list." }
+      },
+      "required": ["checklistId", "description", "order"]
     }
   },
   "auth": {
@@ -435,6 +457,14 @@
     "/seals/{sealId}": {
         "schema": { "$ref": "#/entities/Seal" },
         "description": "Stores all certification seals issued."
+    },
+    "/checklists/{checklistId}": {
+      "schema": { "$ref": "#/entities/Checklist" },
+      "description": "Stores a checklist template."
+    },
+    "/checklists/{checklistId}/items/{itemId}": {
+      "schema": { "$ref": "#/entities/ChecklistItem" },
+      "description": "Stores the items for a specific checklist."
     }
   }
 }
