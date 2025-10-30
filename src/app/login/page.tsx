@@ -10,8 +10,8 @@ export default function LoginPage() {
     <FirebaseClientProvider>
       <main className="relative flex min-h-screen items-center justify-center p-4">
         <Image
-          src="https://images.unsplash.com/photo-1521737604893-d14cc237f11d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3wzODE4MDB8MHwxfGFsbHx8fHx8fHx8fDE3MjM1ODk5MDZ8&ixlib=rb-4.0.3&q=80&w=1080"
-          alt="Escritório moderno"
+          src="https://images.unsplash.com/photo-1521737711867-e3b97375f902?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3wzODE4MDB8MHwxfGFsbHx8fHx8fHx8fDE3MjM1ODk5MDZ8&ixlib=rb-4.0.3&q=80&w=1080"
+          alt="Escritório moderno e colaborativo"
           fill
           className="absolute inset-0 -z-10 h-full w-full object-cover"
           data-ai-hint="modern office"
@@ -21,9 +21,9 @@ export default function LoginPage() {
           <Card className="w-full bg-background/90 backdrop-blur-sm">
             <div className="grid items-stretch md:grid-cols-2">
               <CardHeader className="p-10 md:p-10 border-b md:border-b-0 md:border-r border-border">
-                <div className="flex items-center gap-4 md:gap-0 justify-center md:justify-center">
+                <div className="flex items-center justify-center gap-4">
                   <Image src="/image/BMV.png" alt="BMV Logo" width={200} height={204} className="rounded-md" />
-                  <h1 className="font-headline text-5xl md:text-4xl font-bold tracking-tight text-black">Nexus</h1>
+                  <h1 className="font-headline text-5xl md:text-6xl font-bold tracking-tight text-black">Nexus</h1>
                 </div>
               </CardHeader>
               <CardContent className="p-8 md:p-10">
