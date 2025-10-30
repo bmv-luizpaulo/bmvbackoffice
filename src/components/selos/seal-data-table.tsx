@@ -131,7 +131,7 @@ export function SealDataTable() {
 
       createNotification(notifyUserId, {
         title: 'Renovação de Selo Próxima',
-        message: `Selo para ${productName} (${contactName}) vence em ${daysLeft + 1} dias.`,
+        message: `Selo para ${productName} (${contactName}) vence em ${daysLeft + 1} dia(s).`,
         link: `/selos`,
       });
     }
@@ -209,7 +209,7 @@ export function SealDataTable() {
           variant = 'outline';
         }
 
-        return <Badge variant={variant}>{status}</Badge>
+        return <Badge variant={variant}>{row.original.status}</Badge>
       }
     },
     {
@@ -427,3 +427,5 @@ export function SealDataTable() {
     </div>
   )
 }
+
+    
