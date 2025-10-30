@@ -20,7 +20,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { MoreHorizontal, Pencil, Trash2 } from "lucide-react"
+import { MoreHorizontal, Pencil, ShieldCheck, ShieldOff, Trash2 } from "lucide-react"
 
 import {
   Table,
@@ -34,7 +34,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import type { User } from "@/lib/types";
 import dynamic from "next/dynamic";
-import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
+import { useFirestore, useCollection, useMemoFirebase, useUser as useAuthUser } from "@/firebase";
 import { collection, doc, addDoc, updateDoc, deleteDoc } from "firebase/firestore";
 import {
   AlertDialog,
@@ -48,6 +48,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { FirestorePermissionError } from "@/firebase/errors";
 import { errorEmitter } from "@/firebase/error-emitter";
+import { useToast } from "@/hooks/use-toast"
 
 const UserFormDialog = dynamic(() => import('./user-form-dialog').then(m => m.UserFormDialog), { ssr: false });
 
@@ -85,6 +86,9 @@ const deleteDocumentNonBlocking = (ref: any) => {
 
 export function UserDataTable() {
   const firestore = useFirestore();
+  const { user: currentUser } = useAuthUser();
+  const { toast } = useToast();
+  
   const usersCollection = useMemoFirebase(() => firestore ? collection(firestore, 'users') : null, [firestore]);
   const { data: users, isLoading } = useCollection<User>(usersCollection);
 
@@ -103,6 +107,7 @@ export function UserDataTable() {
       // Update
       const userRef = doc(firestore, 'users', selectedUser.id);
       updateDocumentNonBlocking(userRef, userData);
+      toast({ title: "Usuário Atualizado", description: `As informações de ${userData.name} foram salvas.` });
     } else {
       // Create
       const newUserData = {
@@ -110,6 +115,7 @@ export function UserDataTable() {
           avatarUrl: `https://picsum.photos/seed/${Math.random()}/200/200`
       }
       addDocumentNonBlocking(collection(firestore, 'users'), newUserData);
+      toast({ title: "Usuário Criado", description: `${userData.name} foi adicionado ao sistema.` });
     }
   };
 
@@ -117,9 +123,20 @@ export function UserDataTable() {
     if (!firestore || !selectedUser) return;
     const userRef = doc(firestore, 'users', selectedUser.id);
     deleteDocumentNonBlocking(userRef);
+    toast({ title: "Usuário Excluído", description: `${selectedUser.name} foi removido do sistema.` });
     setIsAlertOpen(false);
     setSelectedUser(null);
   }
+
+  const handleRoleChange = (user: User, newRole: 'Gestor' | 'Usuario') => {
+    if (!firestore) return;
+    const userRef = doc(firestore, 'users', user.id);
+    updateDocumentNonBlocking(userRef, { role: newRole });
+    toast({ 
+        title: "Permissão Alterada", 
+        description: `${user.name} agora é ${newRole}.` 
+    });
+  };
 
   const columns: ColumnDef<User>[] = React.useMemo(() => [
     {
@@ -141,7 +158,9 @@ export function UserDataTable() {
     {
       id: "actions",
       cell: ({ row }) => {
-        const user = row.original
+        const user = row.original;
+        const isCurrentUser = user.id === currentUser?.uid;
+
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -156,10 +175,28 @@ export function UserDataTable() {
                 <Pencil className="mr-2 h-4 w-4" />
                 Editar
               </DropdownMenuItem>
+              
               <DropdownMenuSeparator />
+              
+              {user.role !== 'Gestor' && (
+                <DropdownMenuItem disabled={isCurrentUser} onClick={() => handleRoleChange(user, 'Gestor')}>
+                  <ShieldCheck className="mr-2 h-4 w-4" />
+                  Promover a Gestor
+                </DropdownMenuItem>
+              )}
+              {user.role === 'Gestor' && (
+                <DropdownMenuItem disabled={isCurrentUser} onClick={() => handleRoleChange(user, 'Usuario')}>
+                  <ShieldOff className="mr-2 h-4 w-4" />
+                  Revogar Gestor
+                </DropdownMenuItem>
+              )}
+
+              <DropdownMenuSeparator />
+
               <DropdownMenuItem
                 className="text-red-600"
                 onClick={() => {setSelectedUser(user); setIsAlertOpen(true)}}
+                disabled={isCurrentUser}
               >
                 <Trash2 className="mr-2 h-4 w-4" />
                 Excluir
@@ -169,7 +206,7 @@ export function UserDataTable() {
         )
       },
     },
-  ], []);
+  ], [currentUser?.uid]);
 
   const dataMemo = React.useMemo(() => users || [], [users]);
 
