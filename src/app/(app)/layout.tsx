@@ -12,6 +12,7 @@ import {
   Calendar,
 } from 'lucide-react';
 import Image from 'next/image';
+import { ThemeProvider } from "next-themes"
 
 import {
   SidebarProvider,
@@ -140,7 +141,9 @@ function InnerLayout({ children }: { children: React.ReactNode }) {
                 <DropdownMenuContent align="end">
                   <DropdownMenuLabel>Minha Conta</DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem>Perfil</DropdownMenuItem>
+                  <Link href="/settings">
+                    <DropdownMenuItem>Perfil</DropdownMenuItem>
+                  </Link>
                   <DropdownMenuItem>Faturamento</DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleSignOut}>Sair</DropdownMenuItem>
@@ -159,9 +162,16 @@ function InnerLayout({ children }: { children: React.ReactNode }) {
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <FirebaseClientProvider>
-      <NotificationsProvider>
-        <InnerLayout>{children}</InnerLayout>
-      </NotificationsProvider>
+      <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+        <NotificationsProvider>
+          <InnerLayout>{children}</InnerLayout>
+        </NotificationsProvider>
+      </ThemeProvider>
     </FirebaseClientProvider>
   );
 }
