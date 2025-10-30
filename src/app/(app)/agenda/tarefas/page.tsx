@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { useUser, useCollection, useDoc, useFirestore } from '@/firebase';
+import { useUser, useCollection, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, collectionGroup, doc, query, where } from 'firebase/firestore';
 import type { Task, User, Project } from '@/lib/types';
 import { Calendar } from '@/components/ui/calendar';
@@ -19,14 +19,14 @@ export default function TaskAgendaPage() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [selectedUserId, setSelectedUserId] = useState<string | 'all'>('all');
 
-  const userProfileQuery = React.useMemo(() => firestore && authUser?.uid ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser?.uid]);
+  const userProfileQuery = useMemoFirebase(() => firestore && authUser?.uid ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser?.uid]);
   const { data: userProfile } = useDoc<User>(userProfileQuery);
   const userRole = userProfile?.roleId;
 
-  const allUsersQuery = React.useMemo(() => firestore ? collection(firestore, 'users') : null, [firestore]);
+  const allUsersQuery = useMemoFirebase(() => firestore ? collection(firestore, 'users') : null, [firestore]);
   const { data: allUsers } = useCollection<User>(allUsersQuery);
 
-  const tasksQuery = React.useMemo(() => {
+  const tasksQuery = useMemoFirebase(() => {
     if (!firestore || !userRole || !authUser?.uid) return null;
 
     const tasksCollection = collectionGroup(firestore, 'tasks');
@@ -43,7 +43,7 @@ export default function TaskAgendaPage() {
   }, [firestore, userRole, selectedUserId, authUser?.uid]);
   const { data: tasksData, isLoading: isLoadingTasks } = useCollection<Task>(tasksQuery);
   
-  const projectsQuery = React.useMemo(() => firestore ? collection(firestore, 'projects') : null, [firestore]);
+  const projectsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'projects') : null, [firestore]);
   const { data: projectsData } = useCollection<Project>(projectsQuery);
 
   const projectsMap = useMemo(() => new Map(projectsData?.map(p => [p.id, p])), [projectsData]);

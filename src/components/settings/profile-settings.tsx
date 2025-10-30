@@ -16,7 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import type { User } from "firebase/auth";
-import { useFirestore, useDoc, useCollection } from "@/firebase";
+import { useFirestore, useDoc, useCollection, useMemoFirebase } from "@/firebase";
 import { collection, doc, updateDoc } from "firebase/firestore";
 import type { User as UserProfile, Role } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
@@ -55,15 +55,15 @@ export function ProfileSettings({ user }: ProfileSettingsProps) {
   const { toast } = useToast();
   const [isCepLoading, setIsCepLoading] = React.useState(false);
 
-  const userProfileRef = React.useMemo(() => 
+  const userProfileRef = useMemoFirebase(() => 
     firestore && user ? doc(firestore, 'users', user.uid) : null,
-    [firestore, user]
+    [firestore, user?.uid]
   );
   const { data: userProfile, isLoading: isLoadingProfile } = useDoc<UserProfile>(userProfileRef);
 
-  const rolesQuery = React.useMemo(() => firestore ? collection(firestore, 'roles') : null, [firestore]);
+  const rolesQuery = useMemoFirebase(() => firestore ? collection(firestore, 'roles') : null, [firestore]);
   const { data: roles, isLoading: isLoadingRoles } = useCollection<Role>(rolesQuery);
-  const userRole = React.useMemo(() => roles?.find(r => r.id === userProfile?.roleId), [roles, userProfile]);
+  const userRole = React.useMemo(() => roles?.find(r => r.id === userProfile?.roleId), [roles, userProfile?.roleId]);
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),

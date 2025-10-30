@@ -5,7 +5,7 @@ import { KpiCard } from "@/components/dashboard/kpi-card";
 import { CheckCircle, Target, FolderKanban, ListChecks, Award } from "lucide-react";
 import { PipelineChart } from "@/components/dashboard/pipeline-chart";
 import { ChatSummary } from "@/components/dashboard/chat-summary";
-import { useFirestore, useCollection } from "@/firebase";
+import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { collection, collectionGroup } from "firebase/firestore";
 import type { Project, Task, Stage, Seal } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -33,16 +33,16 @@ function KpiSkeleton() {
 export default function DashboardPage() {
   const firestore = useFirestore();
 
-  const projectsQuery = React.useMemo(() => firestore ? collection(firestore, 'projects') : null, [firestore]);
+  const projectsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'projects') : null, [firestore]);
   const { data: projectsData, isLoading: isLoadingProjects } = useCollection<Project>(projectsQuery);
 
-  const tasksQuery = React.useMemo(() => firestore ? collectionGroup(firestore, 'tasks') : null, [firestore]);
+  const tasksQuery = useMemoFirebase(() => firestore ? collectionGroup(firestore, 'tasks') : null, [firestore]);
   const { data: tasksData, isLoading: isLoadingTasks } = useCollection<Task>(tasksQuery);
   
-  const stagesQuery = React.useMemo(() => firestore && projectsData && projectsData.length > 0 ? collectionGroup(firestore, 'stages') : null, [firestore, projectsData]);
+  const stagesQuery = useMemoFirebase(() => firestore && projectsData && projectsData.length > 0 ? collectionGroup(firestore, 'stages') : null, [firestore, projectsData?.length]);
   const { data: stagesData, isLoading: isLoadingStages } = useCollection<Stage>(stagesQuery);
 
-  const sealsQuery = React.useMemo(() => firestore ? collection(firestore, 'seals') : null, [firestore]);
+  const sealsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'seals') : null, [firestore]);
   const { data: sealsData, isLoading: isLoadingSeals } = useCollection<Seal>(sealsQuery);
 
 
@@ -164,5 +164,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-
-    

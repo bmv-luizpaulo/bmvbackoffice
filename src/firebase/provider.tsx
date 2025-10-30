@@ -68,71 +68,6 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
     userError: null,
   });
 
-  const setupInitialRolesAndUser = async (user: User) => {
-    try {
-        const rolesCollection = collection(firestore, 'roles');
-        const batch = writeBatch(firestore);
-
-        const rolesToCreate = [
-            { name: "Desenvolvedor", description: "Acesso total ao sistema para fins de desenvolvimento.", isManager: true, isDev: true },
-            { name: "Gestor", description: "Acesso de gerenciamento ao sistema.", isManager: true, isDev: false },
-            { name: "Usuário", description: "Acesso padrão de usuário ao sistema.", isManager: false, isDev: false },
-        ];
-        
-        let devRoleId: string | null = null;
-        let gestorRoleId: string | null = null;
-
-        const existingRolesSnap = await getDocs(rolesCollection);
-        const existingRoles = existingRolesSnap.docs.map(d => d.data().name);
-
-        for (const role of rolesToCreate) {
-            if (!existingRoles.includes(role.name)) {
-                const roleRef = doc(rolesCollection);
-                batch.set(roleRef, { ...role, id: roleRef.id });
-                if(role.name === 'Desenvolvedor') devRoleId = roleRef.id;
-                if(role.name === 'Gestor') gestorRoleId = roleRef.id;
-            } else {
-                 const existingRoleDoc = existingRolesSnap.docs.find(d => d.data().name === role.name);
-                 if (existingRoleDoc) {
-                    if(role.name === 'Desenvolvedor') devRoleId = existingRoleDoc.id;
-                    if(role.name === 'Gestor') gestorRoleId = existingRoleDoc.id;
-                 }
-            }
-        }
-
-        const userRef = doc(firestore, "users", user.uid);
-        const userSnap = await getDoc(userRef);
-
-        if (!userSnap.exists()) {
-          const isDevUser = user.uid === 'lxm9BGJOYqOw9ODiAKP6xp4nKTV2';
-          const newUserProfile: Partial<UserProfile> = {
-            id: user.uid,
-            name: user.displayName || user.email || "Novo Usuário",
-            email: user.email,
-            avatarUrl: user.photoURL || `https://picsum.photos/seed/${user.uid}/200`,
-            roleId: isDevUser ? devRoleId : gestorRoleId, // Assign Dev or Gestor role
-          };
-          batch.set(userRef, newUserProfile);
-
-          const notificationsCollection = collection(firestore, `users/${user.uid}/notifications`);
-          const notificationRef = doc(notificationsCollection);
-          batch.set(notificationRef, {
-            id: notificationRef.id,
-            title: 'Bem-vindo ao BMV Nexus!',
-            message: 'Explore o painel e comece a gerenciar seus projetos.',
-            link: '/dashboard',
-            isRead: false,
-            createdAt: new Date().toISOString(),
-          });
-        }
-        
-        await batch.commit();
-
-    } catch (error) {
-        console.error("Error setting up initial roles and user:", error);
-    }
-  }
-
   // Effect to subscribe to Firebase auth state changes and manage user profile
   useEffect(() => {
     if (!auth || !firestore) {
@@ -143,9 +78,6 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
     const unsubscribe = onAuthStateChanged(
       auth,
       async (firebaseUser) => {
-        if (firebaseUser) {
-          await setupInitialRolesAndUser(firebaseUser);
-        }
         // Update auth state
         setUserAuthState({ user: firebaseUser, isUserLoading: false, userError: null });
       },
@@ -165,7 +97,7 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
       const unsubscribe = onSnapshot(userDocRef, (doc) => {
         const data = doc.data() as UserProfile;
         // The Cloud Function updates `_tokenRefreshed`. When it changes, force a token refresh.
-        if (data && data._tokenRefreshed) {
+        if (data && (data as any)._tokenRefreshed) {
             console.log("Detected role change, forcing token refresh...");
             userAuthState.user?.getIdToken(true); // true forces a refresh
         }
@@ -250,5 +182,3 @@ export const useUser = (): UserHookResult => { // Renamed from useAuthUser
   const { user, isUserLoading, userError } = useFirebase(); // Leverages the main hook
   return { user, isUserLoading, userError };
 };
-
-    

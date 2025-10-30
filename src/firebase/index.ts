@@ -4,6 +4,7 @@ import { firebaseConfig } from '@/firebase/config';
 import { initializeApp, getApps, getApp, type FirebaseApp } from 'firebase/app';
 import { getAuth, type Auth } from 'firebase/auth';
 import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, type Firestore } from 'firebase/firestore';
+import { DependencyList, useMemo } from 'react';
 
 // --- Singleton Pattern for Firebase Services ---
 // We use a global symbol to store the instances so they persist across hot-reloads in development.
@@ -45,6 +46,17 @@ function getFirebaseServices(): FirebaseServices {
 // IMPORTANT: DO NOT MODIFY THIS FUNCTION
 export function initializeFirebase() {
   return getFirebaseServices();
+}
+
+/**
+ * Custom hook to memoize Firebase queries.
+ * This is a wrapper around `React.useMemo` that helps to ensure that
+ * query objects are not re-created on every render, which can cause
+ * infinite loops in `useCollection` or `useDoc`.
+ */
+export function useMemoFirebase<T>(factory: () => T, deps: DependencyList | undefined): T {
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    return useMemo(factory, deps);
 }
 
 

@@ -36,7 +36,7 @@ export function ProjectFilesDialog({ isOpen, onOpenChange, project }: ProjectFil
     firestore && project ? 
     query(collection(firestore, `projects/${project.id}/files`), orderBy('uploadedAt', 'desc')) 
     : null, 
-  [firestore, project]);
+  [firestore, project?.id]);
   
   const { data: files, isLoading: isLoadingFiles } = useCollection<ProjectFile>(filesQuery);
 
