@@ -54,7 +54,7 @@ export function initializeFirebase() {
  * query objects are not re-created on every render, which can cause
  * infinite loops in `useCollection` or `useDoc`.
  */
-export function useMemoFirebase<T>(factory: () => T, deps: DependencyList | undefined): T {
+export function useMemoFirebase<T>(factory: () => T, deps: DependencyList): T {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     return useMemo(factory, deps);
 }

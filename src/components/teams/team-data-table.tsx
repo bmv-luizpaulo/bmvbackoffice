@@ -106,8 +106,8 @@ export function TeamDataTable() {
         await updateDocumentNonBlocking(teamRef, teamData);
         toast({ title: "Equipe Atualizada", description: `A equipe "${teamData.name}" foi atualizada.` });
     } else {
-        const docRef = await addDocumentNonBlocking(collection(firestore, 'teams'), teamData);
-        finalTeamId = docRef.id;
+        const docRef = addDocumentNonBlocking(collection(firestore, 'teams'), teamData);
+        finalTeamId = (await docRef).id;
         toast({ title: "Equipe Criada", description: `A equipe "${teamData.name}" foi criada com sucesso.` });
     }
 
