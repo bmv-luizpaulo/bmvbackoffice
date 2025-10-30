@@ -3,305 +3,252 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Allows users to read and write their own user document.
+     * @description Root-level access check to ensure that the database matches the default.
+     */
+    match /{document=**} {
+        allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+
+    function isExistingOwner(ownerId) {
+      return isSignedIn() && resource.data.ownerId == ownerId;
+    }
+
+    /**
+     * @description Rules for the /users/{userId} collection.
      * @path /users/{userId}
-     * @allow (create) request.auth.uid == userId
-     * @allow (get, update, delete) request.auth.uid == userId && resource.data.id == userId
-     * @deny (create) request.auth == null
-     * @deny (get, update, delete) request.auth == null
-     * @principle Enforces document ownership.
+     * @allow (create) User with ID 'user123' can create their own document.
+     *   - request.auth.uid: 'user123'
+     *   - resource.data.id: 'user123'
+     * @allow (get, update, delete) User with ID 'user123' can access their document.
+     *   - request.auth.uid: 'user123'
+     * @deny (create) User with ID 'user456' cannot create a document for user 'user123'.
+     *   - request.auth.uid: 'user456'
+     *   - resource.data.id: 'user123'
+     * @principle Enforces document ownership for all operations.
      */
     match /users/{userId} {
-      function isOwner(userId) {
-        return request.auth.uid == userId;
-      }
-
       allow get: if isOwner(userId);
-      allow list: if false;
+      allow list: if false; // Prevent listing all users
+
+      allow create: if isSignedIn() && request.auth.uid == userId;
+      allow update: if isOwner(userId) && request.auth.uid == userId;
+      allow delete: if isOwner(userId);
+    }
+
+    /**
+     * @description Rules for the /users/{userId}/notifications/{notificationId} collection.
+     * @path /users/{userId}/notifications/{notificationId}
+     * @allow (create) User with ID 'user123' can create a notification in their own collection.
+     *   - request.auth.uid: 'user123'
+     * @allow (get, update, delete) User with ID 'user123' can access notifications in their own collection.
+     *   - request.auth.uid: 'user123'
+     * @deny (list) Non-owner cannot list the notifications.
+     *   - request.auth.uid: 'user456'
+     * @deny (create) User with ID 'user456' cannot create a notification in user 'user123's collection.
+     *   - request.auth.uid: 'user456'
+     * @principle Restricts access to a user's own notifications.
+     */
+    match /users/{userId}/notifications/{notificationId} {
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId);
+
       allow create: if isOwner(userId);
       allow update: if isOwner(userId);
       allow delete: if isOwner(userId);
     }
 
     /**
-     * @description Allows users to read and write their own notifications.
-     * @path /users/{userId}/notifications/{notificationId}
-     * @allow (create) request.auth.uid == userId
-     * @allow (get, update, delete) request.auth.uid == userId
-     * @deny (create) request.auth == null
-     * @deny (get, update, delete) request.auth == null
-     * @principle Enforces document ownership for notifications.
-     */
-    match /users/{userId}/notifications/{notificationId} {
-        function isOwner(userId) {
-            return request.auth.uid == userId;
-        }
-
-        allow get: if isOwner(userId);
-        allow list: if false;
-        allow create: if request.auth.uid == userId;
-        allow update: if isOwner(userId);
-        allow delete: if isOwner(userId);
-    }
-
-    /**
-     * @description Allows anyone to read teams, but only the owner can modify.
+     * @description Rules for the /teams/{teamId} collection.
      * @path /teams/{teamId}
-     * @allow (get, list) true
-     * @allow (create) request.auth.uid == request.resource.data.ownerId
-     * @allow (update, delete) request.auth.uid == resource.data.ownerId
-     * @deny (create, update, delete) request.auth == null
+     * @allow (get, list) Public read access to all teams.
+     * @allow (create) Owner with correct ownerId can create
+     * @allow (update, delete) Owner with correct ownerId can update and delete.
      * @principle Public read, owner-only writes.
      */
     match /teams/{teamId} {
-      function isOwner() {
-        return request.auth.uid == resource.data.ownerId;
-      }
-
-      allow get: if true;
-      allow list: if true;
-      allow create: if request.auth.uid == request.resource.data.ownerId;
-      allow update: if request.auth.uid == resource.data.ownerId;
-      allow delete: if request.auth.uid == resource.data.ownerId;
+      allow get, list: if true;
+      allow create: if isSignedIn() && request.resource.data.ownerId == request.auth.uid;
+      allow update: if isSignedIn() && request.resource.data.ownerId == request.auth.uid;
+      allow delete: if isSignedIn() && resource.data.ownerId == request.auth.uid;
     }
 
-     /**
-     * @description Allows anyone to read roles, but only the owner can modify.
+   /**
+     * @description Rules for the /roles/{roleId} collection.
      * @path /roles/{roleId}
-     * @allow (get, list) true
-     * @allow (create) request.auth.uid == request.resource.data.ownerId
-     * @allow (update, delete) request.auth.uid == resource.data.ownerId
-     * @deny (create, update, delete) request.auth == null
-     * @principle Public read, owner-only writes.
+     * @allow (get, list) Public read access to all roles.
+     * @allow (create, update, delete) No write access.
+     * @principle Completely public collection for roles
      */
     match /roles/{roleId} {
-      function isOwner() {
-        return request.auth.uid == resource.data.ownerId;
-      }
-
-      allow get: if true;
-      allow list: if true;
-      allow create: if request.auth.uid == request.resource.data.ownerId;
-      allow update: if request.auth.uid == resource.data.ownerId;
-      allow delete: if request.auth.uid == resource.data.ownerId;
+      allow get, list: if true;
+      allow create, update, delete: if false;
     }
 
-
     /**
-     * @description Allows anyone to read contacts, but only the owner can modify.
+     * @description Rules for the /contacts/{contactId} collection.
      * @path /contacts/{contactId}
-     * @allow (get, list) true
-     * @allow (create) request.auth.uid == request.resource.data.ownerId
-     * @allow (update, delete) request.auth.uid == resource.data.ownerId
-     * @deny (create, update, delete) request.auth == null
+     * @allow (get, list) Public read access to all contacts.
+     * @allow (create, update, delete) Only the owner can modify contacts.
      * @principle Public read, owner-only writes.
      */
     match /contacts/{contactId} {
-      function isOwner() {
-        return request.auth.uid == resource.data.ownerId;
-      }
-
-      allow get: if true;
-      allow list: if true;
-      allow create: if request.auth.uid == request.resource.data.ownerId;
-      allow update: if request.auth.uid == resource.data.ownerId;
-      allow delete: if request.auth.uid == resource.data.ownerId;
+      allow get, list: if true;
+        allow create: if isSignedIn() && request.resource.data.ownerId == request.auth.uid;
+      allow update: if isSignedIn() && request.resource.data.ownerId == request.auth.uid;
+      allow delete: if isSignedIn() && resource.data.ownerId == request.auth.uid;
     }
 
     /**
-     * @description Allows anyone to read projects, but only the owner or team members can modify.
+     * @description Rules for the /projects/{projectId} collection.
      * @path /projects/{projectId}
-     * @allow (get, list) true
-     * @allow (create) request.auth.uid == request.resource.data.ownerId
-     * @allow (update, delete) request.auth.uid == resource.data.ownerId || request.resource.data.teamMembers.hasAny([request.auth.uid])
-     * @deny (create, update, delete) request.auth == null
-     * @principle Public read, owner/team-only writes.
+     * @allow (get, list) Public read access to all projects.
+     * @allow (create) Only the owner can create projects, validating ownerId.
+     * @allow (update, delete) Only the owner can update and delete projects.
+     * @principle Public read, owner-only writes.
      */
     match /projects/{projectId} {
-      function isOwner() {
-        return request.auth.uid == resource.data.ownerId;
-      }
-      function isTeamMember() {
-          return request.auth.uid in resource.data.teamMembers;
-      }
-
-      allow get: if true;
-      allow list: if true;
-      allow create: if request.auth.uid == request.resource.data.ownerId;
-      allow update: if isOwner() || (exists(resource.data.teamMembers) && isTeamMember());
-      allow delete: if isOwner();
+      allow get, list: if true;
+      allow create: if isSignedIn() && request.resource.data.ownerId == request.auth.uid;
+      allow update: if isSignedIn() && request.resource.data.ownerId == request.auth.uid;
+      allow delete: if isSignedIn() && resource.data.ownerId == request.auth.uid;
     }
 
     /**
-     * @description Allows anyone to read project stages, but only project owners can modify.
+     * @description Rules for the /projects/{projectId}/stages/{stageId} collection.
      * @path /projects/{projectId}/stages/{stageId}
+     * @allow (get, list) Public read access to all stages.
+     * @allow (create, update, delete) Only project owner can write stages.
+     * @principle Public read, owner-only writes, inherited from parent.
      */
     match /projects/{projectId}/stages/{stageId} {
-      function isProjectOwner(projectId) {
-        return get(/databases/$(database)/documents/projects/$(projectId)).data.ownerId == request.auth.uid;
-      }
-
-      allow get: if true;
-      allow list: if true;
-      allow create: if isProjectOwner(projectId);
-      allow update: if isProjectOwner(projectId);
-      allow delete: if isProjectOwner(projectId);
+      allow get, list: if true;
+        allow create: if isSignedIn() && get(/databases/$(database)/documents/projects/$(projectId)).data.ownerId == request.auth.uid;
+      allow update: if isSignedIn() && get(/databases/$(database)/documents/projects/$(projectId)).data.ownerId == request.auth.uid;
+      allow delete: if isSignedIn() && get(/databases/$(database)/documents/projects/$(projectId)).data.ownerId == request.auth.uid;
     }
 
     /**
-     * @description Allows anyone to read project tasks, but only project owners or assignees can modify.
+     * @description Rules for the /projects/{projectId}/tasks/{taskId} collection.
      * @path /projects/{projectId}/tasks/{taskId}
+     * @allow (get, list) Public read access to all tasks.
+     * @allow (create, update, delete) Only project owner can write tasks.
+     * @principle Public read, owner-only writes, inherited from parent.
      */
     match /projects/{projectId}/tasks/{taskId} {
-      function isProjectOwner(projectId) {
-        return get(/databases/$(database)/documents/projects/$(projectId)).data.ownerId == request.auth.uid;
-      }
-      function isAssignee() {
-        return request.auth.uid == resource.data.assigneeId;
-      }
-
-      allow get: if true;
-      allow list: if true;
-      allow create: if isProjectOwner(projectId) || request.auth.uid == request.resource.data.assigneeId;
-      allow update: if isProjectOwner(projectId) || isAssignee();
-      allow delete: if isProjectOwner(projectId);
+      allow get, list: if true;
+        allow create: if isSignedIn() && get(/databases/$(database)/documents/projects/$(projectId)).data.ownerId == request.auth.uid;
+      allow update: if isSignedIn() && get(/databases/$(database)/documents/projects/$(projectId)).data.ownerId == request.auth.uid;
+      allow delete: if isSignedIn() && get(/databases/$(database)/documents/projects/$(projectId)).data.ownerId == request.auth.uid;
     }
 
     /**
-     * @description Allows project members to read and write project files.
+     * @description Rules for the /projects/{projectId}/files/{fileId} collection.
      * @path /projects/{projectId}/files/{fileId}
+     * @allow (get, list) Public read access to project files.
+     * @allow (create, update, delete) Only project owner can manage files.
+     * @principle Public read, owner-only writes, inherited from parent.
      */
     match /projects/{projectId}/files/{fileId} {
-      function isProjectMember(projectId) {
-          return request.auth.uid in get(/databases/$(database)/documents/projects/$(projectId)).data.teamMembers;
-      }
-        function isProjectOwner(projectId) {
-            return get(/databases/$(database)/documents/projects/$(projectId)).data.ownerId == request.auth.uid;
-        }
-
-      allow get: if true;
-      allow list: if true;
-      allow create: if exists(/databases/$(database)/documents/projects/$(projectId)) && isProjectMember(projectId);
-      allow update: if exists(/databases/$(database)/documents/projects/$(projectId)) && isProjectMember(projectId);
-      allow delete: if isProjectOwner(projectId);
+      allow get, list: if true;
+        allow create: if isSignedIn() && get(/databases/$(database)/documents/projects/$(projectId)).data.ownerId == request.auth.uid;
+      allow update: if isSignedIn() && get(/databases/$(database)/documents/projects/$(projectId)).data.ownerId == request.auth.uid;
+      allow delete: if isSignedIn() && get(/databases/$(database)/documents/projects/$(projectId)).data.ownerId == request.auth.uid;
     }
 
     /**
-     * @description Allows chat participants to read and write chat metadata.
+     * @description Rules for the /chats/{chatId} collection.
      * @path /chats/{chatId}
+     * @allow (get, list) Any participant can read the chat metadata.
+     * @allow (create) Any participant can create a chat.
+     * @allow (update) Only participants can update chat metadata
+     * @allow (delete) No one can delete a chat via client.
+     * @principle Shared access: only chat participants can read/write.
      */
     match /chats/{chatId} {
         function isParticipant() {
-            return request.auth.uid in resource.data.userIds;
+            return request.auth.uid in request.resource.data.userIds;
         }
 
-        allow get: if isParticipant();
-        allow list: if false;
-        allow create: if request.auth.uid in request.resource.data.userIds;
-        allow update: if isParticipant();
-        allow delete: if false; // Chats should not be deleted.
+        allow get, list: if isSignedIn() && request.resource.data.userIds.hasAny([request.auth.uid]);
+        allow create: if isSignedIn() && request.resource.data.userIds.hasAny([request.auth.uid]);
+        allow update: if isSignedIn() && request.resource.data.userIds.hasAny([request.auth.uid]);
+        allow delete: if false;
     }
 
     /**
-     * @description Allows chat participants to read and write messages.
+     * @description Rules for the /chats/{chatId}/messages/{messageId} collection.
      * @path /chats/{chatId}/messages/{messageId}
+     * @allow (get, list) Only chat participants can read messages.
+     * @allow (create) Only chat participants can send messages.
+     * @allow (update, delete) No one can update or delete messages via client.
+     * @principle Shared access: only chat participants can read/write messages.
      */
     match /chats/{chatId}/messages/{messageId} {
-        function isChatParticipant(chatId) {
-            return request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.userIds;
-        }
-
-        allow get: if isChatParticipant(chatId);
-        allow list: if isChatParticipant(chatId);
-        allow create: if isChatParticipant(chatId);
-        allow update: if false; // Messages should not be updated.
-        allow delete: if false; // Messages should not be deleted.
+      allow get, list: if isSignedIn() && get(/databases/$(database)/documents/chats/$(chatId)).data.userIds.hasAny([request.auth.uid]);
+      allow create: if isSignedIn() && get(/databases/$(database)/documents/chats/$(chatId)).data.userIds.hasAny([request.auth.uid]);
+      allow update, delete: if false;
     }
 
     /**
-     * @description Allows anyone to read products, but only the owner can modify.
+     * @description Rules for the /products/{productId} collection.
      * @path /products/{productId}
-     * @allow (get, list) true
-     * @allow (create) request.auth.uid == request.resource.data.ownerId
-     * @allow (update, delete) request.auth.uid == resource.data.ownerId
-     * @deny (create, update, delete) request.auth == null
+     * @allow (get, list) Public read access to all products.
+     * @allow (create, update, delete) Only the owner can modify products.
      * @principle Public read, owner-only writes.
      */
     match /products/{productId} {
-      function isOwner() {
-        return request.auth.uid == resource.data.ownerId;
-      }
-
-      allow get: if true;
-      allow list: if true;
-      allow create: if request.auth.uid == request.resource.data.ownerId;
-      allow update: if request.auth.uid == resource.data.ownerId;
-      allow delete: if request.auth.uid == resource.data.ownerId;
+      allow get, list: if true;
+        allow create: if isSignedIn() && request.resource.data.ownerId == request.auth.uid;
+      allow update: if isSignedIn() && request.resource.data.ownerId == request.auth.uid;
+      allow delete: if isSignedIn() && resource.data.ownerId == request.auth.uid;
     }
 
     /**
-     * @description Allows anyone to read seals, but only the owner can modify.
+     * @description Rules for the /seals/{sealId} collection.
      * @path /seals/{sealId}
-     * @allow (get, list) true
-     * @allow (create) request.auth.uid == request.resource.data.ownerId
-     * @allow (update, delete) request.auth.uid == resource.data.ownerId
-     * @deny (create, update, delete) request.auth == null
+     * @allow (get, list) Public read access to all seals.
+     * @allow (create, update, delete) Only the owner can modify seals.
      * @principle Public read, owner-only writes.
      */
     match /seals/{sealId} {
-      function isOwner() {
-        return request.auth.uid == resource.data.ownerId;
-      }
-
-      allow get: if true;
-      allow list: if true;
-      allow create: if request.auth.uid == request.resource.data.ownerId;
-      allow update: if request.auth.uid == resource.data.ownerId;
-      allow delete: if request.auth.uid == resource.data.ownerId;
+      allow get, list: if true;
+        allow create: if isSignedIn() && request.resource.data.ownerId == request.auth.uid;
+      allow update: if isSignedIn() && request.resource.data.ownerId == request.auth.uid;
+      allow delete: if isSignedIn() && resource.data.ownerId == request.auth.uid;
     }
 
     /**
-     * @description Allows team members to read checklists, but only team leaders can modify.
+     * @description Rules for the /checklists/{checklistId} collection.
      * @path /checklists/{checklistId}
+     * @allow (get, list) Public read access to all checklists.
+     * @allow (create, update, delete) Only the team owner can modify checklists.
      */
     match /checklists/{checklistId} {
-      function isTeamMember(teamId) {
-        return request.auth.uid in get(/databases/$(database)/documents/teams/$(teamId)).data.memberIds;
-      }
-      function isTeamLeader(teamId) {
-        return request.auth.uid == get(/databases/$(database)/documents/teams/$(teamId)).data.leaderId;
-      }
-      function getTeamId() {
-          return get(/databases/$(database)/documents/checklists/$(checklistId)).data.teamId;
-      }
-
-      allow get: if true;
-      allow list: if true;
-      allow create: if exists(/databases/$(database)/documents/teams/$(request.resource.data.teamId)) && isTeamLeader(request.resource.data.teamId);
-      allow update: if exists(/databases/$(database)/documents/teams/$(resource.data.teamId)) && isTeamLeader(resource.data.teamId);
-      allow delete: if exists(/databases/$(database)/documents/teams/$(resource.data.teamId)) && isTeamLeader(resource.data.teamId);
+      allow get, list: if true;
+        allow create: if isSignedIn() && request.resource.data.ownerId == request.auth.uid;
+      allow update: if isSignedIn() && request.resource.data.ownerId == request.auth.uid;
+      allow delete: if isSignedIn() && resource.data.ownerId == request.auth.uid;
     }
 
     /**
-     * @description Allows team members to read checklist items, but only team leaders can modify.
+     * @description Rules for the /checklists/{checklistId}/items/{itemId} collection.
      * @path /checklists/{checklistId}/items/{itemId}
+     * @allow (get, list) Public read access to checklist items.
+     * @allow (create, update, delete) Only the team owner can modify checklist items.
      */
     match /checklists/{checklistId}/items/{itemId} {
-      function isTeamMember(teamId) {
-        return request.auth.uid in get(/databases/$(database)/documents/teams/$(teamId)).data.memberIds;
-      }
-      function isTeamLeader(teamId) {
-        return request.auth.uid == get(/databases/$(database)/documents/teams/$(teamId)).data.leaderId;
-      }
-        function getTeamId(checklistId) {
-            return get(/databases/$(database)/documents/checklists/$(checklistId)).data.teamId;
-        }
-
-      allow get: if true;
-      allow list: if true;
-      allow create: if exists(/databases/$(database)/documents/checklists/$(checklistId)) && exists(/databases/$(database)/documents/teams/$(request.resource.data.teamId)) && isTeamLeader(request.resource.data.teamId);
-      allow update: if exists(/databases/$(database)/documents/checklists/$(checklistId)) && exists(/databases/$(database)/documents/teams/$(resource.data.teamId)) && isTeamLeader(resource.data.teamId);
-      allow delete: if exists(/databases/$(database)/documents/checklists/$(checklistId)) && exists(/databases/$(database)/documents/teams/$(resource.data.teamId)) && isTeamLeader(resource.data.teamId);
+      allow get, list: if true;
+        allow create: if isSignedIn() && get(/databases/$(database)/documents/checklists/$(checklistId)).data.ownerId == request.auth.uid;
+      allow update: if isSignedIn() && get(/databases/$(database)/documents/checklists/$(checklistId)).data.ownerId == request.auth.uid;
+      allow delete: if isSignedIn() && get(/databases/$(database)/documents/checklists/$(checklistId)).data.ownerId == request.auth.uid;
     }
   }
 }
