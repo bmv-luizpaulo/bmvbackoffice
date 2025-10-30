@@ -19,10 +19,9 @@
           "format": "uri",
           "description": "URL for the user's avatar image."
         },
-        "role": {
+        "roleId": {
           "type": "string",
-          "description": "The user's role in the system.",
-          "enum": ["Gestor", "Usuario"]
+          "description": "The ID of the role assigned to the user."
         },
         "phone": {
           "type": "string",
@@ -212,6 +211,26 @@
         },
         "required": ["name"]
     },
+    "Role": {
+      "title": "Role",
+      "type": "object",
+      "description": "Represents a user role within the organization.",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Name of the role."
+        },
+        "description": {
+          "type": "string",
+          "description": "Description of the role's permissions and responsibilities."
+        },
+        "isManager": {
+            "type": "boolean",
+            "description": "Indicates if this role has manager-level privileges."
+        }
+      },
+      "required": ["name"]
+    },
     "Contact": {
       "title": "Contact",
       "type": "object",
@@ -379,6 +398,28 @@
         }
       },
       "required": ["productId", "contactId", "issueDate", "expiryDate", "status"]
+    },
+    "Checklist": {
+      "title": "Checklist",
+      "type": "object",
+      "description": "Represents a standardized checklist for a team.",
+      "properties": {
+        "name": { "type": "string", "description": "The name of the checklist." },
+        "description": { "type": "string", "description": "A brief description of the checklist's purpose." },
+        "teamId": { "type": "string", "description": "The ID of the team this checklist is for." }
+      },
+      "required": ["name", "teamId"]
+    },
+    "ChecklistItem": {
+      "title": "ChecklistItem",
+      "type": "object",
+      "description": "Represents a single step or item within a checklist.",
+      "properties": {
+        "checklistId": { "type": "string", "description": "The ID of the parent checklist." },
+        "description": { "type": "string", "description": "The text of the checklist item/step." },
+        "order": { "type": "number", "description": "The numerical order of the item in the list." }
+      },
+      "required": ["checklistId", "description", "order"]
     }
   },
   "auth": {
@@ -399,6 +440,10 @@
     "/teams/{teamId}": {
       "schema": { "$ref": "#/entities/Team" },
       "description": "Represents a team. Contains 'id', 'name', and 'description'."
+    },
+    "/roles/{roleId}": {
+        "schema": { "$ref": "#/entities/Role" },
+        "description": "Represents a user role. Contains 'id', 'name', 'description', and 'isManager'."
     },
     "/contacts/{contactId}": {
       "schema": { "$ref": "#/entities/Contact" },
@@ -435,6 +480,14 @@
     "/seals/{sealId}": {
         "schema": { "$ref": "#/entities/Seal" },
         "description": "Stores all certification seals issued."
+    },
+    "/checklists/{checklistId}": {
+      "schema": { "$ref": "#/entities/Checklist" },
+      "description": "Stores a checklist template."
+    },
+    "/checklists/{checklistId}/items/{itemId}": {
+      "schema": { "$ref": "#/entities/ChecklistItem" },
+      "description": "Stores the items for a specific checklist."
     }
   }
 }

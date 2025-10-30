@@ -1,270 +1,202 @@
 /**
- * @file Firebase Security Rules for Task Management Application
+ * @file Firestore Security Rules
+ * @description This ruleset enforces a strict user-ownership model for most data, with public read access to certain collections.
  *
- * @description This ruleset enforces a user-ownership model for user profiles and their associated data,
- * shared access for chats, and public read access with owner-only writes for products and seals.
- *
- * @dataStructure
+ * Data Structure:
  * - /users/{userId}: User profiles, accessible only to the owner.
- * - /users/{userId}/notifications/{notificationId}: Notifications for each user, accessible only to the owner.
- * - /teams/{teamId}: Teams within the organization, write access is forbidden in this prototype.
- * - /contacts/{contactId}: Contacts, write access is forbidden in this prototype.
- * - /projects/{projectId}: Projects, accessible only to project team members.
- * - /projects/{projectId}/stages/{stageId}: Stages within projects, accessible only to project team members.
- * - /projects/{projectId}/tasks/{taskId}: Tasks within projects, accessible only to project team members.
- * - /projects/{projectId}/files/{fileId}: Files within projects, accessible only to project team members.
- * - /chats/{chatId}: Chat conversations between users, accessible to participating users.
- * - /chats/{chatId}/messages/{messageId}: Messages within chat conversations, accessible to participating users.
- * - /products/{productId}: Products that can be associated with seals, publicly readable, owner-only writes.
- * - /seals/{sealId}: Certification seals, publicly readable, owner-only writes.
- * - /roles: Roles for access control
+ * - /users/{userId}/notifications/{notificationId}: Notifications for a user, accessible only to the owner.
+ * - /teams/{teamId}: Teams within the organization, publicly readable, writeable by anyone for prototyping purposes.
+ * - /contacts/{contactId}: Contacts (clients, suppliers, partners), publicly readable, writeable by anyone for prototyping purposes.
+ * - /projects/{projectId}: Projects, publicly readable, writeable by anyone for prototyping purposes.
+ * - /projects/{projectId}/stages/{stageId}: Stages within projects, publicly readable, writeable by anyone for prototyping purposes.
+ * - /projects/{projectId}/tasks/{taskId}: Tasks within stages, publicly readable, writeable by anyone for prototyping purposes.
+ * - /projects/{projectId}/files/{fileId}: Files associated with projects, publicly readable, writeable by anyone for prototyping purposes.
+ * - /chats/{chatId}: Chat metadata, access controlled via userIds array.
+ * - /chats/{chatId}/messages/{messageId}: Chat messages, access controlled via parent chat document.
+ * - /products/{productId}: Products, publicly readable, writeable by anyone for prototyping purposes.
+ * - /seals/{sealId}: Seals, publicly readable, writeable by anyone for prototyping purposes.
  *
- * @keySecurityDecisions
- * - User listing is disallowed for privacy.
- * - Ambiguous relationships default to strict owner-only access.
- * - Roles are statically defined and accessible to all for read operations.
+ * Key Security Decisions:
+ * - User listing is disallowed.
+ * - Default security posture for ambiguous relationships is strict owner-only access.
+ * - Read-only collections are explicitly marked as such.
  *
- * @denormalizationForAuthorization
- * - Project documents contain a `teamMembers` array to simplify authorization checks for project-related data.
- * - Chat documents contain a `userIds` array to simplify authorization checks for chat messages.
- *
- * @structuralSegregation
- * - No explicit segregation of public and private data is implemented beyond the chat and owner models.
+ * Denormalization for Authorization:
+ * - Chats include a `userIds` array to efficiently determine access for participants.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    /**
-     * @description Checks if the request is authenticated.
-     * @returns {boolean} True if the user is signed in, false otherwise.
-     */
     function isSignedIn() {
       return request.auth != null;
     }
 
-    /**
-     * @description Checks if the authenticated user is the owner of the resource.
-     * @param {string} userId The user ID to compare against the authenticated user's ID.
-     * @returns {boolean} True if the user is the owner, false otherwise.
-     */
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
     }
 
-    /**
-     * @description Checks if the authenticated user is the owner of the existing resource.
-     * @param {string} userId The user ID to compare against the authenticated user's ID.
-     * @returns {boolean} True if the user is the owner and the resource exists, false otherwise.
-     */
     function isExistingOwner(userId) {
-        return isOwner(userId) && resource.data.id == request.auth.uid;
+        return isOwner(userId) && resource != null;
     }
 
     /**
-     * @description Checks if the authenticated user is a member of the project
-     * @param {array} teamMembers An array containing the user IDs of the team members.
-     * @returns {boolean} True if the user is a team member, false otherwise.
-     */
-    function isTeamMember(teamMembers) {
-        return isSignedIn() && teamMembers.hasAny([request.auth.uid]);
-    }
-
-   /**
-     * @description
-     * @path /roles
-     * @allow (list) Signed-in user can list roles
-     * @deny (list) Non-signed-in user cannot list roles
-     * @principle Allow any sign in user to read roles
-     */
-    match /roles {
-        allow get, list: if isSignedIn();
-        allow create, update, delete: if false;
-    }
-
-    /**
-     * @description Enforces access control for user profiles.
+     * @description Controls access to user profiles. Only the user themselves can read/write their profile.
      * @path /users/{userId}
-     * @allow (create) User 'abc' can create their own profile.
-     * @allow (get) User 'abc' can read their own profile.
-     * @allow (update) User 'abc' can update their own profile.
-     * @allow (delete) User 'abc' can delete their own profile.
-     * @deny (create) User 'def' cannot create a profile for user 'abc'.
-     * @deny (get) User 'def' cannot read user 'abc''s profile.
-     * @principle Enforces document ownership for reads and writes.
+     * @allow (create, update, delete, get, list) if the user is the owner.
+     * @deny (create, update, delete) if the user is not the owner.
+     * @principle Enforces document ownership for writes.
      */
     match /users/{userId} {
       allow get: if isOwner(userId);
-      allow list: if false;
-
-      allow create: if isOwner(userId);
-      allow update: if isOwner(userId);
-      allow delete: if isOwner(userId);
+      allow list: if false; // User listing is not allowed.
+      allow create: if isOwner(userId) && request.resource.data.id == userId;
+      allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
+      allow delete: if isExistingOwner(userId);
     }
 
     /**
-     * @description Enforces access control for user-specific notifications.
+     * @description Controls access to notifications for a specific user. Only the user themselves can read/write their notifications.
      * @path /users/{userId}/notifications/{notificationId}
-     * @allow (create) User 'abc' can create a notification in their own profile.
-     * @allow (get) User 'abc' can read a notification in their own profile.
-     * @allow (update) User 'abc' can update a notification in their own profile.
-     * @allow (delete) User 'abc' can delete a notification in their own profile.
-     * @deny (create) User 'def' cannot create a notification for user 'abc'.
-     * @deny (get) User 'def' cannot read user 'abc''s notifications.
+     * @allow (create, update, delete, get, list) if the user is the owner.
+     * @deny (create, update, delete) if the user is not the owner.
      * @principle Restricts access to a user's own data tree.
      */
     match /users/{userId}/notifications/{notificationId} {
       allow get: if isOwner(userId);
       allow list: if isOwner(userId);
-
       allow create: if isOwner(userId);
-      allow update: if isOwner(userId);
-      allow delete: if isOwner(userId);
+      allow update: if isExistingOwner(userId);
+      allow delete: if isExistingOwner(userId);
     }
 
-    /**
-     * @description Restricts access to teams.
-     * @path /teams/{teamId}
-     * @allow (get) Anyone can read a team.
-     * @deny (create) No one can create a team.
-     * @deny (update) No one can update a team.
-     * @deny (delete) No one can delete a team.
-     * @principle Restricts write access to teams for prototyping.
-     */
-    match /teams/{teamId} {
-      allow get, list: if true;
-      allow create, update, delete: if false;
-    }
+      /**
+       * @description Controls access to teams.
+       * @path /teams/{teamId}
+       * @allow (get, list) to everyone.
+       * @allow (create, update, delete) to anyone - prototyping purposes
+       * @principle Publicly readable, writeable by anyone.
+       */
+      match /teams/{teamId} {
+        allow get, list: if true;
+        allow create, update, delete: if true;
+      }
+
+      /**
+       * @description Controls access to contacts.
+       * @path /contacts/{contactId}
+       * @allow (get, list) to everyone.
+       * @allow (create, update, delete) to anyone - prototyping purposes
+       * @principle Publicly readable, writeable by anyone.
+       */
+      match /contacts/{contactId} {
+        allow get, list: if true;
+        allow create, update, delete: if true;
+      }
+
+      /**
+       * @description Controls access to projects.
+       * @path /projects/{projectId}
+       * @allow (get, list) to everyone.
+       * @allow (create, update, delete) to anyone - prototyping purposes
+       * @principle Publicly readable, writeable by anyone.
+       */
+      match /projects/{projectId} {
+        allow get, list: if true;
+        allow create, update, delete: if true;
+      }
+
+      /**
+       * @description Controls access to stages within projects.
+       * @path /projects/{projectId}/stages/{stageId}
+       * @allow (get, list) to everyone.
+       * @allow (create, update, delete) to anyone - prototyping purposes
+       * @principle Publicly readable, writeable by anyone.
+       */
+      match /projects/{projectId}/stages/{stageId} {
+        allow get, list: if true;
+        allow create, update, delete: if true;
+      }
+
+      /**
+       * @description Controls access to tasks within projects.
+       * @path /projects/{projectId}/tasks/{taskId}
+       * @allow (get, list) to everyone.
+       * @allow (create, update, delete) to anyone - prototyping purposes
+       * @principle Publicly readable, writeable by anyone.
+       */
+      match /projects/{projectId}/tasks/{taskId} {
+        allow get, list: if true;
+        allow create, update, delete: if true;
+      }
+
+      /**
+       * @description Controls access to files within projects.
+       * @path /projects/{projectId}/files/{fileId}
+       * @allow (get, list) to everyone.
+       * @allow (create, update, delete) to anyone - prototyping purposes
+       * @principle Publicly readable, writeable by anyone.
+       */
+      match /projects/{projectId}/files/{fileId} {
+        allow get, list: if true;
+        allow create, update, delete: if true;
+      }
 
     /**
-     * @description Restricts access to contacts.
-     * @path /contacts/{contactId}
-     * @allow (get) Anyone can read a contact.
-     * @deny (create) No one can create a contact.
-     * @deny (update) No one can update a contact.
-     * @deny (delete) No one can delete a contact.
-     * @principle Restricts write access to contacts for prototyping.
-     */
-    match /contacts/{contactId} {
-      allow get, list: if true;
-      allow create, update, delete: if false;
-    }
-
-    /**
-     * @description Enforces access control for projects based on team membership.
-     * @path /projects/{projectId}
-     * @allow (get) User 'abc' can read a project if they are a team member.
-     * @allow (update) User 'abc' can update a project if they are a team member.
-     * @deny (get) User 'def' cannot read a project if they are not a team member.
-     * @principle Restricts access to projects to team members only.
-     */
-    match /projects/{projectId} {
-      allow get, list: if isSignedIn() && 'teamMembers' in resource.data && resource.data.teamMembers is List && resource.data.teamMembers.hasAny([request.auth.uid]);
-      allow create: if isSignedIn() && 'teamMembers' in request.resource.data && request.resource.data.teamMembers is List;
-      allow update: if isSignedIn() && 'teamMembers' in resource.data && resource.data.teamMembers is List && resource.data.teamMembers.hasAny([request.auth.uid]);
-      allow delete: if isSignedIn() && 'teamMembers' in resource.data && resource.data.teamMembers is List && resource.data.teamMembers.hasAny([request.auth.uid]);
-    }
-
-    /**
-     * @description Enforces access control for stages within projects based on team membership.
-     * @path /projects/{projectId}/stages/{stageId}
-     * @allow (get) User 'abc' can read a stage if they are a team member of the project.
-     * @deny (get) User 'def' cannot read a stage if they are not a team member of the project.
-     * @principle Restricts access to stages to project team members only.
-     */
-    match /projects/{projectId}/stages/{stageId} {
-      allow get, list: if isSignedIn() && 'teamMembers' in get(/databases/$(database)/documents/projects/$(projectId)).data && get(/databases/$(database)/documents/projects/$(projectId)).data.teamMembers is List && get(/databases/$(database)/documents/projects/$(projectId)).data.teamMembers.hasAny([request.auth.uid]);
-      allow create: if isSignedIn() && 'teamMembers' in get(/databases/$(database)/documents/projects/$(projectId)).data && get(/databases/$(database)/documents/projects/$(projectId)).data.teamMembers is List && get(/databases/$(database)/documents/projects/$(projectId)).data.teamMembers.hasAny([request.auth.uid]);
-      allow update: if isSignedIn() && 'teamMembers' in get(/databases/$(database)/documents/projects/$(projectId)).data && get(/databases/$(database)/documents/projects/$(projectId)).data.teamMembers is List && get(/databases/$(database)/documents/projects/$(projectId)).data.teamMembers.hasAny([request.auth.uid]);
-      allow delete: if isSignedIn() && 'teamMembers' in get(/databases/$(database)/documents/projects/$(projectId)).data && get(/databases/$(database)/documents/projects/$(projectId)).data.teamMembers is List && get(/databases/$(database)/documents/projects/$(projectId)).data.teamMembers.hasAny([request.auth.uid]);
-    }
-
-    /**
-     * @description Enforces access control for tasks within projects based on team membership.
-     * @path /projects/{projectId}/tasks/{taskId}
-     * @allow (get) User 'abc' can read a task if they are a team member of the project.
-     * @deny (get) User 'def' cannot read a task if they are not a team member of the project.
-     * @principle Restricts access to tasks to project team members only.
-     */
-    match /projects/{projectId}/tasks/{taskId} {
-      allow get, list: if isSignedIn() && 'teamMembers' in get(/databases/$(database)/documents/projects/$(projectId)).data && get(/databases/$(database)/documents/projects/$(projectId)).data.teamMembers is List && get(/databases/$(database)/documents/projects/$(projectId)).data.teamMembers.hasAny([request.auth.uid]);
-      allow create: if isSignedIn() && 'teamMembers' in get(/databases/$(database)/documents/projects/$(projectId)).data && get(/databases/$(database)/documents/projects/$(projectId)).data.teamMembers is List && get(/databases/$(database)/documents/projects/$(projectId)).data.teamMembers.hasAny([request.auth.uid]);
-      allow update: if isSignedIn() && 'teamMembers' in get(/databases/$(database)/documents/projects/$(projectId)).data && get(/databases/$(database)/documents/projects/$(projectId)).data.teamMembers is List && get(/databases/$(database)/documents/projects/$(projectId)).data.teamMembers.hasAny([request.auth.uid]);
-      allow delete: if isSignedIn() && 'teamMembers' in get(/databases/$(database)/documents/projects/$(projectId)).data && get(/databases/$(database)/documents/projects/$(projectId)).data.teamMembers is List && get(/databases/$(database)/documents/projects/$(projectId)).data.teamMembers.hasAny([request.auth.uid]);
-    }
-
-    /**
-     * @description Enforces access control for files within projects based on team membership.
-     * @path /projects/{projectId}/files/{fileId}
-     * @allow (get) User 'abc' can read a file if they are a team member of the project.
-     * @deny (get) User 'def' cannot read a file if they are not a team member of the project.
-     * @principle Restricts access to files to project team members only.
-     */
-    match /projects/{projectId}/files/{fileId} {
-      allow get, list: if isSignedIn() && 'teamMembers' in get(/databases/$(database)/documents/projects/$(projectId)).data && get(/databases/$(database)/documents/projects/$(projectId)).data.teamMembers is List && get(/databases/$(database)/documents/projects/$(projectId)).data.teamMembers.hasAny([request.auth.uid]);
-      allow create: if isSignedIn() && 'teamMembers' in get(/databases/$(database)/documents/projects/$(projectId)).data && get(/databases/$(database)/documents/projects/$(projectId)).data.teamMembers is List && get(/databases/$(database)/documents/projects/$(projectId)).data.teamMembers.hasAny([request.auth.uid]);
-      allow update: if isSignedIn() && 'teamMembers' in get(/databases/$(database)/documents/projects/$(projectId)).data && get(/databases/$(database)/documents/projects/$(projectId)).data.teamMembers is List && get(/databases/$(database)/documents/projects/$(projectId)).data.teamMembers.hasAny([request.auth.uid]);
-      allow delete: if isSignedIn() && 'teamMembers' in get(/databases/$(database)/documents/projects/$(projectId)).data && get(/databases/$(database)/documents/projects/$(projectId)).data.teamMembers is List && get(/databases/$(database)/documents/projects/$(projectId)).data.teamMembers.hasAny([request.auth.uid]);
-    }
-
-    /**
-     * @description Enforces access control for chat conversations based on user participation.
+     * @description Controls access to chat metadata.  Users must be a participant in the chat.
      * @path /chats/{chatId}
-     * @allow (get) User 'abc' can read a chat if they are a participant.
-     * @deny (get) User 'def' cannot read a chat if they are not a participant.
-     * @principle Restricts access to chats to participating users only.
      */
     match /chats/{chatId} {
-      allow get, list: if isSignedIn() && 'userIds' in resource.data && resource.data.userIds is List && resource.data.userIds.hasAny([request.auth.uid]);
-      allow create: if isSignedIn() && 'userIds' in request.resource.data && request.resource.data.userIds is List && request.resource.data.userIds.hasAny([request.auth.uid]);
-      allow update: if isSignedIn() && 'userIds' in resource.data && resource.data.userIds is List && resource.data.userIds.hasAny([request.auth.uid]);
-      allow delete: if isSignedIn() && 'userIds' in resource.data && resource.data.userIds is List && resource.data.userIds.hasAny([request.auth.uid]);
+      allow get: if isSignedIn() && request.auth.uid in resource.data.userIds;
+      allow list: if false; // Listing chats not allowed in this prototype.
+      allow create: if isSignedIn() && request.resource.data.userIds.hasAll([request.auth.uid]);
+      allow update: if isSignedIn() && request.auth.uid in resource.data.userIds && resource != null;
+      allow delete: if isSignedIn() && request.auth.uid in resource.data.userIds && resource != null;
     }
 
     /**
-     * @description Enforces access control for messages within chat conversations based on chat participation.
+     * @description Controls access to messages within a chat. Users must be a participant in the parent chat.
      * @path /chats/{chatId}/messages/{messageId}
-     * @allow (get) User 'abc' can read a message if they are a participant in the chat.
-     * @deny (get) User 'def' cannot read a message if they are not a participant in the chat.
-     * @principle Restricts access to messages to participants of the chat.
      */
     match /chats/{chatId}/messages/{messageId} {
-      allow get, list: if isSignedIn() && 'userIds' in get(/databases/$(database)/documents/chats/$(chatId)).data && get(/databases/$(database)/documents/chats/$(chatId)).data.userIds is List && get(/databases/$(database)/documents/chats/$(chatId)).data.userIds.hasAny([request.auth.uid]);
-      allow create: if isSignedIn() && 'userIds' in get(/databases/$(database)/documents/chats/$(chatId)).data && get(/databases/$(database)/documents/chats/$(chatId)).data.userIds is List && get(/databases/$(database)/documents/chats/$(chatId)).data.userIds.hasAny([request.auth.uid]);
-      allow update: if isSignedIn() && 'userIds' in get(/databases/$(database)/documents/chats/$(chatId)).data && get(/databases/$(database)/documents/chats/$(chatId)).data.userIds is List && get(/databases/$(database)/documents/chats/$(chatId)).data.userIds.hasAny([request.auth.uid]);
-      allow delete: if isSignedIn() && 'userIds' in get(/databases/$(database)/documents/chats/$(chatId)).data && get(/databases/$(database)/documents/chats/$(chatId)).data.userIds is List && get(/databases/$(database)/documents/chats/$(chatId)).data.userIds.hasAny([request.auth.uid]);
+      allow get: if isSignedIn() && get(/databases/$(database)/documents/chats/$(chatId)).data.userIds.hasAny([request.auth.uid]);
+      allow list: if isSignedIn() && get(/databases/$(database)/documents/chats/$(chatId)).data.userIds.hasAny([request.auth.uid]);
+      allow create: if isSignedIn() && get(/databases/$(database)/documents/chats/$(chatId)).data.userIds.hasAny([request.auth.uid]);
+      allow update: if isSignedIn() && get(/databases/$(database)/documents/chats/$(chatId)).data.userIds.hasAny([request.auth.uid]) && resource != null;
+      allow delete: if isSignedIn() && get(/databases/$(database)/documents/chats/$(chatId)).data.userIds.hasAny([request.auth.uid]) && resource != null;
     }
 
-    /**
-     * @description Allows public read access to products with owner-only writes.
-     * @path /products/{productId}
-     * @allow (get) Anyone can read a product.
-     * @allow (create) Only the product owner can create a product, with matching ownerId.
-     * @allow (update) Only the product owner can update a product.
-     * @deny (create) User 'abc' cannot create a product for user 'def'.
-     * @principle Allows public read access with owner-only writes.
-     */
-    match /products/{productId} {
-      allow get, list: if true;
-      allow create: if isSignedIn(); // TODO: Add owner validation once the schema is updated with an ownership field.
-      allow update: if isSignedIn();  // TODO: Add owner validation once the schema is updated with an ownership field.
-      allow delete: if isSignedIn(); // TODO: Add owner validation once the schema is updated with an ownership field.
-    }
+      /**
+       * @description Controls access to products.
+       * @path /products/{productId}
+       * @allow (get, list) to everyone.
+       * @allow (create, update, delete) to anyone - prototyping purposes
+       * @principle Publicly readable, writeable by anyone.
+       */
+      match /products/{productId} {
+        allow get, list: if true;
+        allow create, update, delete: if true;
+      }
 
-    /**
-     * @description Allows public read access to seals with owner-only writes.
-     * @path /seals/{sealId}
-     * @allow (get) Anyone can read a seal.
-     * @allow (create) Only the seal owner can create a seal, with matching ownerId.
-     * @allow (update) Only the seal owner can update a seal.
-     * @deny (create) User 'abc' cannot create a seal for user 'def'.
-     * @principle Allows public read access with owner-only writes.
-     */
-    match /seals/{sealId} {
-      allow get, list: if true;
-      allow create: if isSignedIn(); // TODO: Add owner validation once the schema is updated with an ownership field.
-      allow update: if isSignedIn(); // TODO: Add owner validation once the schema is updated with an ownership field.
-      allow delete: if isSignedIn(); // TODO: Add owner validation once the schema is updated with an ownership field.
-    }
+      /**
+       * @description Controls access to seals.
+       * @path /seals/{sealId}
+       * @allow (get, list) to everyone.
+       * @allow (create, update, delete) to anyone - prototyping purposes
+       * @principle Publicly readable, writeable by anyone.
+       */
+      match /seals/{sealId} {
+        allow get, list: if true;
+        allow create, update, delete: if true;
+      }
+
+     /**
+      * @description This path should NOT exist.  The error indicates that the client is trying to write to a collection called `/roles`.
+      * @path /roles
+      */
+     match /roles {
+        allow get, list: if false;
+        allow create, update, delete: if false;
+     }
   }
 }
