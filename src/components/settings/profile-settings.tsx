@@ -28,6 +28,7 @@ import { formatCPF, formatPhone } from "@/lib/masks";
 const profileFormSchema = z.object({
   name: z.string().min(1, "O nome é obrigatório."),
   email: z.string().email(),
+  role: z.string().optional(),
   phone: z.string().optional(),
   personalDocument: z.string().optional(),
   address: z.object({
@@ -63,6 +64,7 @@ export function ProfileSettings({ user }: ProfileSettingsProps) {
     defaultValues: {
       name: '',
       email: '',
+      role: '',
       phone: '',
       personalDocument: '',
       address: {
@@ -82,6 +84,7 @@ export function ProfileSettings({ user }: ProfileSettingsProps) {
       form.reset({
         name: userProfile.name || '',
         email: userProfile.email || '',
+        role: userProfile.role || 'Não definido',
         phone: userProfile.phone || '',
         personalDocument: userProfile.personalDocument || '',
         address: {
@@ -121,11 +124,10 @@ export function ProfileSettings({ user }: ProfileSettingsProps) {
   async function onSubmit(data: ProfileFormValues) {
     if (!userProfileRef) return;
     try {
+      // Don't update email and role from this form
+      const { email, role, ...updatableData } = data;
       await updateDoc(userProfileRef, {
-          name: data.name,
-          phone: data.phone,
-          personalDocument: data.personalDocument,
-          address: data.address,
+        ...updatableData
       });
       toast({
         title: "Perfil Atualizado",
@@ -190,6 +192,19 @@ export function ProfileSettings({ user }: ProfileSettingsProps) {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Email</FormLabel>
+                    <FormControl>
+                      <Input {...field} disabled />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+               <FormField
+                control={form.control}
+                name="role"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Nível de Acesso</FormLabel>
                     <FormControl>
                       <Input {...field} disabled />
                     </FormControl>
