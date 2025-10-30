@@ -17,24 +17,25 @@ export default function LoginPage() {
           data-ai-hint="modern office"
         />
         <div className="absolute inset-0 -z-10 bg-black/60" />
-        <div className="flex w-full max-w-6xl flex-col items-center justify-center gap-16 md:flex-row">
-          <div className="w-full max-w-md text-center md:text-left">
-            <div className="mb-4 flex items-center justify-center gap-3 md:justify-start">
-              <Image src="/image/BMV.png" alt="BMV Logo" width={60} height={60} className="text-primary" />
-              <h1 className="font-headline text-4xl font-bold tracking-tight text-white">
-                BMV Nexus
-              </h1>
+        <div className="w-full max-w-5xl">
+          <Card className="w-full bg-background/90 backdrop-blur-sm">
+            <div className="grid items-stretch md:grid-cols-2">
+              <CardHeader className="p-8 md:p-10 border-b md:border-b-0 md:border-r border-border">
+                <div className="flex items-center gap-4 md:gap-6 justify-center md:justify-start">
+                  <Image src="/image/BMV.png" alt="BMV Logo" width={64} height={64} className="rounded-md" />
+                  <h1 className="font-headline text-4xl md:text-5xl font-bold tracking-tight text-black">Nexus</h1>
+                </div>
+              </CardHeader>
+              <CardContent className="p-8 md:p-10">
+                <div className="mx-auto w-full max-w-sm space-y-4">
+                  <div className="text-center md:text-left">
+                    <CardTitle className="font-headline text-3xl">Bem-vindo</CardTitle>
+                    <CardDescription>Insira suas credenciais para acessar seu painel.</CardDescription>
+                  </div>
+                  <LoginForm />
+                </div>
+              </CardContent>
             </div>
-            {/* O texto de marketing foi removido conforme solicitado */}
-          </div>
-          <Card className="w-full max-w-sm shrink-0 bg-background/90 backdrop-blur-sm">
-            <CardHeader>
-              <CardTitle className="font-headline text-2xl">Bem-vindo de Volta</CardTitle>
-              <CardDescription>Insira suas credenciais para acessar seu painel.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <LoginForm />
-            </CardContent>
           </Card>
         </div>
       </main>
