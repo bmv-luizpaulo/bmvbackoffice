@@ -162,26 +162,38 @@ export function SealDataTable() {
     },
     {
         accessorKey: "expiryDate",
-        header: "Data de Vencimento",
+        header: "Vencimento",
         cell: ({ row }) => {
             const expiryDate = new Date(row.original.expiryDate);
             const daysLeft = differenceInDays(expiryDate, new Date());
-            let color = "text-foreground";
-            if (isPast(expiryDate) && !isToday(expiryDate)) color = "text-destructive";
-            else if (daysLeft <= 30) color = "text-amber-600";
-            
-            return <span className={cn(color)}>{format(expiryDate, 'dd/MM/yyyy')}</span>
+
+            if (isPast(expiryDate) && !isToday(expiryDate)) {
+                return <span className="text-destructive font-medium">{format(expiryDate, 'dd/MM/yyyy')}</span>
+            }
+            if (daysLeft <= 30) {
+                 return <span className="text-amber-600 font-medium">{`em ${daysLeft + 1} dia(s)`}</span>
+            }
+            return <span>{format(expiryDate, 'dd/MM/yyyy')}</span>
         }
     },
     {
       accessorKey: "status",
       header: "Status",
       cell: ({ row }) => {
-        const status = row.original.status;
-        let variant: "default" | "secondary" | "destructive" | "outline" = "secondary";
-        if (status === 'Ativo') variant = 'default';
-        if (status === 'Vencido') variant = 'destructive';
-        if (status === 'Em Renovação') variant = 'outline';
+        const expiryDate = new Date(row.original.expiryDate);
+        const daysLeft = differenceInDays(expiryDate, new Date());
+
+        let status: 'Ativo' | 'Vencendo' | 'Vencido' = 'Ativo';
+        let variant: "default" | "destructive" | "outline" = 'default';
+
+        if (isPast(expiryDate) && !isToday(expiryDate)) {
+          status = 'Vencido';
+          variant = 'destructive';
+        } else if (daysLeft <= 30) {
+          status = 'Vencendo';
+          variant = 'outline';
+        }
+
         return <Badge variant={variant}>{status}</Badge>
       }
     },
@@ -279,7 +291,12 @@ export function SealDataTable() {
                             column.toggleVisibility(!!value)
                             }
                         >
-                            {column.id}
+                            {column.id === 'productId' ? 'Produto' : 
+                             column.id === 'contactId' ? 'Cliente' :
+                             column.id === 'issueDate' ? 'Data de Emissão' :
+                             column.id === 'expiryDate' ? 'Vencimento' :
+                             column.id
+                            }
                         </DropdownMenuCheckboxItem>
                         )
                     })}
