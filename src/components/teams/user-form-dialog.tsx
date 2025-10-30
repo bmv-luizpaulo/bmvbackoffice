@@ -391,12 +391,12 @@ export function UserFormDialog({ isOpen, onOpenChange, onSave, user }: UserFormD
                             name="teamIds"
                             render={({ field }) => (
                                 <FormItem>
-                                <FormLabel className="flex items-center gap-2"><Users className="h-4 w-4" />Núcleos</FormLabel>
+                                <FormLabel className="flex items-center gap-2"><Users className="h-4 w-4" />Equipes</FormLabel>
                                     <MultiSelect
                                         options={teamOptions}
                                         selected={field.value || []}
                                         onChange={field.onChange}
-                                        placeholder="Selecione os núcleos..."
+                                        placeholder="Selecione as equipes..."
                                     />
                                 <FormMessage />
                                 </FormItem>

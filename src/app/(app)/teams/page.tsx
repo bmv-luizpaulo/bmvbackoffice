@@ -19,7 +19,7 @@ export default function TeamsPage() {
       <Tabs defaultValue="users">
         <TabsList>
           <TabsTrigger value="users">Usuários</TabsTrigger>
-          <TabsTrigger value="teams">Núcleos</TabsTrigger>
+          <TabsTrigger value="teams">Equipes</TabsTrigger>
         </TabsList>
 
         <TabsContent value="users">
@@ -51,9 +51,9 @@ export default function TeamsPage() {
         <TabsContent value="teams">
           <Card>
             <CardHeader>
-              <CardTitle>Gerenciamento de Núcleos</CardTitle>
+              <CardTitle>Gerenciamento de Equipes</CardTitle>
               <CardDescription>
-                Crie e gerencie os núcleos (equipes) da sua organização.
+                Crie e gerencie as equipes da sua organização.
               </CardDescription>
             </CardHeader>
             <CardContent>

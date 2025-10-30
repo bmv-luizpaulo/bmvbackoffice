@@ -1,4 +1,3 @@
-// This is a new file: src/components/teams/team-data-table.tsx
 'use client';
 
 import * as React from "react"
@@ -33,7 +32,7 @@ import {
 } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import type { Team } from "@/lib/types";
+import type { Team, User } from "@/lib/types";
 import dynamic from "next/dynamic";
 import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { collection, doc, addDoc, updateDoc, deleteDoc } from "firebase/firestore";
@@ -49,6 +48,8 @@ import {
 } from "@/components/ui/alert-dialog"
 import { FirestorePermissionError } from "@/firebase/errors";
 import { errorEmitter } from "@/firebase/error-emitter";
+import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
 
 const TeamFormDialog = dynamic(() => import('./team-form-dialog').then(m => m.TeamFormDialog), { ssr: false });
 
@@ -88,7 +89,10 @@ const deleteDocumentNonBlocking = (ref: any) => {
 export function TeamDataTable() {
   const firestore = useFirestore();
   const teamsCollection = useMemoFirebase(() => firestore ? collection(firestore, 'teams') : null, [firestore]);
-  const { data: teams, isLoading } = useCollection<Team>(teamsCollection);
+  const { data: teams, isLoading: isLoadingTeams } = useCollection<Team>(teamsCollection);
+
+  const usersCollection = useMemoFirebase(() => firestore ? collection(firestore, 'users') : null, [firestore]);
+  const { data: users, isLoading: isLoadingUsers } = useCollection<User>(usersCollection);
 
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
@@ -97,6 +101,23 @@ export function TeamDataTable() {
   const [isAlertOpen, setIsAlertOpen] = React.useState(false);
   const [selectedTeam, setSelectedTeam] = React.useState<Team | null>(null);
   const [nameFilter, setNameFilter] = React.useState("");
+  
+  const isLoading = isLoadingTeams || isLoadingUsers;
+
+  const usersByTeam = React.useMemo(() => {
+    if (!users) return new Map<string, User[]>();
+
+    const map = new Map<string, User[]>();
+    users.forEach(user => {
+        user.teamIds?.forEach(teamId => {
+            if (!map.has(teamId)) {
+                map.set(teamId, []);
+            }
+            map.get(teamId)!.push(user);
+        });
+    });
+    return map;
+  }, [users]);
 
   const handleSaveTeam = (teamData: Omit<Team, 'id'>) => {
     if (!firestore) return;
@@ -122,11 +143,55 @@ export function TeamDataTable() {
   const columns: ColumnDef<Team>[] = React.useMemo(() => [
     {
       accessorKey: "name",
-      header: "Nome do Núcleo",
+      header: "Nome da Equipe",
     },
     {
       accessorKey: "description",
       header: "Descrição",
+    },
+    {
+      id: "members",
+      header: "Membros",
+      cell: ({ row }) => {
+        const team = row.original;
+        const members = usersByTeam.get(team.id) || [];
+        
+        if (members.length === 0) {
+            return <span className="text-muted-foreground text-xs">Sem membros</span>;
+        }
+
+        return (
+             <TooltipProvider>
+                <div className="flex -space-x-2">
+                    {members.slice(0, 5).map(member => (
+                        <Tooltip key={member.id}>
+                            <TooltipTrigger asChild>
+                                <Avatar className="h-8 w-8 border-2 border-background">
+                                    <AvatarImage src={member.avatarUrl} alt={member.name}/>
+                                    <AvatarFallback>{member.name.charAt(0)}</AvatarFallback>
+                                </Avatar>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                                <p>{member.name}</p>
+                            </TooltipContent>
+                        </Tooltip>
+                    ))}
+                    {members.length > 5 && (
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Avatar className="h-8 w-8 border-2 border-background">
+                                    <AvatarFallback>+{members.length - 5}</AvatarFallback>
+                                </Avatar>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                                <p>{members.slice(5).map(m => m.name).join(', ')}</p>
+                            </TooltipContent>
+                        </Tooltip>
+                    )}
+                </div>
+            </TooltipProvider>
+        );
+      }
     },
     {
       id: "actions",
@@ -159,7 +224,7 @@ export function TeamDataTable() {
         )
       },
     },
-  ], []);
+  ], [usersByTeam]);
 
   const dataMemo = React.useMemo(() => teams || [], [teams]);
 
@@ -195,7 +260,7 @@ export function TeamDataTable() {
           onChange={(event) => setNameFilter(event.target.value)}
           className="max-w-sm"
         />
-        <Button onClick={() => {setSelectedTeam(null); setIsFormOpen(true)}}>Adicionar Núcleo</Button>
+        <Button onClick={() => {setSelectedTeam(null); setIsFormOpen(true)}}>Adicionar Equipe</Button>
       </div>
       <div className="rounded-md border">
         <Table>
@@ -234,7 +299,7 @@ export function TeamDataTable() {
             ) : (
               <TableRow>
                 <TableCell colSpan={columns.length} className="h-24 text-center">
-                  {isLoading ? "Carregando núcleos..." : "Nenhum resultado."}
+                  {isLoading ? "Carregando equipes..." : "Nenhum resultado."}
                 </TableCell>
               </TableRow>
             )}
@@ -275,7 +340,7 @@ export function TeamDataTable() {
             <AlertDialogHeader>
               <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
               <AlertDialogDescription>
-                Esta ação não pode ser desfeita. Isso excluirá permanentemente o núcleo "{selectedTeam?.name}".
+                Esta ação não pode ser desfeita. Isso excluirá permanentemente a equipe "{selectedTeam?.name}".
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>

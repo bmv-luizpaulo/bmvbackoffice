@@ -12,17 +12,17 @@ O **BMV Nexus** é uma plataforma integrada de gestão de projetos, tarefas, con
 2.  **Funil de Projetos (Kanban):**
     *   **Gestão Visual:** Um quadro Kanban interativo onde você pode arrastar e soltar tarefas entre as etapas do projeto.
     *   **Criação Detalhada:** Permite criar projetos e tarefas com informações completas, incluindo responsável, datas, dependências e recorrência (diária, semanal, mensal).
-    *   **Controle de Acesso por Papel:** "Gestores" têm uma visão completa de todas as tarefas, enquanto "Funcionários" visualizam apenas as que lhes foram atribuídas.
+    *   **Controle de Acesso por Papel:** "Gestores" têm uma visão completa de todas as tarefas, enquanto "Usuários" visualizam apenas as que lhes foram atribuídas.
     *   **Gestão de Arquivos:** Funcionalidade para anexar arquivos diretamente aos projetos (usando Firebase Storage).
 
 3.  **Agenda de Tarefas (Calendário):**
     *   Visualização em calendário que destaca os dias com tarefas agendadas.
     *   Ao selecionar um dia, exibe a lista de tarefas correspondente.
-    *   Visão diferenciada para "Gestores" (que podem filtrar por funcionário) e "Funcionários" (que veem apenas suas próprias tarefas).
+    *   Visão diferenciada para "Gestores" (que podem filtrar por usuário) e "Usuários" (que veem apenas suas próprias tarefas).
 
 4.  **Agenda de Contatos:**
     *   Centraliza o gerenciamento de todos os contatos da empresa.
-    *   Organizado em abas: **Clientes**, **Fornecedores**, **Parceiros** e **Funcionários**.
+    *   Organizado em abas: **Clientes**, **Fornecedores**, **Parceiros** e **Usuários**.
     *   Oferece formulários completos para criar, editar e excluir contatos.
 
 5.  **Chat Interno:**
@@ -31,7 +31,7 @@ O **BMV Nexus** é uma plataforma integrada de gestão de projetos, tarefas, con
 
 6.  **Usuários & Equipes:**
     *   **Gerenciamento de Usuários:** Formulário completo para cadastrar e editar usuários com informações detalhadas (nome, contato, endereço, documentos, cargo).
-    *   **Gerenciamento de Núcleos (Equipes):** Permite criar, editar e organizar equipes, associando usuários a um ou mais "núcleos" (ex: Contabilidade, TI).
+    *   **Gerenciamento de Equipes:** Permite criar, editar e organizar equipes, associando usuários a uma ou mais equipes (ex: Contabilidade, TI).
 
 7.  **Autenticação Segura:**
     *   Sistema de login com e-mail e senha, integrado ao Firebase Authentication.

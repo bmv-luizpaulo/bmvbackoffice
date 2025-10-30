@@ -199,7 +199,7 @@
     "Team": {
         "title": "Team",
         "type": "object",
-        "description": "Represents a team or 'núcleo' within the organization.",
+        "description": "Represents a team within the organization.",
         "properties": {
             "name": {
                 "type": "string",
@@ -347,7 +347,7 @@
     },
     "/teams/{teamId}": {
       "schema": { "$ref": "#/entities/Team" },
-      "description": "Represents a team (núcleo). Contains 'id', 'name', and 'description'."
+      "description": "Represents a team. Contains 'id', 'name', and 'description'."
     },
     "/contacts/{contactId}": {
       "schema": { "$ref": "#/entities/Contact" },

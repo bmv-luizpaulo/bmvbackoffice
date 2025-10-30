@@ -35,7 +35,7 @@ type TeamFormDialogProps = {
 };
 
 const formSchema = z.object({
-  name: z.string().min(1, "O nome do núcleo é obrigatório."),
+  name: z.string().min(1, "O nome da equipe é obrigatório."),
   description: z.string().optional(),
 });
 
@@ -69,9 +69,9 @@ export function TeamFormDialog({ isOpen, onOpenChange, onSave, team }: TeamFormD
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>{team ? 'Editar Núcleo' : 'Adicionar Novo Núcleo'}</DialogTitle>
+          <DialogTitle>{team ? 'Editar Equipe' : 'Adicionar Nova Equipe'}</DialogTitle>
           <DialogDescription>
-            Gerencie as informações do núcleo aqui. Clique em salvar quando terminar.
+            Gerencie as informações da equipe aqui. Clique em salvar quando terminar.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -81,7 +81,7 @@ export function TeamFormDialog({ isOpen, onOpenChange, onSave, team }: TeamFormD
                     name="name"
                     render={({ field }) => (
                         <FormItem>
-                        <FormLabel>Nome do Núcleo</FormLabel>
+                        <FormLabel>Nome da Equipe</FormLabel>
                         <FormControl>
                             <Input placeholder="Ex: Contabilidade" {...field} />
                         </FormControl>
@@ -96,7 +96,7 @@ export function TeamFormDialog({ isOpen, onOpenChange, onSave, team }: TeamFormD
                         <FormItem>
                         <FormLabel>Descrição</FormLabel>
                         <FormControl>
-                            <Textarea placeholder="Descreva as responsabilidades do núcleo..." {...field} />
+                            <Textarea placeholder="Descreva as responsabilidades da equipe..." {...field} />
                         </FormControl>
                         <FormMessage />
                         </FormItem>
