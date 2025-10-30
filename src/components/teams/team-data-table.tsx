@@ -35,7 +35,7 @@ import { Input } from "@/components/ui/input"
 import type { Team, User } from "@/lib/types";
 import dynamic from "next/dynamic";
 import { useFirestore, useCollection } from "@/firebase";
-import { collection, doc } from "firebase/firestore";
+import { collection, doc, writeBatch } from "firebase/firestore";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -96,27 +96,71 @@ export function TeamDataTable() {
     setIsAlertOpen(true);
   }, []);
 
-  const handleSaveTeam = React.useCallback((teamData: Omit<Team, 'id'>, teamId?: string) => {
+  const handleSaveTeam = React.useCallback(async (teamData: Omit<Team, 'id'>, memberIds: string[], teamId?: string) => {
     if (!firestore) return;
-    
-    if (teamId) {
-      const teamRef = doc(firestore, 'teams', teamId);
-      updateDocumentNonBlocking(teamRef, teamData);
-      toast({ title: "Equipe Atualizada", description: `A equipe "${teamData.name}" foi atualizada.`});
-    } else {
-      addDocumentNonBlocking(collection(firestore, 'teams'), teamData);
-      toast({ title: "Equipe Criada", description: `A equipe "${teamData.name}" foi criada com sucesso.`});
-    }
-  }, [firestore, toast]);
 
-  const handleDeleteTeam = React.useCallback(() => {
-    if (!firestore || !selectedTeam) return;
+    let finalTeamId = teamId;
+
+    if (finalTeamId) {
+        const teamRef = doc(firestore, 'teams', finalTeamId);
+        await updateDocumentNonBlocking(teamRef, teamData);
+        toast({ title: "Equipe Atualizada", description: `A equipe "${teamData.name}" foi atualizada.` });
+    } else {
+        const docRef = await addDocumentNonBlocking(collection(firestore, 'teams'), teamData);
+        finalTeamId = docRef.id;
+        toast({ title: "Equipe Criada", description: `A equipe "${teamData.name}" foi criada com sucesso.` });
+    }
+
+    if (!finalTeamId || !users) return;
+
+    const batch = writeBatch(firestore);
+    const usersToUpdate = new Map<string, string[]>();
+
+    // Determine which users need their teamIds array updated
+    users.forEach(user => {
+        const isMember = user.teamIds?.includes(finalTeamId!) || false;
+        const shouldBeMember = memberIds.includes(user.id);
+
+        if (isMember !== shouldBeMember) {
+            const newTeamIds = shouldBeMember
+                ? [...(user.teamIds || []), finalTeamId!]
+                : user.teamIds!.filter(id => id !== finalTeamId);
+            usersToUpdate.set(user.id, newTeamIds);
+        }
+    });
+
+    if (usersToUpdate.size > 0) {
+        usersToUpdate.forEach((newTeamIds, userId) => {
+            const userRef = doc(firestore, 'users', userId);
+            batch.update(userRef, { teamIds: newTeamIds });
+        });
+        await batch.commit();
+        toast({ title: "Membros Atualizados", description: "As equipes dos usuários foram atualizadas." });
+    }
+  }, [firestore, toast, users]);
+
+
+  const handleDeleteTeam = React.useCallback(async () => {
+    if (!firestore || !selectedTeam || !users) return;
+    
+    // First, remove the teamId from all users that are members
+    const batch = writeBatch(firestore);
+    const members = users.filter(u => u.teamIds?.includes(selectedTeam.id));
+    members.forEach(member => {
+        const userRef = doc(firestore, 'users', member.id);
+        const newTeamIds = member.teamIds?.filter(id => id !== selectedTeam.id);
+        batch.update(userRef, { teamIds: newTeamIds });
+    });
+    await batch.commit();
+
+    // Then, delete the team document
     const teamRef = doc(firestore, 'teams', selectedTeam.id);
     deleteDocumentNonBlocking(teamRef);
+    
     toast({ title: "Equipe Excluída", description: `A equipe "${selectedTeam.name}" foi removida.`, variant: 'destructive' });
     setIsAlertOpen(false);
     setSelectedTeam(null);
-  }, [firestore, selectedTeam, toast]);
+  }, [firestore, selectedTeam, toast, users]);
 
   const columns: ColumnDef<Team>[] = React.useMemo(() => [
     {
@@ -146,7 +190,7 @@ export function TeamDataTable() {
         return (
             <div className="flex flex-col text-sm text-muted-foreground">
                 {displayMembers.map(m => <span key={m.id} className="truncate">{m.name}</span>)}
-                {remainingCount > 0 && <span>+ {remainingCount} outro(s)</span>}
+                {remainingCount > 0 && <span className="text-xs font-medium">+ {remainingCount} outro(s)</span>}
             </div>
         );
       }
@@ -282,8 +326,10 @@ export function TeamDataTable() {
         <TeamFormDialog 
           isOpen={isFormOpen}
           onOpenChange={setIsFormOpen}
-          onSave={handleSaveTeam}
+          onSave={(teamData, teamId) => handleSaveTeam(teamData, (isFormOpen && selectedTeam?.id) ? selectedTeam.id : undefined)}
           team={selectedTeam}
+          users={users || []}
+          usersInTeam={selectedTeam ? usersByTeam.get(selectedTeam.id) || [] : []}
         />
       )}
 
@@ -293,7 +339,7 @@ export function TeamDataTable() {
             <AlertDialogHeader>
               <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
               <AlertDialogDescription>
-                Esta ação não pode ser desfeita. Isso excluirá permanentemente a equipe "{selectedTeam?.name}".
+                Esta ação não pode ser desfeita. Isso excluirá permanentemente a equipe "{selectedTeam?.name}" e a removerá de todos os usuários.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
