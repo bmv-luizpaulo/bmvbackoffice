@@ -52,7 +52,8 @@ import { addDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlo
 export function ProductDataTable() {
   const firestore = useFirestore();
   const productsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'products') : null, [firestore]);
-  const { data: products, isLoading } = useCollection<Product>(productsQuery);
+  const { data: productsData, isLoading } = useCollection<Product>(productsQuery);
+  const data = React.useMemo(() => productsData ?? [], [productsData]);
   const { toast } = useToast();
 
   const [sorting, setSorting] = React.useState<SortingState>([]);
@@ -145,7 +146,7 @@ export function ProductDataTable() {
   ], [handleEditClick, handleDeleteClick]);
 
   const table = useReactTable({
-    data: products || [],
+    data,
     columns,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),

@@ -59,7 +59,8 @@ export function UserDataTable() {
   const { toast } = useToast();
   
   const usersCollection = useMemoFirebase(() => firestore ? collection(firestore, 'users') : null, [firestore]);
-  const { data: users, isLoading } = useCollection<User>(usersCollection);
+  const { data: usersData, isLoading } = useCollection<User>(usersCollection);
+  const data = React.useMemo(() => usersData ?? [], [usersData]);
 
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
@@ -219,7 +220,7 @@ export function UserDataTable() {
   ], [currentUser?.uid, handleRoleChange, handleEditClick, handleDeleteClick]);
 
   const table = useReactTable({
-    data: users || [],
+    data,
     columns,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),

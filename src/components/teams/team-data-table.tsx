@@ -55,7 +55,8 @@ const TeamFormDialog = dynamic(() => import('./team-form-dialog').then(m => m.Te
 export function TeamDataTable() {
   const firestore = useFirestore();
   const teamsCollection = useMemoFirebase(() => firestore ? collection(firestore, 'teams') : null, [firestore]);
-  const { data: teams, isLoading: isLoadingTeams } = useCollection<Team>(teamsCollection);
+  const { data: teamsData, isLoading: isLoadingTeams } = useCollection<Team>(teamsCollection);
+  const data = React.useMemo(() => teamsData ?? [], [teamsData]);
 
   const usersCollection = useMemoFirebase(() => firestore ? collection(firestore, 'users') : null, [firestore]);
   const { data: users, isLoading: isLoadingUsers } = useCollection<User>(usersCollection);
@@ -202,7 +203,7 @@ export function TeamDataTable() {
   ], [usersByTeam, handleEditClick, handleDeleteClick]);
 
   const table = useReactTable({
-    data: teams || [],
+    data,
     columns,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),

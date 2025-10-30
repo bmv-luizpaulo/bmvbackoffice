@@ -69,7 +69,9 @@ export function ContactDataTable({ type }: ContactDataTableProps) {
         : null,
     [firestore, type, pageSize]
   );
-  const { data: contacts, isLoading } = useCollection<Contact>(contactsQuery);
+  const { data: contactsData, isLoading } = useCollection<Contact>(contactsQuery);
+  const data = React.useMemo(() => contactsData ?? [], [contactsData]);
+
 
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
@@ -172,7 +174,7 @@ export function ContactDataTable({ type }: ContactDataTableProps) {
   ], [handleEditClick, handleDeleteClick]);
 
   const table = useReactTable({
-    data: contacts || [],
+    data,
     columns,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
@@ -248,7 +250,7 @@ export function ContactDataTable({ type }: ContactDataTableProps) {
       </div>
       <div className="flex flex-wrap items-center justify-between gap-2 py-4">
         <div className="text-sm text-muted-foreground">
-          {contacts ? `${Math.min(contacts.length, pageSize)} de ${pageSize}${contacts.length < pageSize ? '' : '+'}` : ''}
+          {contactsData ? `${Math.min(contactsData.length, pageSize)} de ${pageSize}${contactsData.length < pageSize ? '' : '+'}` : ''}
         </div>
         <div className="flex items-center gap-2">
           <Button

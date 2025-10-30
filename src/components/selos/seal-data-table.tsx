@@ -68,7 +68,8 @@ export function SealDataTable() {
     () => firestore ? query(collection(firestore, 'seals'), orderBy('issueDate', 'desc'), fbLimit(pageSize)) : null,
     [firestore, pageSize]
   );
-  const { data: seals, isLoading: isLoadingSeals } = useCollection<Seal>(sealsQuery);
+  const { data: sealsData, isLoading: isLoadingSeals } = useCollection<Seal>(sealsQuery);
+  const data = React.useMemo(() => sealsData ?? [], [sealsData]);
 
   const productsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'products') : null, [firestore]);
   const { data: products } = useCollection<Product>(productsQuery);
@@ -246,7 +247,7 @@ export function SealDataTable() {
   ], [productsMap, contactsMap, handleEditClick, handleDeleteClick]);
 
   const table = useReactTable({
-    data: seals || [],
+    data,
     columns,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
@@ -371,7 +372,7 @@ export function SealDataTable() {
       </div>
       <div className="flex flex-wrap items-center justify-between gap-2 py-4">
         <div className="text-sm text-muted-foreground">
-          {seals ? `${Math.min(seals.length, pageSize)} de ${pageSize}${seals.length < pageSize ? '' : '+'}` : ''}
+          {sealsData ? `${Math.min(sealsData.length, pageSize)} de ${pageSize}${sealsData.length < pageSize ? '' : '+'}` : ''}
         </div>
         <div className="flex items-center gap-2">
           <Button
