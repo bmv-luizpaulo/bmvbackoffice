@@ -32,7 +32,7 @@ import {
 } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import type { User } from "@/lib/types";
+import type { User, Role } from "@/lib/types";
 import dynamic from "next/dynamic";
 import { useAuth, useFirestore, useCollection, useUser as useAuthUser } from "@/firebase";
 import { collection, doc, setDoc } from "firebase/firestore";
@@ -59,8 +59,12 @@ export function UserDataTable() {
   const { toast } = useToast();
   
   const usersCollection = React.useMemo(() => firestore ? collection(firestore, 'users') : null, [firestore]);
-  const { data: usersData, isLoading } = useCollection<User>(usersCollection);
+  const { data: usersData, isLoading: isLoadingUsers } = useCollection<User>(usersCollection);
   const data = React.useMemo(() => usersData ?? [], [usersData]);
+
+  const rolesCollection = React.useMemo(() => firestore ? collection(firestore, 'roles') : null, [firestore]);
+  const { data: rolesData, isLoading: isLoadingRoles } = useCollection<Role>(rolesCollection);
+  const rolesMap = React.useMemo(() => new Map(rolesData?.map(r => [r.id, r])), [rolesData]);
 
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
@@ -68,6 +72,8 @@ export function UserDataTable() {
   const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [isAlertOpen, setIsAlertOpen] = React.useState(false);
   const [selectedUser, setSelectedUser] = React.useState<User | null>(null);
+
+  const isLoading = isLoadingUsers || isLoadingRoles;
 
   const handleEditClick = React.useCallback((user: User) => {
     setSelectedUser(user);
@@ -90,7 +96,6 @@ export function UserDataTable() {
     } else if (password) {
         // Create
         const adminUserEmail = auth.currentUser.email;
-        // This is not secure for production. It's a temporary workaround for the demo environment.
         const adminPassword = prompt("Para criar um novo usuário, por favor, confirme sua senha de Gestor:");
 
         if (!adminUserEmail || !adminPassword) {
@@ -120,11 +125,9 @@ export function UserDataTable() {
                 : 'Ocorreu um erro ao criar o usuário. Verifique a senha do gestor e tente novamente.';
             toast({ variant: 'destructive', title: "Erro ao Criar Usuário", description: errorMessage });
         } finally {
-            // 3. Re-authenticate the admin user to restore their session
             await signInWithEmailAndPassword(auth, adminUserEmail, adminPassword).catch(reauthError => {
                 console.error("Erro ao reautenticar o gestor:", reauthError);
                 toast({ variant: 'destructive', title: "Erro de Sessão", description: "Falha ao restaurar sua sessão. Por favor, faça login novamente." });
-                // Potentially force a sign-out here if re-auth fails
             });
         }
     }
@@ -139,15 +142,16 @@ export function UserDataTable() {
     setSelectedUser(null);
   }, [firestore, selectedUser, toast]);
 
-  const handleRoleChange = React.useCallback((user: User, newRole: 'Gestor' | 'Usuario') => {
+  const handleRoleChange = React.useCallback((user: User, newRoleId: string) => {
     if (!firestore) return;
     const userRef = doc(firestore, 'users', user.id);
-    updateDocumentNonBlocking(userRef, { role: newRole });
+    updateDocumentNonBlocking(userRef, { roleId: newRoleId });
+    const newRole = rolesMap.get(newRoleId);
     toast({ 
-        title: "Permissão Alterada", 
-        description: `${user.name} agora é ${newRole}.` 
+        title: "Cargo Alterado", 
+        description: `${user.name} agora tem o cargo de ${newRole?.name}.` 
     });
-  }, [firestore, toast]);
+  }, [firestore, toast, rolesMap]);
 
   const columns: ColumnDef<User>[] = React.useMemo(() => [
     {
@@ -163,8 +167,12 @@ export function UserDataTable() {
       header: "Telefone",
     },
     {
-      accessorKey: "role",
-      header: "Função",
+      accessorKey: "roleId",
+      header: "Cargo",
+      cell: ({ row }) => {
+        const role = rolesMap.get(row.original.roleId || '');
+        return role ? role.name : <span className="text-muted-foreground">Não definido</span>;
+      }
     },
     {
       id: "actions",
@@ -186,22 +194,21 @@ export function UserDataTable() {
                 <Pencil className="mr-2 h-4 w-4" />
                 Editar
               </DropdownMenuItem>
-              
-              <DropdownMenuSeparator />
-              
-              {user.role !== 'Gestor' && (
-                <DropdownMenuItem disabled={isCurrentUser} onClick={() => handleRoleChange(user, 'Gestor')}>
-                  <ShieldCheck className="mr-2 h-4 w-4" />
-                  Promover a Gestor
-                </DropdownMenuItem>
-              )}
-              {user.role === 'Gestor' && (
-                <DropdownMenuItem disabled={isCurrentUser} onClick={() => handleRoleChange(user, 'Usuario')}>
-                  <ShieldOff className="mr-2 h-4 w-4" />
-                  Revogar Gestor
-                </DropdownMenuItem>
-              )}
 
+              <DropdownMenuSeparator />
+
+              <DropdownMenuLabel>Alterar Cargo</DropdownMenuLabel>
+              {rolesData?.map(role => (
+                <DropdownMenuItem 
+                  key={role.id}
+                  disabled={isCurrentUser || user.roleId === role.id}
+                  onClick={() => handleRoleChange(user, role.id)}
+                >
+                  {role.isManager ? <ShieldCheck className="mr-2 h-4 w-4 text-primary" /> : <ShieldOff className="mr-2 h-4 w-4 text-muted-foreground" />}
+                  {role.name}
+                </DropdownMenuItem>
+              ))}
+              
               <DropdownMenuSeparator />
 
               <DropdownMenuItem
@@ -217,7 +224,7 @@ export function UserDataTable() {
         )
       },
     },
-  ], [currentUser?.uid, handleRoleChange, handleEditClick, handleDeleteClick]);
+  ], [currentUser?.uid, handleRoleChange, handleEditClick, handleDeleteClick, rolesData, rolesMap]);
 
   const table = useReactTable({
     data,
@@ -339,5 +346,3 @@ export function UserDataTable() {
     </div>
   )
 }
-
-    

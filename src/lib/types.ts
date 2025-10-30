@@ -3,7 +3,7 @@ export type User = {
   name: string;
   email: string;
   avatarUrl: string;
-  role?: 'Gestor' | 'Usuario';
+  roleId?: string;
   phone?: string;
   address?: {
     street?: string;
@@ -108,6 +108,13 @@ export type Team = {
     name: string;
     description?: string;
 };
+
+export type Role = {
+    id: string;
+    name: string;
+    description?: string;
+    isManager?: boolean;
+}
 
 export type ProjectFile = {
     id: string;

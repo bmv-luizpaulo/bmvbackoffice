@@ -24,7 +24,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
-import type { User, Team } from "@/lib/types";
+import type { User, Team, Role } from "@/lib/types";
 import { Separator } from "../ui/separator";
 import { useCollection, useFirestore } from "@/firebase";
 import { collection } from "firebase/firestore";
@@ -46,7 +46,7 @@ const baseFormSchema = z.object({
   name: z.string().min(1, "O nome é obrigatório."),
   email: z.string().email("O e-mail é inválido."),
   password: z.string().optional(),
-  role: z.enum(['Gestor', 'Usuario']),
+  roleId: z.string().optional(),
   phone: z.string().optional(),
   personalDocument: z.string().optional(),
   address: z.object({
@@ -66,7 +66,7 @@ const defaultValues = {
     name: '',
     email: '',
     password: '',
-    role: 'Usuario' as 'Gestor' | 'Usuario',
+    roleId: undefined,
     phone: '',
     personalDocument: '',
     address: {
@@ -85,6 +85,8 @@ export function UserFormDialog({ isOpen, onOpenChange, onSave, user }: UserFormD
   const firestore = useFirestore();
   const teamsQuery = React.useMemo(() => firestore ? collection(firestore, 'teams') : null, [firestore]);
   const { data: teamsData } = useCollection<Team>(teamsQuery);
+  const rolesQuery = React.useMemo(() => firestore ? collection(firestore, 'roles') : null, [firestore]);
+  const { data: rolesData } = useCollection<Role>(rolesQuery);
   const [isCepLoading, setIsCepLoading] = React.useState(false);
 
   // Dynamically create schema based on whether we are creating or editing
@@ -107,7 +109,7 @@ export function UserFormDialog({ isOpen, onOpenChange, onSave, user }: UserFormD
         form.reset({
           name: user.name || '',
           email: user.email || '',
-          role: user.role || 'Usuario',
+          roleId: user.roleId || undefined,
           phone: user.phone || '',
           personalDocument: user.personalDocument || '',
           address: {
@@ -120,7 +122,7 @@ export function UserFormDialog({ isOpen, onOpenChange, onSave, user }: UserFormD
             zipCode: user.address?.zipCode || '',
           },
           teamIds: user.teamIds || [],
-          password: '', // Senha não é preenchida na edição
+          password: '',
         });
       } else {
         form.reset(defaultValues);
@@ -156,6 +158,7 @@ export function UserFormDialog({ isOpen, onOpenChange, onSave, user }: UserFormD
   }
 
   const teamOptions = teamsData?.map(team => ({ value: team.id, label: team.name })) || [];
+  const roleOptions = rolesData?.map(role => ({ value: role.id, label: role.name })) || [];
   
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -367,19 +370,20 @@ export function UserFormDialog({ isOpen, onOpenChange, onSave, user }: UserFormD
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <FormField
                             control={form.control}
-                            name="role"
+                            name="roleId"
                             render={({ field }) => (
                                 <FormItem>
-                                <FormLabel>Função</FormLabel>
+                                <FormLabel>Cargo</FormLabel>
                                 <Select onValueChange={field.onChange} value={field.value}>
                                     <FormControl>
                                     <SelectTrigger>
-                                        <SelectValue placeholder="Selecione uma função" />
+                                        <SelectValue placeholder="Selecione um cargo" />
                                     </SelectTrigger>
                                     </FormControl>
                                     <SelectContent>
-                                        <SelectItem value="Gestor">Gestor</SelectItem>
-                                        <SelectItem value="Usuario">Usuário</SelectItem>
+                                        {roleOptions.map(option => (
+                                            <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                                        ))}
                                     </SelectContent>
                                 </Select>
                                 <FormMessage />
@@ -417,5 +421,3 @@ export function UserFormDialog({ isOpen, onOpenChange, onSave, user }: UserFormD
     </Dialog>
   );
 }
-
-    
