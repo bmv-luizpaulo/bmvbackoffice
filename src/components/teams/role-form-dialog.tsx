@@ -1,4 +1,3 @@
-// THIS IS A NEW FILE
 'use client';
 
 import * as React from "react";
@@ -28,7 +27,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from "../ui/textarea";
 import type { Role } from "@/lib/types";
 import { Switch } from "../ui/switch";
-import { Shield } from "lucide-react";
+import { Shield, Code } from "lucide-react";
 
 type RoleFormDialogProps = {
   isOpen: boolean;
@@ -41,12 +40,14 @@ const formSchema = z.object({
   name: z.string().min(1, "O nome do cargo é obrigatório."),
   description: z.string().optional(),
   isManager: z.boolean().default(false),
+  isDev: z.boolean().default(false),
 });
 
 const defaultValues = {
   name: '',
   description: '',
   isManager: false,
+  isDev: false,
 };
 
 export function RoleFormDialog({ isOpen, onOpenChange, onSave, role }: RoleFormDialogProps) {
@@ -62,6 +63,7 @@ export function RoleFormDialog({ isOpen, onOpenChange, onSave, role }: RoleFormD
           name: role.name, 
           description: role.description || '', 
           isManager: role.isManager || false,
+          isDev: role.isDev || false,
         });
       } else {
         form.reset(defaultValues);
@@ -133,6 +135,27 @@ export function RoleFormDialog({ isOpen, onOpenChange, onSave, role }: RoleFormD
                         </FormItem>
                     )}
                 />
+                 <FormField
+                    control={form.control}
+                    name="isDev"
+                    render={({ field }) => (
+                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                            <div className="space-y-0.5">
+                                <FormLabel className="flex items-center gap-2"><Code className="h-4 w-4"/>Permissão de Desenvolvedor</FormLabel>
+                                <FormMessage />
+                                <p className="text-xs text-muted-foreground">
+                                    Concede acesso total de leitura e escrita em todo o sistema.
+                                </p>
+                            </div>
+                            <FormControl>
+                                <Switch
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                                />
+                            </FormControl>
+                        </FormItem>
+                    )}
+                />
 
                 <DialogFooter>
                     <DialogClose asChild>
@@ -146,5 +169,4 @@ export function RoleFormDialog({ isOpen, onOpenChange, onSave, role }: RoleFormD
     </Dialog>
   );
 }
-
     

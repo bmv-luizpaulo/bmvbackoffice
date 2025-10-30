@@ -114,6 +114,7 @@ export type Role = {
     name: string;
     description?: string;
     isManager?: boolean;
+    isDev?: boolean;
 }
 
 export type ProjectFile = {
@@ -164,3 +165,4 @@ export type ChecklistItem = {
   description: string;
   order: number;
 };
+    

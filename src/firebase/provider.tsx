@@ -2,7 +2,7 @@
 
 import React, { DependencyList, createContext, useContext, ReactNode, useMemo, useState, useEffect } from 'react';
 import { FirebaseApp } from 'firebase/app';
-import { Firestore, doc, getDoc, setDoc, collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { Firestore, doc, getDoc, setDoc, collection, addDoc, serverTimestamp, getDocs, query, where, writeBatch } from 'firebase/firestore';
 import { Auth, User, onAuthStateChanged } from 'firebase/auth';
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener'
 
@@ -67,6 +67,76 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
     userError: null,
   });
 
+  const setupInitialRolesAndUser = async (user: User) => {
+    try {
+        const rolesCollection = collection(firestore, 'roles');
+        const batch = writeBatch(firestore);
+
+        const rolesToCreate = [
+            { name: "Desenvolvedor", description: "Acesso total ao sistema para fins de desenvolvimento.", isManager: true, isDev: true },
+            { name: "Gestor", description: "Acesso de gerenciamento ao sistema.", isManager: true, isDev: false },
+            { name: "Usuário", description: "Acesso padrão de usuário ao sistema.", isManager: false, isDev: false },
+        ];
+        
+        let devRoleId: string | null = null;
+        let gestorRoleId: string | null = null;
+
+        const existingRolesSnap = await getDocs(rolesCollection);
+        const existingRoles = existingRolesSnap.docs.map(d => d.data().name);
+
+        for (const role of rolesToCreate) {
+            if (!existingRoles.includes(role.name)) {
+                const roleRef = doc(rolesCollection);
+                batch.set(roleRef, { ...role, id: roleRef.id });
+                if(role.name === 'Desenvolvedor') devRoleId = roleRef.id;
+                if(role.name === 'Gestor') gestorRoleId = roleRef.id;
+            } else {
+                 const existingRoleDoc = existingRolesSnap.docs.find(d => d.data().name === role.name);
+                 if (existingRoleDoc) {
+                    if(role.name === 'Desenvolvedor') devRoleId = existingRoleDoc.id;
+                    if(role.name === 'Gestor') gestorRoleId = existingRoleDoc.id;
+                 }
+            }
+        }
+        
+        // Assign dev role to specific user
+        if (user.uid === 'lxm9BGJOYqOw9ODiAKP6xp4nKTV2' && devRoleId) {
+             const devUserRef = doc(firestore, 'users', 'lxm9BGJOYqOw9ODiAKP6xp4nKTV2');
+             batch.update(devUserRef, { roleId: devRoleId });
+        }
+
+        const userRef = doc(firestore, "users", user.uid);
+        const userSnap = await getDoc(userRef);
+
+        if (!userSnap.exists()) {
+          const newUserProfile = {
+            id: user.uid,
+            name: user.displayName || user.email || "Novo Usuário",
+            email: user.email,
+            avatarUrl: user.photoURL || `https://picsum.photos/seed/${user.uid}/200`,
+            roleId: gestorRoleId, // First user is a manager by default
+          };
+          batch.set(userRef, newUserProfile);
+
+          const notificationsCollection = collection(firestore, `users/${user.uid}/notifications`);
+          const notificationRef = doc(notificationsCollection);
+          batch.set(notificationRef, {
+            id: notificationRef.id,
+            title: 'Bem-vindo ao BMV Nexus!',
+            message: 'Explore o painel e comece a gerenciar seus projetos.',
+            link: '/dashboard',
+            isRead: false,
+            createdAt: new Date().toISOString(),
+          });
+        }
+        
+        await batch.commit();
+
+    } catch (error) {
+        console.error("Error setting up initial roles and user:", error);
+    }
+  }
+
   // Effect to subscribe to Firebase auth state changes and manage user profile
   useEffect(() => {
     if (!auth || !firestore) {
@@ -78,35 +148,7 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
       auth,
       async (firebaseUser) => {
         if (firebaseUser) {
-          // User is signed in, check for profile
-          const userRef = doc(firestore, "users", firebaseUser.uid);
-          try {
-            const userSnap = await getDoc(userRef);
-            if (!userSnap.exists()) {
-              // User profile doesn't exist, create it
-              const newUserProfile = {
-                name: firebaseUser.displayName || firebaseUser.email || "Novo Usuário",
-                email: firebaseUser.email,
-                avatarUrl: firebaseUser.photoURL || `https://picsum.photos/seed/${firebaseUser.uid}/200`,
-                role: 'Gestor', // Make first user a manager
-              };
-              // This is an authorized action since the user is creating their OWN doc
-              await setDoc(userRef, newUserProfile);
-
-               // Create a welcome notification
-              const notificationsCollection = collection(firestore, `users/${firebaseUser.uid}/notifications`);
-              await addDoc(notificationsCollection, {
-                title: 'Bem-vindo ao BMV Nexus!',
-                message: 'Explore o painel e comece a gerenciar seus projetos.',
-                link: '/dashboard',
-                isRead: false,
-                createdAt: new Date().toISOString(),
-              });
-            }
-          } catch (error) {
-            console.error("Error creating or checking user profile:", error);
-            // Optionally handle this error, e.g., sign the user out or show a message
-          }
+          await setupInitialRolesAndUser(firebaseUser);
         }
         // Update auth state
         setUserAuthState({ user: firebaseUser, isUserLoading: false, userError: null });
@@ -194,5 +236,4 @@ export const useUser = (): UserHookResult => { // Renamed from useAuthUser
   const { user, isUserLoading, userError } = useFirebase(); // Leverages the main hook
   return { user, isUserLoading, userError };
 };
-
     
