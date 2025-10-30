@@ -1,0 +1,381 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "type": "object",
+      "description": "Represents a user in the system.",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The user's full name."
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "The user's email address."
+        },
+        "avatarUrl": {
+          "type": "string",
+          "format": "uri",
+          "description": "URL for the user's avatar image."
+        },
+        "role": {
+          "type": "string",
+          "description": "The user's role in the system.",
+          "enum": ["Gestor", "Usuario"]
+        },
+        "phone": {
+          "type": "string",
+          "description": "The user's phone number (WhatsApp)."
+        },
+        "address": {
+          "type": "object",
+          "description": "The user's full address.",
+          "properties": {
+            "street": { "type": "string" },
+            "number": { "type": "string" },
+            "complement": { "type": "string" },
+            "neighborhood": { "type": "string" },
+            "city": { "type": "string" },
+            "state": { "type": "string" },
+            "zipCode": { "type": "string" }
+          }
+        },
+        "personalDocument": {
+          "type": "string",
+          "description": "The user's personal document number (e.g., CPF)."
+        },
+        "teamIds": {
+            "type": "array",
+            "description": "An array of team IDs the user belongs to.",
+            "items": {
+                "type": "string"
+            }
+        }
+      },
+      "required": [
+        "name",
+        "email"
+      ]
+    },
+    "Project": {
+      "title": "Project",
+      "type": "object",
+      "description": "Represents a project within the task and project funnel.",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Name of the project."
+        },
+        "description": {
+          "type": "string",
+          "description": "Description of the project."
+        },
+        "startDate": {
+          "type": "string",
+          "description": "Start date of the project.",
+          "format": "date-time"
+        },
+        "endDate": {
+          "type": "string",
+          "description": "End date of the project.",
+          "format": "date-time"
+        },
+        "ownerId": {
+            "type": "string",
+            "description": "Reference to a User who is the project owner."
+        },
+        "teamMembers": {
+            "type": "array",
+            "description": "References to Users who are part of the project team.",
+            "items": {
+                "type": "string"
+            }
+        },
+        "contactPhone": {
+            "type": "string",
+            "description": "Contact phone for the project."
+        },
+        "technicalDetails": {
+            "type": "string",
+            "description": "Technical specifications and details of the project."
+        }
+      },
+      "required": [
+        "name",
+        "description",
+        "startDate",
+        "ownerId"
+      ]
+    },
+    "Task": {
+      "title": "Task",
+      "type": "object",
+      "description": "Represents a task within a project.",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Name of the task."
+        },
+        "description": {
+          "type": "string",
+          "description": "Description of the task."
+        },
+        "projectId": {
+          "type": "string",
+          "description": "Reference to Project. (Relationship: Project 1:N Task)"
+        },
+        "stageId": {
+          "type": "string",
+          "description": "Reference to Stage. (Relationship: Stage 1:N Task)"
+        },
+        "isCompleted": {
+          "type": "boolean",
+          "description": "Indicates whether the task is completed."
+        },
+        "dependentTaskIds": {
+          "type": "array",
+          "description": "References to other Tasks that must be completed before this task can be started. (Relationship: Task 1:N Task)",
+          "items": {
+            "type": "string"
+          }
+        },
+        "assigneeId": {
+            "type": "string",
+            "description": "Reference to a User who is responsible for the task."
+        },
+        "dueDate": {
+            "type": "string",
+            "description": "The due date for the task.",
+            "format": "date-time"
+        },
+        "isRecurring": {
+          "type": "boolean",
+          "description": "Indicates if the task is recurring."
+        },
+        "recurrenceFrequency": {
+            "type": "string",
+            "description": "The frequency of the recurrence.",
+            "enum": ["diaria", "semanal", "mensal"]
+        },
+        "recurrenceEndDate": {
+            "type": "string",
+            "description": "The end date for the recurrence.",
+            "format": "date-time"
+        }
+      },
+      "required": [
+        "name",
+        "description",
+        "projectId",
+        "stageId",
+        "isCompleted"
+      ]
+    },
+    "Stage": {
+      "title": "Stage",
+      "type": "object",
+      "description": "Represents a stage in the project funnel. Stages contain tasks.",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Name of the stage."
+        },
+        "description": {
+          "type": "string",
+          "description": "Description of the stage."
+        },
+        "order": {
+          "type": "number",
+          "description": "The order of the stage in the funnel.  Lower numbers mean earlier in the funnel."
+        }
+      },
+      "required": [
+        "name",
+        "description",
+        "order"
+      ]
+    },
+    "Team": {
+        "title": "Team",
+        "type": "object",
+        "description": "Represents a team within the organization.",
+        "properties": {
+            "name": {
+                "type": "string",
+                "description": "Name of the team."
+            },
+            "description": {
+                "type": "string",
+                "description": "Description of the team's purpose or responsibilities."
+            }
+        },
+        "required": ["name"]
+    },
+    "Contact": {
+      "title": "Contact",
+      "type": "object",
+      "description": "Represents a contact, which can be a client, a supplier, or a partner.",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The contact's full name."
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "The contact's email address."
+        },
+        "phone": {
+          "type": "string",
+          "description": "The contact's phone number."
+        },
+        "companyName": {
+            "type": "string",
+            "description": "The name of the company the contact works for."
+        },
+        "type": {
+          "type": "string",
+          "description": "The type of contact.",
+          "enum": ["cliente", "fornecedor", "parceiro"]
+        },
+        "address": {
+          "type": "object",
+          "description": "The contact's full address.",
+          "properties": {
+            "street": { "type": "string" },
+            "number": { "type": "string" },
+            "complement": { "type": "string" },
+            "neighborhood": { "type": "string" },
+            "city": { "type": "string" },
+            "state": { "type": "string" },
+            "zipCode": { "type": "string" }
+          }
+        }
+      },
+      "required": ["name", "email", "type"]
+    },
+    "ProjectFile": {
+      "title": "ProjectFile",
+      "type": "object",
+      "description": "Represents a file uploaded to a project.",
+      "properties": {
+        "name": { "type": "string", "description": "The name of the file." },
+        "url": { "type": "string", "format": "uri", "description": "The public URL of the file in Firebase Storage." },
+        "size": { "type": "number", "description": "The size of the file in bytes." },
+        "type": { "type": "string", "description": "The MIME type of the file." },
+        "uploadedAt": { "type": "string", "format": "date-time", "description": "The timestamp when the file was uploaded." },
+        "uploaderId": { "type": "string", "description": "The ID of the user who uploaded the file." }
+      },
+      "required": ["name", "url", "size", "type", "uploadedAt", "uploaderId"]
+    },
+     "Chat": {
+      "title": "Chat",
+      "type": "object",
+      "description": "Represents a chat conversation between two or more users.",
+      "properties": {
+        "userIds": {
+          "type": "array",
+          "description": "An array of user IDs participating in the chat.",
+          "items": { "type": "string" }
+        },
+        "lastMessage": {
+          "type": "object",
+          "description": "The last message sent in the chat for preview purposes.",
+          "properties": {
+            "text": { "type": "string" },
+            "timestamp": { "type": "string", "format": "date-time" },
+            "senderId": { "type": "string" }
+          }
+        },
+         "users": {
+          "type": "object",
+          "description": "Denormalized user data for quick display.",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "avatarUrl": { "type": "string", "format": "uri" },
+              "email": { "type": "string", "format": "email" }
+            }
+          }
+        }
+      },
+      "required": ["userIds"]
+    },
+    "Message": {
+      "title": "Message",
+      "type": "object",
+      "description": "Represents a single message within a chat.",
+      "properties": {
+        "chatId": { "type": "string", "description": "The ID of the chat this message belongs to." },
+        "senderId": { "type": "string", "description": "The ID of the user who sent the message." },
+        "text": { "type": "string", "description": "The content of the message." },
+        "timestamp": { "type": "string", "format": "date-time", "description": "The time the message was sent." },
+        "read": { "type": "boolean", "description": "Whether the message has been read by the recipient(s)." }
+      },
+      "required": ["chatId", "senderId", "text", "timestamp"]
+    },
+    "Notification": {
+      "title": "Notification",
+      "type": "object",
+      "description": "Represents a notification for a user.",
+      "properties": {
+        "title": { "type": "string" },
+        "message": { "type": "string" },
+        "link": { "type": "string", "format": "uri" },
+        "isRead": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "message", "link", "isRead", "createdAt"]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/User" },
+      "description": "Represents a user of the application. Contains profile information."
+    },
+    "/users/{userId}/notifications/{notificationId}": {
+      "schema": { "$ref": "#/entities/Notification" },
+      "description": "Contains notifications for a specific user."
+    },
+    "/teams/{teamId}": {
+      "schema": { "$ref": "#/entities/Team" },
+      "description": "Represents a team. Contains 'id', 'name', and 'description'."
+    },
+    "/contacts/{contactId}": {
+      "schema": { "$ref": "#/entities/Contact" },
+      "description": "Represents a contact, either a client, a supplier, or a partner."
+    },
+    "/projects/{projectId}": {
+      "schema": { "$ref": "#/entities/Project" },
+      "description": "Represents a project. Includes the 'id', 'name', 'description', 'startDate', 'endDate', 'ownerId', 'teamMembers', 'contactPhone', 'technicalDetails'."
+    },
+    "/projects/{projectId}/stages/{stageId}": {
+      "schema": { "$ref": "#/entities/Stage" },
+      "description": "Represents a stage within a project. Contains 'id', 'name', 'description', and 'order'."
+    },
+    "/projects/{projectId}/tasks/{taskId}": {
+      "schema": { "$ref": "#/entities/Task" },
+      "description": "Represents a task within a stage. Contains 'id', 'name', 'description', 'projectId', 'stageId', 'isCompleted', 'assigneeId', 'dueDate', and 'dependentTaskIds'."
+    },
+    "/projects/{projectId}/files/{fileId}": {
+      "schema": { "$ref": "#/entities/ProjectFile" },
+      "description": "Represents a file associated with a specific project."
+    },
+    "/chats/{chatId}": {
+      "schema": { "$ref": "#/entities/Chat" },
+      "description": "Represents a chat conversation metadata."
+    },
+    "/chats/{chatId}/messages/{messageId}": {
+      "schema": { "$ref": "#/entities/Message" },
+      "description": "Contains all messages for a given chat."
+    }
+  }
+}
