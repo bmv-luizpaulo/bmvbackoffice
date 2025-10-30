@@ -3,7 +3,7 @@
 import { firebaseConfig } from '@/firebase/config';
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import { getFirestore, initializeFirestore } from 'firebase/firestore'
+import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from 'firebase/firestore'
 
 // IMPORTANT: DO NOT MODIFY THIS FUNCTION
 export function initializeFirebase() {
@@ -39,8 +39,9 @@ export function getSdks(firebaseApp: FirebaseApp) {
     // Forcing long polling fixes "INTERNAL ASSERTION FAILED" errors in some dev setups.
     // This is more stable than WebSockets in environments with hot-reloading.
     firestore = initializeFirestore(firebaseApp, {
-      experimentalForceLongPolling: true,
-      ignoreUndefinedProperties: true,
+        localCache: persistentLocalCache({
+            tabManager: persistentMultipleTabManager(),
+        }),
     });
   } catch {
     firestore = getFirestore(firebaseApp);
