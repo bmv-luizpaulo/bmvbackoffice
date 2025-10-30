@@ -34,7 +34,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import type { Team, User } from "@/lib/types";
 import dynamic from "next/dynamic";
-import { useFirestore, useCollection } from "@/firebase";
+import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { collection, doc, writeBatch } from "firebase/firestore";
 import {
   AlertDialog,
@@ -55,10 +55,10 @@ export function TeamDataTable() {
   const firestore = useFirestore();
   const { toast } = useToast();
   
-  const teamsQuery = React.useMemo(() => firestore ? collection(firestore, 'teams') : null, [firestore]);
+  const teamsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'teams') : null, [firestore]);
   const { data: teamsData, isLoading: isLoadingTeams } = useCollection<Team>(teamsQuery);
   
-  const usersQuery = React.useMemo(() => firestore ? collection(firestore, 'users') : null, [firestore]);
+  const usersQuery = useMemoFirebase(() => firestore ? collection(firestore, 'users') : null, [firestore]);
   const { data: users, isLoading: isLoadingUsers } = useCollection<User>(usersQuery);
 
   const data = React.useMemo(() => teamsData ?? [], [teamsData]);
@@ -326,7 +326,7 @@ export function TeamDataTable() {
         <TeamFormDialog 
           isOpen={isFormOpen}
           onOpenChange={setIsFormOpen}
-          onSave={(teamData, teamId) => handleSaveTeam(teamData, (isFormOpen && selectedTeam?.id) ? selectedTeam.id : undefined)}
+          onSave={handleSaveTeam}
           team={selectedTeam}
           users={users || []}
           usersInTeam={selectedTeam ? usersByTeam.get(selectedTeam.id) || [] : []}

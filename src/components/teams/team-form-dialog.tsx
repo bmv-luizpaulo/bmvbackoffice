@@ -32,7 +32,7 @@ import { MultiSelect } from "../ui/multi-select";
 type TeamFormDialogProps = {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
-  onSave: (team: Omit<Team, 'id'>, teamId?: string) => void;
+  onSave: (teamData: Omit<Team, 'id'>, memberIds: string[], teamId?: string) => void;
   team?: Team | null;
   users: User[];
   usersInTeam: User[];
@@ -72,12 +72,12 @@ export function TeamFormDialog({ isOpen, onOpenChange, onSave, team, users, user
 
 
   function onSubmit(values: z.infer<typeof formSchema>) {
-    // We only pass back the team data. The parent component will handle user updates.
     const teamData = {
         name: values.name,
         description: values.description,
-    }
-    onSave(teamData, team?.id);
+    };
+    const memberIds = values.memberIds || [];
+    onSave(teamData, memberIds, team?.id);
     onOpenChange(false);
   }
   
