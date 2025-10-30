@@ -3,7 +3,6 @@ import type {NextConfig} from 'next';
 const nextConfig: NextConfig = {
   /* config options here */
   experimental: {
-    reactCompiler: true,
     optimizePackageImports: [
       'lucide-react',
       'date-fns',
