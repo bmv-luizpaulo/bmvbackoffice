@@ -220,7 +220,6 @@ function InnerLayout({ children }: { children: React.ReactNode }) {
                   <Link href="/settings">
                     <DropdownMenuItem>Perfil</DropdownMenuItem>
                   </Link>
-                  <DropdownMenuItem>Faturamento</DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleSignOut}>Sair</DropdownMenuItem>
                 </DropdownMenuContent>
