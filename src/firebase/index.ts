@@ -3,7 +3,7 @@
 import { firebaseConfig } from '@/firebase/config';
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore'
+import { getFirestore, initializeFirestore } from 'firebase/firestore'
 
 // IMPORTANT: DO NOT MODIFY THIS FUNCTION
 export function initializeFirebase() {
@@ -33,10 +33,25 @@ export function initializeFirebase() {
 }
 
 export function getSdks(firebaseApp: FirebaseApp) {
+  // Prefer initializeFirestore with options; fall back to getFirestore if it's already initialized
+  let firestore;
+  try {
+    const isProd = process.env.NODE_ENV === 'production';
+    firestore = initializeFirestore(firebaseApp, {
+      // Force long polling in dev to avoid INTERNAL ASSERTION FAILED from watch streams in some setups
+      experimentalForceLongPolling: !isProd,
+      // Auto-detect in prod environments
+      experimentalAutoDetectLongPolling: isProd,
+      ignoreUndefinedProperties: true,
+    } as any);
+  } catch {
+    firestore = getFirestore(firebaseApp);
+  }
+
   return {
     firebaseApp,
     auth: getAuth(firebaseApp),
-    firestore: getFirestore(firebaseApp)
+    firestore,
   };
 }
 

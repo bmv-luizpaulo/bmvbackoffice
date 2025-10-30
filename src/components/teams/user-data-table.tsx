@@ -33,7 +33,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import type { User } from "@/lib/types";
-import { UserFormDialog } from "./user-form-dialog";
+import dynamic from "next/dynamic";
 import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { collection, doc, addDoc, updateDoc, deleteDoc } from "firebase/firestore";
 import {
@@ -48,6 +48,8 @@ import {
 } from "@/components/ui/alert-dialog"
 import { FirestorePermissionError } from "@/firebase/errors";
 import { errorEmitter } from "@/firebase/error-emitter";
+
+const UserFormDialog = dynamic(() => import('./user-form-dialog').then(m => m.UserFormDialog), { ssr: false });
 
 const addDocumentNonBlocking = (ref: any, data: any) => {
     return addDoc(ref, data).catch(err => {
@@ -92,6 +94,7 @@ export function UserDataTable() {
   const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [isAlertOpen, setIsAlertOpen] = React.useState(false);
   const [selectedUser, setSelectedUser] = React.useState<User | null>(null);
+  const [emailFilter, setEmailFilter] = React.useState("");
 
   const handleSaveUser = (userData: Omit<User, 'id' | 'avatarUrl'>) => {
     if (!firestore) return;
@@ -118,7 +121,7 @@ export function UserDataTable() {
     setSelectedUser(null);
   }
 
-  const columns: ColumnDef<User>[] = [
+  const columns: ColumnDef<User>[] = React.useMemo(() => [
     {
       accessorKey: "name",
       header: "Nome",
@@ -127,7 +130,7 @@ export function UserDataTable() {
       accessorKey: "email",
       header: "Email",
     },
-     {
+    {
       accessorKey: "phone",
       header: "Telefone",
     },
@@ -139,7 +142,6 @@ export function UserDataTable() {
       id: "actions",
       cell: ({ row }) => {
         const user = row.original
-   
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -155,7 +157,7 @@ export function UserDataTable() {
                 Editar
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem 
+              <DropdownMenuItem
                 className="text-red-600"
                 onClick={() => {setSelectedUser(user); setIsAlertOpen(true)}}
               >
@@ -167,10 +169,12 @@ export function UserDataTable() {
         )
       },
     },
-  ]
+  ], []);
+
+  const dataMemo = React.useMemo(() => users || [], [users]);
 
   const table = useReactTable({
-    data: users || [],
+    data: dataMemo,
     columns,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
@@ -178,21 +182,27 @@ export function UserDataTable() {
     getSortedRowModel: getSortedRowModel(),
     onColumnFiltersChange: setColumnFilters,
     getFilteredRowModel: getFilteredRowModel(),
+    initialState: { pagination: { pageSize: 10 } },
     state: {
       sorting,
       columnFilters,
     },
   });
 
+  React.useEffect(() => {
+    const h = setTimeout(() => {
+      table.getColumn("email")?.setFilterValue(emailFilter);
+    }, 300);
+    return () => clearTimeout(h);
+  }, [emailFilter, table]);
+
   return (
     <div>
        <div className="flex items-center justify-between py-4">
         <Input
           placeholder="Filtrar por e-mail..."
-          value={(table.getColumn("email")?.getFilterValue() as string) ?? ""}
-          onChange={(event) =>
-            table.getColumn("email")?.setFilterValue(event.target.value)
-          }
+          value={emailFilter}
+          onChange={(event) => setEmailFilter(event.target.value)}
           className="max-w-sm"
         />
         <Button onClick={() => {setSelectedUser(null); setIsFormOpen(true)}}>Adicionar Usuário</Button>
@@ -260,27 +270,31 @@ export function UserDataTable() {
         </Button>
       </div>
 
-      <UserFormDialog 
-        isOpen={isFormOpen}
-        onOpenChange={setIsFormOpen}
-        onSave={handleSaveUser}
-        user={selectedUser}
-      />
-      
-      <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  Esta ação não pode ser desfeita. Isso excluirá permanentemente o usuário "{selectedUser?.name}".
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel onClick={() => setSelectedUser(null)}>Cancelar</AlertDialogCancel>
-                <AlertDialogAction onClick={handleDeleteUser}>Excluir</AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-      </AlertDialog>
+      {isFormOpen && (
+        <UserFormDialog 
+          isOpen={isFormOpen}
+          onOpenChange={setIsFormOpen}
+          onSave={handleSaveUser}
+          user={selectedUser}
+        />
+      )}
+
+      {isAlertOpen && (
+        <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Esta ação não pode ser desfeita. Isso excluirá permanentemente o usuário "{selectedUser?.name}".
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setSelectedUser(null)}>Cancelar</AlertDialogCancel>
+              <AlertDialogAction onClick={handleDeleteUser}>Excluir</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
     </div>
   )
 }

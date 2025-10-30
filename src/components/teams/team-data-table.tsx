@@ -34,7 +34,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import type { Team } from "@/lib/types";
-import { TeamFormDialog } from "./team-form-dialog";
+import dynamic from "next/dynamic";
 import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { collection, doc, addDoc, updateDoc, deleteDoc } from "firebase/firestore";
 import {
@@ -49,6 +49,8 @@ import {
 } from "@/components/ui/alert-dialog"
 import { FirestorePermissionError } from "@/firebase/errors";
 import { errorEmitter } from "@/firebase/error-emitter";
+
+const TeamFormDialog = dynamic(() => import('./team-form-dialog').then(m => m.TeamFormDialog), { ssr: false });
 
 const addDocumentNonBlocking = (ref: any, data: any) => {
     return addDoc(ref, data).catch(err => {
@@ -94,6 +96,7 @@ export function TeamDataTable() {
   const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [isAlertOpen, setIsAlertOpen] = React.useState(false);
   const [selectedTeam, setSelectedTeam] = React.useState<Team | null>(null);
+  const [nameFilter, setNameFilter] = React.useState("");
 
   const handleSaveTeam = (teamData: Omit<Team, 'id'>) => {
     if (!firestore) return;
@@ -116,7 +119,7 @@ export function TeamDataTable() {
     setSelectedTeam(null);
   }
 
-  const columns: ColumnDef<Team>[] = [
+  const columns: ColumnDef<Team>[] = React.useMemo(() => [
     {
       accessorKey: "name",
       header: "Nome do Núcleo",
@@ -129,7 +132,6 @@ export function TeamDataTable() {
       id: "actions",
       cell: ({ row }) => {
         const team = row.original
-   
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -157,10 +159,12 @@ export function TeamDataTable() {
         )
       },
     },
-  ]
+  ], []);
+
+  const dataMemo = React.useMemo(() => teams || [], [teams]);
 
   const table = useReactTable({
-    data: teams || [],
+    data: dataMemo,
     columns,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
@@ -168,21 +172,27 @@ export function TeamDataTable() {
     getSortedRowModel: getSortedRowModel(),
     onColumnFiltersChange: setColumnFilters,
     getFilteredRowModel: getFilteredRowModel(),
+    initialState: { pagination: { pageSize: 10 } },
     state: {
       sorting,
       columnFilters,
     },
   });
 
+  React.useEffect(() => {
+    const h = setTimeout(() => {
+      table.getColumn("name")?.setFilterValue(nameFilter);
+    }, 300);
+    return () => clearTimeout(h);
+  }, [nameFilter, table]);
+
   return (
     <div>
        <div className="flex items-center justify-between py-4">
         <Input
           placeholder="Filtrar por nome..."
-          value={(table.getColumn("name")?.getFilterValue() as string) ?? ""}
-          onChange={(event) =>
-            table.getColumn("name")?.setFilterValue(event.target.value)
-          }
+          value={nameFilter}
+          onChange={(event) => setNameFilter(event.target.value)}
           className="max-w-sm"
         />
         <Button onClick={() => {setSelectedTeam(null); setIsFormOpen(true)}}>Adicionar Núcleo</Button>
@@ -250,27 +260,31 @@ export function TeamDataTable() {
         </Button>
       </div>
 
-      <TeamFormDialog 
-        isOpen={isFormOpen}
-        onOpenChange={setIsFormOpen}
-        onSave={handleSaveTeam}
-        team={selectedTeam}
-      />
-      
-      <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  Esta ação não pode ser desfeita. Isso excluirá permanentemente o núcleo "{selectedTeam?.name}".
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel onClick={() => setSelectedTeam(null)}>Cancelar</AlertDialogCancel>
-                <AlertDialogAction onClick={handleDeleteTeam}>Excluir</AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-      </AlertDialog>
+      {isFormOpen && (
+        <TeamFormDialog 
+          isOpen={isFormOpen}
+          onOpenChange={setIsFormOpen}
+          onSave={handleSaveTeam}
+          team={selectedTeam}
+        />
+      )}
+
+      {isAlertOpen && (
+        <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Esta ação não pode ser desfeita. Isso excluirá permanentemente o núcleo "{selectedTeam?.name}".
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setSelectedTeam(null)}>Cancelar</AlertDialogCancel>
+              <AlertDialogAction onClick={handleDeleteTeam}>Excluir</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
     </div>
   )
 }

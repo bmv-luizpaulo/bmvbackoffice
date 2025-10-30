@@ -1,7 +1,11 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { UserDataTable } from "@/components/teams/user-data-table";
-import { TeamDataTable } from "@/components/teams/team-data-table";
-import { Separator } from "@/components/ui/separator";
+import { Suspense } from "react";
+import dynamic from "next/dynamic";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Skeleton } from "@/components/ui/skeleton";
+
+const UserDataTable = dynamic(() => import("@/components/teams/user-data-table").then(m => m.UserDataTable));
+const TeamDataTable = dynamic(() => import("@/components/teams/team-data-table").then(m => m.TeamDataTable));
 
 export default function TeamsPage() {
   return (
@@ -12,31 +16,64 @@ export default function TeamsPage() {
           Gerencie suas equipes, gestores, funcionários e grupos.
         </p>
       </header>
-      <Card>
-        <CardHeader>
-          <CardTitle>Gerenciamento de Usuários</CardTitle>
-          <CardDescription>
-            Adicione, edite e organize os membros da sua equipe.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <UserDataTable />
-        </CardContent>
-      </Card>
-      
-      <Separator />
+      <Tabs defaultValue="users">
+        <TabsList>
+          <TabsTrigger value="users">Usuários</TabsTrigger>
+          <TabsTrigger value="teams">Núcleos</TabsTrigger>
+        </TabsList>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Gerenciamento de Núcleos</CardTitle>
-          <CardDescription>
-            Crie e gerencie os núcleos (equipes) da sua organização.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <TeamDataTable />
-        </CardContent>
-      </Card>
+        <TabsContent value="users">
+          <Card>
+            <CardHeader>
+              <CardTitle>Gerenciamento de Usuários</CardTitle>
+              <CardDescription>
+                Adicione, edite e organize os membros da sua equipe.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Suspense fallback={
+                <div className="space-y-3">
+                  <Skeleton className="h-8 w-48" />
+                  <Skeleton className="h-10 w-full" />
+                  <div className="space-y-2">
+                    <Skeleton className="h-6 w-full" />
+                    <Skeleton className="h-6 w-full" />
+                    <Skeleton className="h-6 w-full" />
+                  </div>
+                </div>
+              }>
+                <UserDataTable />
+              </Suspense>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="teams">
+          <Card>
+            <CardHeader>
+              <CardTitle>Gerenciamento de Núcleos</CardTitle>
+              <CardDescription>
+                Crie e gerencie os núcleos (equipes) da sua organização.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Suspense fallback={
+                <div className="space-y-3">
+                  <Skeleton className="h-8 w-48" />
+                  <Skeleton className="h-10 w-full" />
+                  <div className="space-y-2">
+                    <Skeleton className="h-6 w-full" />
+                    <Skeleton className="h-6 w-full" />
+                    <Skeleton className="h-6 w-full" />
+                  </div>
+                </div>
+              }>
+                <TeamDataTable />
+              </Suspense>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
