@@ -2,16 +2,6 @@ import type {NextConfig} from 'next';
 
 const nextConfig: NextConfig = {
   /* config options here */
-  experimental: {
-    optimizePackageImports: [
-      'lucide-react',
-      'date-fns',
-      '@radix-ui/react-tooltip',
-      '@radix-ui/react-dialog',
-      '@radix-ui/react-popover',
-      '@radix-ui/react-toast',
-    ],
-  },
   typescript: {
     ignoreBuildErrors: true,
   },
