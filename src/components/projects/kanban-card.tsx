@@ -22,6 +22,7 @@ import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { format, isPast, isToday, differenceInDays } from 'date-fns';
+import { memo } from 'react';
 
 type KanbanCardProps = {
   task: Task & { isLocked?: boolean; assignee?: User };
@@ -30,7 +31,7 @@ type KanbanCardProps = {
   onEditTask: (task: Task) => void;
 };
 
-export function KanbanCard({ task, onUpdateTask, onDeleteTask, onEditTask }: KanbanCardProps) {
+function KanbanCardComponent({ task, onUpdateTask, onDeleteTask, onEditTask }: KanbanCardProps) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: task.id,
     disabled: task.isLocked,
@@ -163,3 +164,20 @@ export function KanbanCard({ task, onUpdateTask, onDeleteTask, onEditTask }: Kan
     </Card>
   );
 }
+
+const areEqual = (prev: KanbanCardProps, next: KanbanCardProps) => {
+  const a = prev.task;
+  const b = next.task;
+  if (a.id !== b.id) return false;
+  if (a.name !== b.name) return false;
+  if ((a.description || '') !== (b.description || '')) return false;
+  if ((a.isCompleted ? 1 : 0) !== (b.isCompleted ? 1 : 0)) return false;
+  if ((a.isLocked ? 1 : 0) !== (b.isLocked ? 1 : 0)) return false;
+  if ((a.dueDate || '') !== (b.dueDate || '')) return false;
+  const aAssignee = (a as any).assignee?.id || (a as any).assigneeId || '';
+  const bAssignee = (b as any).assignee?.id || (b as any).assigneeId || '';
+  if (aAssignee !== bAssignee) return false;
+  return true;
+};
+
+export const KanbanCard = memo(KanbanCardComponent, areEqual);

@@ -1,12 +1,13 @@
 'use client';
 
-import React, { memo } from 'react';
+import React, { memo, useRef } from 'react';
 import { useDroppable } from '@dnd-kit/core';
 import type { Stage, Task, User } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { KanbanCard } from './kanban-card';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 import { Info } from 'lucide-react';
+import { useVirtualizer } from '@tanstack/react-virtual';
 
 type KanbanColumnProps = {
   stage: Stage;
@@ -18,6 +19,13 @@ type KanbanColumnProps = {
 
 function KanbanColumnComponent({ stage, tasks, onUpdateTask, onDeleteTask, onEditTask }: KanbanColumnProps) {
   const { setNodeRef, isOver } = useDroppable({ id: stage.id });
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  const rowVirtualizer = useVirtualizer({
+    count: tasks.length,
+    getScrollElement: () => scrollRef.current,
+    estimateSize: () => 120,
+    overscan: 6,
+  });
 
   return (
     <div 
@@ -44,23 +52,40 @@ function KanbanColumnComponent({ stage, tasks, onUpdateTask, onDeleteTask, onEdi
             <Badge variant="secondary" className="font-mono text-sm">{tasks.length}</Badge>
         </div>
       </div>
-      <div 
-        className={`flex flex-1 flex-col gap-3 overflow-y-auto p-3 rounded-b-lg transition-colors ${isOver ? 'bg-primary/10' : 'bg-muted/50'}`}
+      <div
+        ref={scrollRef}
+        className={`flex flex-1 flex-col overflow-y-auto p-3 rounded-b-lg transition-colors ${isOver ? 'bg-primary/10' : 'bg-muted/50'}`}
         style={{ minHeight: '150px' }}
       >
-        {tasks.map(task => (
-          <KanbanCard 
-            key={task.id} 
-            task={task} 
-            onUpdateTask={onUpdateTask}
-            onDeleteTask={onDeleteTask}
-            onEditTask={onEditTask}
-            />
-        ))}
-        {tasks.length === 0 && (
-            <div className="flex h-full items-center justify-center rounded-md border-2 border-dashed border-border">
-                <p className="text-sm text-muted-foreground">Arraste tarefas aqui</p>
-            </div>
+        {tasks.length === 0 ? (
+          <div className="flex h-full items-center justify-center rounded-md border-2 border-dashed border-border">
+            <p className="text-sm text-muted-foreground">Arraste tarefas aqui</p>
+          </div>
+        ) : (
+          <div
+            className="relative w-full"
+            style={{ height: rowVirtualizer.getTotalSize() }}
+          >
+            {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+              const task = tasks[virtualRow.index];
+              return (
+                <div
+                  key={virtualRow.key}
+                  data-index={virtualRow.index}
+                  ref={rowVirtualizer.measureElement}
+                  className="absolute left-0 top-0 w-full pb-3"
+                  style={{ transform: `translateY(${virtualRow.start}px)` }}
+                >
+                  <KanbanCard
+                    task={task}
+                    onUpdateTask={onUpdateTask}
+                    onDeleteTask={onDeleteTask}
+                    onEditTask={onEditTask}
+                  />
+                </div>
+              );
+            })}
+          </div>
         )}
       </div>
     </div>

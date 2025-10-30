@@ -1,23 +1,28 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { DndContext, type DragEndEvent, useSensor, useSensors, PointerSensor } from '@dnd-kit/core';
 import { useToast } from '@/hooks/use-toast';
 import { KanbanColumn } from './kanban-column';
 import type { Task, Stage, Project, User } from '@/lib/types';
 import { Button } from '../ui/button';
 import { Plus, FolderPlus, ChevronsUpDown, Files } from 'lucide-react';
-import { AddTaskDialog } from './add-task-dialog';
-import { AddProjectDialog } from './add-project-dialog';
-import { ProjectFilesDialog } from './project-files-dialog';
+import dynamic from 'next/dynamic';
+const LoadingFallback = () => (
+  <div className="p-4 text-sm text-muted-foreground">Carregando...</div>
+);
+const AddTaskDialog = dynamic(() => import('./add-task-dialog').then(m => m.AddTaskDialog), { ssr: false, loading: () => <LoadingFallback /> });
+const AddProjectDialog = dynamic(() => import('./add-project-dialog').then(m => m.AddProjectDialog), { ssr: false, loading: () => <LoadingFallback /> });
+const ProjectFilesDialog = dynamic(() => import('./project-files-dialog').then(m => m.ProjectFilesDialog), { ssr: false, loading: () => <LoadingFallback /> });
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '../ui/command';
 import { useCollection, useDoc, useFirestore, useMemoFirebase, useUser as useAuthUser } from '@/firebase';
 import { collection, doc, writeBatch, addDoc, updateDoc, deleteDoc, query, where } from 'firebase/firestore';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { errorEmitter } from '@/firebase/error-emitter';
-import { AiFollowUpSuggestions } from './ai-follow-up-suggestions';
 import { useNotifications } from '../notifications/notifications-provider';
+
+const AiFollowUpSuggestions = dynamic(() => import('./ai-follow-up-suggestions').then(m => m.AiFollowUpSuggestions), { ssr: false });
 
 const addDocumentNonBlocking = (ref: any, data: any) => {
     return addDoc(ref, data).catch(err => {
@@ -105,6 +110,16 @@ export function KanbanBoard() {
 
   const { toast } = useToast();
 
+  // Preload dynamic components to avoid first-open delay
+  useEffect(() => {
+    Promise.allSettled([
+      import('./add-task-dialog'),
+      import('./add-project-dialog'),
+      import('./project-files-dialog'),
+      import('./ai-follow-up-suggestions'),
+    ]);
+  }, []);
+
   useEffect(() => {
     if (!projectsData) return;
 
@@ -129,10 +144,10 @@ export function KanbanBoard() {
     }
   }, [projectsData]);
 
-  const handleSelectProject = (project: Project) => {
+  const handleSelectProject = useCallback((project: Project) => {
     setSelectedProject(project);
     setIsProjectSelectorOpen(false);
-  }
+  }, []);
 
   const handleAddProject = async (newProject: Omit<Project, 'id'>) => {
     if (!firestore) return;
@@ -208,7 +223,7 @@ export function KanbanBoard() {
     }
   }
 
-  const handleUpdateTaskStatus = (taskId: string, updates: Partial<Omit<Task, 'id'>>) => {
+  const handleUpdateTaskStatus = useCallback((taskId: string, updates: Partial<Omit<Task, 'id'>>) => {
       if (!firestore || !selectedProject || !userProfile) return;
       const taskRef = doc(firestore, 'projects', selectedProject.id, 'tasks', taskId);
       updateDocumentNonBlocking(taskRef, updates);
@@ -220,7 +235,7 @@ export function KanbanBoard() {
         if(task.assigneeId) notificationReceivers.add(task.assigneeId);
 
         notificationReceivers.forEach(userId => {
-            if (userId !== authUser?.uid) { // Don't notify user about their own action
+            if (userId !== authUser?.uid) {
                 createNotification(userId, {
                     title: 'Tarefa Concluída',
                     message: `A tarefa "${task.name}" foi concluída no projeto "${selectedProject.name}".`,
@@ -234,9 +249,9 @@ export function KanbanBoard() {
           title: "Tarefa Atualizada",
           description: "O status da tarefa foi atualizado."
       });
-  }
+  }, [firestore, selectedProject, userProfile, tasksData, authUser, createNotification, toast]);
 
-  const handleDeleteTask = (taskId: string) => {
+  const handleDeleteTask = useCallback((taskId: string) => {
       if (!firestore || !selectedProject) return;
       const taskRef = doc(firestore, 'projects', selectedProject.id, 'tasks', taskId);
       deleteDocumentNonBlocking(taskRef);
@@ -245,20 +260,20 @@ export function KanbanBoard() {
           title: "Tarefa Excluída",
           description: "A tarefa foi excluída com sucesso."
       });
-  }
+  }, [firestore, selectedProject, toast]);
   
-  const handleEditTask = (task: Task) => {
+  const handleEditTask = useCallback((task: Task) => {
     setTaskToEdit(task);
     setIsTaskDialogOpen(true);
-  }
+  }, []);
 
-  const handleAddTaskClick = () => {
+  const handleAddTaskClick = useCallback(() => {
     setTaskToEdit(null);
     setIsTaskDialogOpen(true);
-  }
+  }, []);
 
 
-  const handleDragEnd = (event: DragEndEvent) => {
+  const handleDragEnd = useCallback((event: DragEndEvent) => {
     const { active, over } = event;
 
     if (firestore && selectedProject && over && active.id !== over.id) {
@@ -273,7 +288,7 @@ export function KanbanBoard() {
             description: `A tarefa foi movida para a etapa "${stage?.name}".`,
         });
     }
-  };
+  }, [firestore, selectedProject, stagesData, toast, handleUpdateTaskStatus]);
   
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -297,7 +312,23 @@ export function KanbanBoard() {
     });
   }, [tasksData, usersMap]);
 
-  const sortedStages = stagesData?.sort((a,b) => a.order - b.order) || [];
+  const stageTasksMap = useMemo(() => {
+    const map = new Map<string, typeof tasksWithDetails>();
+    for (const task of tasksWithDetails) {
+      const list = map.get(task.stageId);
+      if (list) {
+        list.push(task);
+      } else {
+        map.set(task.stageId, [task]);
+      }
+    }
+    return map;
+  }, [tasksWithDetails]);
+
+  const sortedStages = useMemo(() => {
+    if (!stagesData) return [] as Stage[];
+    return [...stagesData].sort((a,b) => a.order - b.order);
+  }, [stagesData]);
 
   if (isLoadingProjects || isLoadingUserProfile) {
     return <div className="flex justify-center items-center h-full">Carregando...</div>;
@@ -376,7 +407,7 @@ export function KanbanBoard() {
                     <KanbanColumn
                         key={stage.id}
                         stage={stage}
-                        tasks={tasksWithDetails?.filter(task => task.stageId === stage.id) || []}
+                        tasks={stageTasksMap.get(stage.id) || []}
                         onUpdateTask={handleUpdateTaskStatus}
                         onDeleteTask={handleDeleteTask}
                         onEditTask={handleEditTask}

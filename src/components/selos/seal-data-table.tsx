@@ -260,11 +260,11 @@ export function SealDataTable() {
 
   React.useEffect(() => {
     table.getColumn('productId')?.setFilterValue(deferredProductFilter);
-  }, [deferredProductFilter, table]);
+  }, [deferredProductFilter]);
 
   React.useEffect(() => {
     table.getColumn('contactId')?.setFilterValue(deferredContactFilter);
-  }, [deferredContactFilter, table]);
+  }, [deferredContactFilter]);
 
   return (
     <div>
