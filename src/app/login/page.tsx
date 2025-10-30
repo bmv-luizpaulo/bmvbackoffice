@@ -20,7 +20,7 @@ export default function LoginPage() {
         <div className="flex w-full max-w-6xl flex-col items-center justify-center gap-16 md:flex-row">
           <div className="w-full max-w-md text-center md:text-left">
             <div className="mb-4 flex items-center justify-center gap-3 md:justify-start">
-              <Image src="/image/BMV.png" alt="BMV Logo" width={40} height={40} className="text-primary" />
+              <Image src="/image/BMV.png" alt="BMV Logo" width={60} height={60} className="text-primary" />
               <h1 className="font-headline text-4xl font-bold tracking-tight text-white">
                 BMV Nexus
               </h1>
