@@ -35,7 +35,7 @@ import { Input } from "@/components/ui/input"
 import type { User } from "@/lib/types";
 import dynamic from "next/dynamic";
 import { useAuth, useFirestore, useCollection, useMemoFirebase, useUser as useAuthUser } from "@/firebase";
-import { collection, doc, setDoc, updateDoc, deleteDoc } from "firebase/firestore";
+import { collection, doc, setDoc } from "firebase/firestore";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -46,33 +46,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { FirestorePermissionError } from "@/firebase/errors";
-import { errorEmitter } from "@/firebase/error-emitter";
 import { useToast } from "@/hooks/use-toast"
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth";
+import { addDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase/non-blocking-updates"
 
 const UserFormDialog = dynamic(() => import('./user-form-dialog').then(m => m.UserFormDialog), { ssr: false });
-
-const updateDocumentNonBlocking = (ref: any, data: any) => {
-    return updateDoc(ref, data).catch(err => {
-        errorEmitter.emit('permission-error', new FirestorePermissionError({
-            path: ref.path,
-            operation: 'update',
-            requestResourceData: data,
-        }));
-        throw err;
-    });
-};
-
-const deleteDocumentNonBlocking = (ref: any) => {
-    return deleteDoc(ref).catch(err => {
-        errorEmitter.emit('permission-error', new FirestorePermissionError({
-            path: ref.path,
-            operation: 'delete',
-        }));
-        throw err;
-    });
-};
 
 export function UserDataTable() {
   const firestore = useFirestore();
@@ -89,9 +67,8 @@ export function UserDataTable() {
   const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [isAlertOpen, setIsAlertOpen] = React.useState(false);
   const [selectedUser, setSelectedUser] = React.useState<User | null>(null);
-  const [emailFilter, setEmailFilter] = React.useState("");
 
-  const handleSaveUser = async (userData: Omit<User, 'id' | 'avatarUrl'>, password?: string) => {
+  const handleSaveUser = React.useCallback(async (userData: Omit<User, 'id' | 'avatarUrl'>, password?: string) => {
     if (!firestore || !auth || !auth.currentUser) return;
 
     if (selectedUser) {
@@ -129,7 +106,7 @@ export function UserDataTable() {
             console.error("Erro ao criar usuário:", error);
             const errorMessage = error.code === 'auth/email-already-in-use' 
                 ? 'Este e-mail já está em uso por outra conta.' 
-                : error.message;
+                : 'Ocorreu um erro ao criar o usuário. Verifique a senha do gestor e tente novamente.';
             toast({ variant: 'destructive', title: "Erro ao Criar Usuário", description: errorMessage });
         } finally {
             // 3. Re-authenticate the admin user to restore their session
@@ -140,18 +117,18 @@ export function UserDataTable() {
             });
         }
     }
-};
+  }, [firestore, auth, selectedUser, toast]);
 
-  const handleDeleteUser = () => {
+  const handleDeleteUser = React.useCallback(() => {
     if (!firestore || !selectedUser) return;
     const userRef = doc(firestore, 'users', selectedUser.id);
     deleteDocumentNonBlocking(userRef);
     toast({ title: "Usuário Excluído", description: `${selectedUser.name} foi removido do sistema.` });
     setIsAlertOpen(false);
     setSelectedUser(null);
-  }
+  }, [firestore, selectedUser, toast]);
 
-  const handleRoleChange = (user: User, newRole: 'Gestor' | 'Usuario') => {
+  const handleRoleChange = React.useCallback((user: User, newRole: 'Gestor' | 'Usuario') => {
     if (!firestore) return;
     const userRef = doc(firestore, 'users', user.id);
     updateDocumentNonBlocking(userRef, { role: newRole });
@@ -159,7 +136,7 @@ export function UserDataTable() {
         title: "Permissão Alterada", 
         description: `${user.name} agora é ${newRole}.` 
     });
-  };
+  }, [firestore, toast]);
 
   const columns: ColumnDef<User>[] = React.useMemo(() => [
     {
@@ -229,15 +206,10 @@ export function UserDataTable() {
         )
       },
     },
-  ], [currentUser?.uid]);
-  
-  const filteredUsers = React.useMemo(() => {
-    return (users || []).filter(user => user.email?.toLowerCase().includes(emailFilter.toLowerCase()));
-  }, [users, emailFilter]);
-
+  ], [currentUser?.uid, handleRoleChange]);
 
   const table = useReactTable({
-    data: filteredUsers,
+    data: users || [],
     columns,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
@@ -257,9 +229,9 @@ export function UserDataTable() {
        <div className="flex items-center justify-between py-4">
         <Input
           placeholder="Filtrar por e-mail..."
-          value={emailFilter}
+          value={(table.getColumn("email")?.getFilterValue() as string) ?? ""}
           onChange={(event) =>
-            setEmailFilter(event.target.value)
+            table.getColumn("email")?.setFilterValue(event.target.value)
           }
           className="max-w-sm"
         />

@@ -24,7 +24,6 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { MoreHorizontal, Pencil, Trash2 } from "lucide-react"
 import { format, isPast, isToday, differenceInDays } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
 
 import {
   Table,
@@ -39,7 +38,7 @@ import { Input } from "@/components/ui/input"
 import type { Seal, Product, Contact } from "@/lib/types";
 import { SealFormDialog } from "./seal-form-dialog";
 import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
-import { collection, doc, addDoc, updateDoc, deleteDoc } from "firebase/firestore";
+import { collection, doc } from "firebase/firestore";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -50,43 +49,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { FirestorePermissionError } from "@/firebase/errors";
-import { errorEmitter } from "@/firebase/error-emitter";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "../ui/badge";
-import { cn } from "@/lib/utils";
-
-const addDocumentNonBlocking = (ref: any, data: any) => {
-    return addDoc(ref, data).catch(err => {
-        errorEmitter.emit('permission-error', new FirestorePermissionError({
-            path: ref.path,
-            operation: 'create',
-            requestResourceData: data,
-        }));
-        throw err;
-    });
-};
-
-const updateDocumentNonBlocking = (ref: any, data: any) => {
-    return updateDoc(ref, data).catch(err => {
-        errorEmitter.emit('permission-error', new FirestorePermissionError({
-            path: ref.path,
-            operation: 'update',
-            requestResourceData: data,
-        }));
-        throw err;
-    });
-};
-
-const deleteDocumentNonBlocking = (ref: any) => {
-    return deleteDoc(ref).catch(err => {
-        errorEmitter.emit('permission-error', new FirestorePermissionError({
-            path: ref.path,
-            operation: 'delete',
-        }));
-        throw err;
-    });
-};
+import { addDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase/non-blocking-updates"
 
 export function SealDataTable() {
   const firestore = useFirestore();
@@ -114,7 +79,7 @@ export function SealDataTable() {
 
   const isLoading = isLoadingSeals;
 
-  const handleSaveSeal = (sealData: Omit<Seal, 'id'>) => {
+  const handleSaveSeal = React.useCallback((sealData: Omit<Seal, 'id'>) => {
     if (!firestore) return;
     
     if (selectedSeal) {
@@ -125,16 +90,16 @@ export function SealDataTable() {
       addDocumentNonBlocking(collection(firestore, 'seals'), sealData);
       toast({ title: "Selo Adicionado", description: "O novo selo foi cadastrado." });
     }
-  };
+  }, [firestore, selectedSeal, toast]);
 
-  const handleDeleteSeal = () => {
+  const handleDeleteSeal = React.useCallback(() => {
     if (!firestore || !selectedSeal) return;
     const sealRef = doc(firestore, 'seals', selectedSeal.id);
     deleteDocumentNonBlocking(sealRef);
     toast({ title: "Selo Excluído", description: "O selo foi removido do sistema." });
     setIsAlertOpen(false);
     setSelectedSeal(null);
-  }
+  }, [firestore, selectedSeal, toast]);
 
   const columns: ColumnDef<Seal>[] = React.useMemo(() => [
     {

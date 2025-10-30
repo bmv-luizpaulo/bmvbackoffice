@@ -35,7 +35,7 @@ import { Input } from "@/components/ui/input"
 import type { Team, User } from "@/lib/types";
 import dynamic from "next/dynamic";
 import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
-import { collection, doc, addDoc, updateDoc, deleteDoc } from "firebase/firestore";
+import { collection, doc } from "firebase/firestore";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -46,45 +46,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { FirestorePermissionError } from "@/firebase/errors";
-import { errorEmitter } from "@/firebase/error-emitter";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
+import { addDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase/non-blocking-updates"
 
 const TeamFormDialog = dynamic(() => import('./team-form-dialog').then(m => m.TeamFormDialog), { ssr: false });
-
-const addDocumentNonBlocking = (ref: any, data: any) => {
-    return addDoc(ref, data).catch(err => {
-        errorEmitter.emit('permission-error', new FirestorePermissionError({
-            path: ref.path,
-            operation: 'create',
-            requestResourceData: data,
-        }));
-        throw err;
-    });
-};
-
-const updateDocumentNonBlocking = (ref: any, data: any) => {
-    return updateDoc(ref, data).catch(err => {
-        errorEmitter.emit('permission-error', new FirestorePermissionError({
-            path: ref.path,
-            operation: 'update',
-            requestResourceData: data,
-        }));
-        throw err;
-    });
-};
-
-const deleteDocumentNonBlocking = (ref: any) => {
-    return deleteDoc(ref).catch(err => {
-        errorEmitter.emit('permission-error', new FirestorePermissionError({
-            path: ref.path,
-            operation: 'delete',
-        }));
-        throw err;
-    });
-};
-
 
 export function TeamDataTable() {
   const firestore = useFirestore();
@@ -100,7 +66,6 @@ export function TeamDataTable() {
   const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [isAlertOpen, setIsAlertOpen] = React.useState(false);
   const [selectedTeam, setSelectedTeam] = React.useState<Team | null>(null);
-  const [nameFilter, setNameFilter] = React.useState("");
   
   const isLoading = isLoadingTeams || isLoadingUsers;
 
@@ -119,7 +84,7 @@ export function TeamDataTable() {
     return map;
   }, [users]);
 
-  const handleSaveTeam = (teamData: Omit<Team, 'id'>) => {
+  const handleSaveTeam = React.useCallback((teamData: Omit<Team, 'id'>) => {
     if (!firestore) return;
     
     if (selectedTeam) {
@@ -130,15 +95,15 @@ export function TeamDataTable() {
       // Create
       addDocumentNonBlocking(collection(firestore, 'teams'), teamData);
     }
-  };
+  }, [firestore, selectedTeam]);
 
-  const handleDeleteTeam = () => {
+  const handleDeleteTeam = React.useCallback(() => {
     if (!firestore || !selectedTeam) return;
     const teamRef = doc(firestore, 'teams', selectedTeam.id);
     deleteDocumentNonBlocking(teamRef);
     setIsAlertOpen(false);
     setSelectedTeam(null);
-  }
+  }, [firestore, selectedTeam]);
 
   const columns: ColumnDef<Team>[] = React.useMemo(() => [
     {
@@ -226,10 +191,8 @@ export function TeamDataTable() {
     },
   ], [usersByTeam]);
 
-  const dataMemo = React.useMemo(() => teams || [], [teams]);
-
   const table = useReactTable({
-    data: dataMemo,
+    data: teams || [],
     columns,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
@@ -244,20 +207,15 @@ export function TeamDataTable() {
     },
   });
 
-  React.useEffect(() => {
-    const h = setTimeout(() => {
-      table.getColumn("name")?.setFilterValue(nameFilter);
-    }, 300);
-    return () => clearTimeout(h);
-  }, [nameFilter, table]);
-
   return (
     <div>
        <div className="flex items-center justify-between py-4">
         <Input
           placeholder="Filtrar por nome..."
-          value={nameFilter}
-          onChange={(event) => setNameFilter(event.target.value)}
+          value={(table.getColumn("name")?.getFilterValue() as string) ?? ""}
+          onChange={(event) =>
+            table.getColumn("name")?.setFilterValue(event.target.value)
+          }
           className="max-w-sm"
         />
         <Button onClick={() => {setSelectedTeam(null); setIsFormOpen(true)}}>Adicionar Equipe</Button>

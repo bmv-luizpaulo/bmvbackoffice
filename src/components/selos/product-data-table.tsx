@@ -35,7 +35,7 @@ import { Input } from "@/components/ui/input"
 import type { Product } from "@/lib/types";
 import { ProductFormDialog } from "./product-form-dialog";
 import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
-import { collection, doc, addDoc, updateDoc, deleteDoc } from "firebase/firestore";
+import { collection, doc } from "firebase/firestore";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -46,41 +46,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { FirestorePermissionError } from "@/firebase/errors";
-import { errorEmitter } from "@/firebase/error-emitter";
 import { useToast } from "@/hooks/use-toast";
-
-const addDocumentNonBlocking = (ref: any, data: any) => {
-    return addDoc(ref, data).catch(err => {
-        errorEmitter.emit('permission-error', new FirestorePermissionError({
-            path: ref.path,
-            operation: 'create',
-            requestResourceData: data,
-        }));
-        throw err;
-    });
-};
-
-const updateDocumentNonBlocking = (ref: any, data: any) => {
-    return updateDoc(ref, data).catch(err => {
-        errorEmitter.emit('permission-error', new FirestorePermissionError({
-            path: ref.path,
-            operation: 'update',
-            requestResourceData: data,
-        }));
-        throw err;
-    });
-};
-
-const deleteDocumentNonBlocking = (ref: any) => {
-    return deleteDoc(ref).catch(err => {
-        errorEmitter.emit('permission-error', new FirestorePermissionError({
-            path: ref.path,
-            operation: 'delete',
-        }));
-        throw err;
-    });
-};
+import { addDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase/non-blocking-updates"
 
 export function ProductDataTable() {
   const firestore = useFirestore();
@@ -95,7 +62,7 @@ export function ProductDataTable() {
   const [isAlertOpen, setIsAlertOpen] = React.useState(false);
   const [selectedProduct, setSelectedProduct] = React.useState<Product | null>(null);
 
-  const handleSaveProduct = (productData: Omit<Product, 'id'>) => {
+  const handleSaveProduct = React.useCallback((productData: Omit<Product, 'id'>) => {
     if (!firestore) return;
     
     if (selectedProduct) {
@@ -108,18 +75,18 @@ export function ProductDataTable() {
       addDocumentNonBlocking(collection(firestore, 'products'), productData);
       toast({ title: "Produto Adicionado", description: "O novo produto foi cadastrado." });
     }
-  };
+  }, [firestore, selectedProduct, toast]);
 
-  const handleDeleteProduct = () => {
+  const handleDeleteProduct = React.useCallback(() => {
     if (!firestore || !selectedProduct) return;
     const productRef = doc(firestore, 'products', selectedProduct.id);
     deleteDocumentNonBlocking(productRef);
     toast({ title: "Produto Excluído", description: "O produto foi removido do sistema." });
     setIsAlertOpen(false);
     setSelectedProduct(null);
-  }
+  }, [firestore, selectedProduct, toast]);
 
-  const columns: ColumnDef<Product>[] = [
+  const columns: ColumnDef<Product>[] = React.useMemo(() => [
     {
       accessorKey: "name",
       header: "Nome do Produto",
@@ -165,7 +132,7 @@ export function ProductDataTable() {
         )
       },
     },
-  ]
+  ], []);
 
   const table = useReactTable({
     data: products || [],

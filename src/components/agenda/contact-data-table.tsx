@@ -36,7 +36,7 @@ import { Input } from "@/components/ui/input"
 import type { Contact } from "@/lib/types";
 import { ContactFormDialog } from "./contact-form-dialog";
 import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
-import { collection, doc, addDoc, updateDoc, deleteDoc, query, where } from "firebase/firestore";
+import { collection, doc, query, where } from "firebase/firestore";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -47,40 +47,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { FirestorePermissionError } from "@/firebase/errors";
-import { errorEmitter } from "@/firebase/error-emitter";
-
-const addDocumentNonBlocking = (ref: any, data: any) => {
-    return addDoc(ref, data).catch(err => {
-        errorEmitter.emit('permission-error', new FirestorePermissionError({
-            path: ref.path,
-            operation: 'create',
-            requestResourceData: data,
-        }));
-        throw err;
-    });
-};
-
-const updateDocumentNonBlocking = (ref: any, data: any) => {
-    return updateDoc(ref, data).catch(err => {
-        errorEmitter.emit('permission-error', new FirestorePermissionError({
-            path: ref.path,
-            operation: 'update',
-            requestResourceData: data,
-        }));
-        throw err;
-    });
-};
-
-const deleteDocumentNonBlocking = (ref: any) => {
-    return deleteDoc(ref).catch(err => {
-        errorEmitter.emit('permission-error', new FirestorePermissionError({
-            path: ref.path,
-            operation: 'delete',
-        }));
-        throw err;
-    });
-};
+import { addDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase/non-blocking-updates"
 
 interface ContactDataTableProps {
     type: 'cliente' | 'fornecedor' | 'parceiro';
@@ -98,7 +65,7 @@ export function ContactDataTable({ type }: ContactDataTableProps) {
   const [isAlertOpen, setIsAlertOpen] = React.useState(false);
   const [selectedContact, setSelectedContact] = React.useState<Contact | null>(null);
 
-  const handleSaveContact = (contactData: Omit<Contact, 'id' | 'type'>) => {
+  const handleSaveContact = React.useCallback((contactData: Omit<Contact, 'id' | 'type'>) => {
     if (!firestore) return;
     
     const dataToSave = { ...contactData, type };
@@ -111,19 +78,19 @@ export function ContactDataTable({ type }: ContactDataTableProps) {
       // Create
       addDocumentNonBlocking(collection(firestore, 'contacts'), dataToSave);
     }
-  };
+  }, [firestore, selectedContact, type]);
 
-  const handleDeleteContact = () => {
+  const handleDeleteContact = React.useCallback(() => {
     if (!firestore || !selectedContact) return;
     const contactRef = doc(firestore, 'contacts', selectedContact.id);
     deleteDocumentNonBlocking(contactRef);
     setIsAlertOpen(false);
     setSelectedContact(null);
-  }
+  }, [firestore, selectedContact]);
   
-  const typeLabel = type.charAt(0).toUpperCase() + type.slice(1);
+  const typeLabel = React.useMemo(() => type.charAt(0).toUpperCase() + type.slice(1), [type]);
 
-  const columns: ColumnDef<Contact>[] = [
+  const columns: ColumnDef<Contact>[] = React.useMemo(() => [
     {
       accessorKey: "name",
       header: "Nome",
@@ -172,7 +139,7 @@ export function ContactDataTable({ type }: ContactDataTableProps) {
         )
       },
     },
-  ]
+  ], []);
 
   const table = useReactTable({
     data: contacts || [],
