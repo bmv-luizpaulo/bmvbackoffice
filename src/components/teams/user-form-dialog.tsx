@@ -44,7 +44,7 @@ type UserFormDialogProps = {
 const formSchema = z.object({
   name: z.string().min(1, "O nome é obrigatório."),
   email: z.string().email("O e-mail é inválido."),
-  role: z.enum(['Gestor', 'Funcionário']),
+  role: z.enum(['Gestor', 'Usuario']),
   phone: z.string().optional(),
   personalDocument: z.string().optional(),
   address: z.object({
@@ -62,7 +62,7 @@ const formSchema = z.object({
 const defaultValues = {
     name: '',
     email: '',
-    role: 'Funcionário' as 'Gestor' | 'Funcionário',
+    role: 'Usuario' as 'Gestor' | 'Usuario',
     phone: '',
     personalDocument: '',
     address: {
@@ -94,7 +94,7 @@ export function UserFormDialog({ isOpen, onOpenChange, onSave, user }: UserFormD
         form.reset({
           name: user.name || '',
           email: user.email || '',
-          role: user.role || 'Funcionário',
+          role: user.role || 'Usuario',
           phone: user.phone || '',
           personalDocument: user.personalDocument || '',
           address: {
@@ -346,7 +346,7 @@ export function UserFormDialog({ isOpen, onOpenChange, onSave, user }: UserFormD
                                     </FormControl>
                                     <SelectContent>
                                         <SelectItem value="Gestor">Gestor</SelectItem>
-                                        <SelectItem value="Funcionário">Funcionário</SelectItem>
+                                        <SelectItem value="Usuario">Usuário</SelectItem>
                                     </SelectContent>
                                 </Select>
                                 <FormMessage />

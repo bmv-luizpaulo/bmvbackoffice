@@ -22,7 +22,7 @@
         "role": {
           "type": "string",
           "description": "The user's role in the system.",
-          "enum": ["Gestor", "Funcionário"]
+          "enum": ["Gestor", "Usuario"]
         },
         "phone": {
           "type": "string",

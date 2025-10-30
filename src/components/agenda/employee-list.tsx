@@ -1,4 +1,3 @@
-// This is a new file: src/components/agenda/employee-list.tsx
 'use client';
 
 import * as React from "react"
@@ -133,7 +132,7 @@ export function EmployeeList() {
             ) : (
               <TableRow>
                 <TableCell colSpan={columns.length} className="h-24 text-center">
-                  {isLoading ? "Carregando funcionários..." : "Nenhum resultado."}
+                  {isLoading ? "Carregando usuários..." : "Nenhum resultado."}
                 </TableCell>
               </TableRow>
             )}

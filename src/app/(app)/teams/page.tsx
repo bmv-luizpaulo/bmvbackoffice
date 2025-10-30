@@ -11,9 +11,9 @@ export default function TeamsPage() {
   return (
     <div className="space-y-6">
       <header>
-        <h1 className="font-headline text-3xl font-bold tracking-tight">Equipes</h1>
+        <h1 className="font-headline text-3xl font-bold tracking-tight">Usuários & Equipes</h1>
         <p className="text-muted-foreground">
-          Gerencie suas equipes, gestores, funcionários e grupos.
+          Gerencie suas equipes, gestores, usuários e grupos.
         </p>
       </header>
       <Tabs defaultValue="users">

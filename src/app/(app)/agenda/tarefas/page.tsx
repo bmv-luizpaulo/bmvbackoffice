@@ -75,10 +75,10 @@ export default function TaskAgendaPage() {
                 <div className="w-64">
                     <Select value={selectedUserId} onValueChange={setSelectedUserId}>
                         <SelectTrigger>
-                            <SelectValue placeholder="Filtrar por funcionário..." />
+                            <SelectValue placeholder="Filtrar por usuário..." />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="all">Todos os Funcionários</SelectItem>
+                            <SelectItem value="all">Todos os Usuários</SelectItem>
                             {allUsers?.map(user => (
                                 <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>
                             ))}
