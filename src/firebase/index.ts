@@ -36,9 +36,8 @@ export function getSdks(firebaseApp: FirebaseApp) {
   // Prefer initializeFirestore with options; fall back to getFirestore if it's already initialized
   let firestore;
   try {
-    // In a client component, process.env.NODE_ENV is always "production" after build.
-    // The reliable way to ensure dev-only behavior is to not check the env.
     // Forcing long polling fixes "INTERNAL ASSERTION FAILED" errors in some dev setups.
+    // This is more stable than WebSockets in environments with hot-reloading.
     firestore = initializeFirestore(firebaseApp, {
       experimentalForceLongPolling: true,
       ignoreUndefinedProperties: true,
