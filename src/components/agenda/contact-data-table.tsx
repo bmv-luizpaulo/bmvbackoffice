@@ -1,4 +1,3 @@
-// This is a new file: src/components/agenda/contact-data-table.tsx
 'use client';
 
 import * as React from "react"
@@ -22,6 +21,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { MoreHorizontal, Pencil, Trash2 } from "lucide-react"
+import dynamic from "next/dynamic";
 
 import {
   Table,
@@ -34,7 +34,6 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import type { Contact } from "@/lib/types";
-import { ContactFormDialog } from "./contact-form-dialog";
 import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { collection, doc, query, where } from "firebase/firestore";
 import {
@@ -48,6 +47,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { updateDocumentNonBlocking, deleteDocumentNonBlocking, addDocumentNonBlocking } from "@/firebase/non-blocking-updates";
+
+const ContactFormDialog = dynamic(() => import('./contact-form-dialog').then(m => m.ContactFormDialog), { ssr: false });
 
 interface ContactDataTableProps {
     type: 'cliente' | 'fornecedor' | 'parceiro';
@@ -242,28 +243,32 @@ export function ContactDataTable({ type }: ContactDataTableProps) {
         </Button>
       </div>
 
-      <ContactFormDialog 
-        isOpen={isFormOpen}
-        onOpenChange={setIsFormOpen}
-        onSave={handleSaveContact}
-        contact={selectedContact}
-        type={type}
-      />
+      {isFormOpen && (
+        <ContactFormDialog 
+          isOpen={isFormOpen}
+          onOpenChange={setIsFormOpen}
+          onSave={handleSaveContact}
+          contact={selectedContact}
+          type={type}
+        />
+      )}
       
-      <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  Esta ação não pode ser desfeita. Isso excluirá permanentemente o contato "{selectedContact?.name}".
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel onClick={() => setSelectedContact(null)}>Cancelar</AlertDialogCancel>
-                <AlertDialogAction onClick={handleDeleteContact}>Excluir</AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-      </AlertDialog>
+      {isAlertOpen && (
+        <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Esta ação não pode ser desfeita. Isso excluirá permanentemente o contato "{selectedContact?.name}".
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel onClick={() => setSelectedContact(null)}>Cancelar</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleDeleteContact}>Excluir</AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+        </AlertDialog>
+      )}
     </div>
   )
 }
