@@ -346,7 +346,7 @@ export function AddTaskDialog({ isOpen, onOpenChange, onSaveTask, stages, tasks,
                                             <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                                             </Button>
                                         </FormControl>
-                                        </PopoverContent>
+                                        </PopoverTrigger>
                                         <PopoverContent className="w-auto p-0" align="start">
                                         <Calendar
                                             mode="single"
@@ -376,5 +376,3 @@ export function AddTaskDialog({ isOpen, onOpenChange, onSaveTask, stages, tasks,
     </Dialog>
   );
 }
-
-    
