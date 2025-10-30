@@ -2,7 +2,7 @@
 
 import React, { DependencyList, createContext, useContext, ReactNode, useMemo, useState, useEffect } from 'react';
 import { FirebaseApp } from 'firebase/app';
-import { Firestore, doc, getDoc, setDoc, collection, addDoc } from 'firebase/firestore';
+import { Firestore, doc, getDoc, setDoc, collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { Auth, User, onAuthStateChanged } from 'firebase/auth';
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener'
 
@@ -90,6 +90,7 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
                 avatarUrl: firebaseUser.photoURL || `https://picsum.photos/seed/${firebaseUser.uid}/200`,
                 role: 'Gestor', // Make first user a manager
               };
+              // This is an authorized action since the user is creating their OWN doc
               await setDoc(userRef, newUserProfile);
 
                // Create a welcome notification
