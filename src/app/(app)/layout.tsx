@@ -15,6 +15,7 @@ import {
   Award,
   FileText,
   Wrench,
+  ChevronDown,
 } from 'lucide-react';
 import Image from 'next/image';
 
@@ -32,6 +33,9 @@ import {
   SidebarGroup,
   SidebarGroupLabel,
   SidebarSeparator,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  useSidebar,
 } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import {
@@ -51,6 +55,8 @@ import {
 } from '@/components/notifications/notifications-provider';
 import { NotificationBell } from '@/components/notifications/notification-bell';
 import { useEffect } from 'react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { cn } from '@/lib/utils';
 
 const navSections = [
     {
@@ -70,11 +76,17 @@ const navSections = [
         name: 'Operacional',
         items: [
             { href: '/projects', icon: ListChecks, label: 'Tarefas' },
-            { href: '/assets', icon: Building2, label: 'Ativos' },
-            { href: '/maintenance', icon: Wrench, label: 'Manutenções' },
-            { href: '/contracts', icon: Archive, label: 'Contratos' },
+            { 
+              href: '/assets', 
+              icon: Building2, 
+              label: 'Ativos',
+              subItems: [
+                { href: '/maintenance', icon: Wrench, label: 'Manutenções' },
+                { href: '/contracts', icon: Archive, label: 'Contratos' },
+                { href: '/reports', icon: FileText, label: 'Relatórios' },
+              ]
+            },
             { href: '/checklists', icon: ListChecks, label: 'Checklists' },
-            { href: '/reports', icon: FileText, label: 'Relatórios' },
         ]
     },
     {
@@ -106,6 +118,64 @@ function UserAvatar() {
             <AvatarFallback>{getInitials(user?.displayName)}</AvatarFallback>
         </Avatar>
     );
+}
+
+function NavItem({ item, pathname }: { item: (typeof navSections)[0]['items'][0], pathname: string }) {
+  const { state } = useSidebar();
+  const hasSubItems = item.subItems && item.subItems.length > 0;
+  const isParentActive = pathname.startsWith(item.href);
+  const [isOpen, setIsOpen] = React.useState(isParentActive);
+
+  useEffect(() => {
+    if (state === 'collapsed') {
+      setIsOpen(false);
+    }
+  }, [state]);
+
+  if (!hasSubItems) {
+    return (
+      <SidebarMenuItem>
+        <Link href={item.href}>
+          <SidebarMenuButton isActive={pathname.startsWith(item.href)} tooltip={item.label}>
+            <item.icon />
+            <span>{item.label}</span>
+          </SidebarMenuButton>
+        </Link>
+      </SidebarMenuItem>
+    );
+  }
+
+  return (
+     <Collapsible open={isOpen} onOpenChange={setIsOpen} className='w-full'>
+        <CollapsibleTrigger asChild>
+            <SidebarMenuButton
+                isActive={isParentActive}
+                tooltip={item.label}
+                className="justify-between"
+            >
+                <div className='flex items-center gap-2'>
+                    <item.icon />
+                    <span>{item.label}</span>
+                </div>
+                <ChevronDown className={cn("h-4 w-4 transition-transform", isOpen && "rotate-180")} />
+            </SidebarMenuButton>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+             <SidebarMenuSub>
+                {item.subItems?.map(subItem => (
+                     <SidebarMenuItem key={subItem.href}>
+                        <Link href={subItem.href}>
+                            <SidebarMenuSubButton isActive={pathname.startsWith(subItem.href)}>
+                                <subItem.icon />
+                                <span>{subItem.label}</span>
+                            </SidebarMenuSubButton>
+                        </Link>
+                    </SidebarMenuItem>
+                ))}
+            </SidebarMenuSub>
+        </CollapsibleContent>
+     </Collapsible>
+  )
 }
 
 function InnerLayout({ children }: { children: React.ReactNode }) {
@@ -174,17 +244,7 @@ function InnerLayout({ children }: { children: React.ReactNode }) {
                         {index > 0 && <SidebarSeparator />}
                         <SidebarGroupLabel>{section.name}</SidebarGroupLabel>
                         {section.items.map((item) => (
-                            <SidebarMenuItem key={item.href}>
-                                <Link href={item.href}>
-                                    <SidebarMenuButton
-                                    isActive={pathname.startsWith(item.href)}
-                                    tooltip={item.label}
-                                    >
-                                    <item.icon />
-                                    <span>{item.label}</span>
-                                    </SidebarMenuButton>
-                                </Link>
-                            </SidebarMenuItem>
+                           <NavItem key={item.href} item={item as any} pathname={pathname} />
                         ))}
                     </SidebarGroup>
                 ))}
