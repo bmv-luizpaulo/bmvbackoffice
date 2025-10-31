@@ -1,5 +1,3 @@
-
-
 'use client';
 
 import Link from 'next/link';
@@ -59,8 +57,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { useUser, useAuth } from '@/firebase';
-import { FirebaseClientProvider } from '@/firebase/client-provider';
+import { useUser, useAuth, FirebaseClientProvider } from '@/firebase';
 import { signOut } from 'firebase/auth';
 import {
   NotificationsProvider,
@@ -170,8 +167,12 @@ function NavItem({ item, pathname }: { item: (typeof navSections)[0]['items'][0]
   const [isOpen, setIsOpen] = React.useState(isParentActive);
 
   React.useEffect(() => {
-      setIsOpen(isParentActive);
-  }, [isParentActive]);
+      if (!isParentActive && state === 'expanded') {
+        // Don't close on navigation away if it's a collapsible parent
+      } else {
+        setIsOpen(isParentActive);
+      }
+  }, [isParentActive, state]);
   
   useEffect(() => {
     if (state === 'collapsed') {
@@ -204,7 +205,7 @@ function NavItem({ item, pathname }: { item: (typeof navSections)[0]['items'][0]
                     <item.icon />
                     <span>{item.label}</span>
                 </div>
-                <ChevronDown className={cn("h-4 w-4 transition-transform", isOpen && "rotate-180", isParentActive && "text-sidebar-accent-foreground")} />
+                <ChevronDown className={cn("h-4 w-4 shrink-0 transition-transform", isOpen && "rotate-180")} />
             </SidebarMenuButton>
         </CollapsibleTrigger>
         <CollapsibleContent>
