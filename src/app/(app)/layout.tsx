@@ -169,8 +169,6 @@ function NavItem({ item, pathname }: { item: (typeof navSections)[0]['items'][0]
     }
   }, [state]);
   
-  const isDummyLink = item.href === '#';
-
   if (!hasSubItems) {
     return (
       <SidebarMenuItem>
