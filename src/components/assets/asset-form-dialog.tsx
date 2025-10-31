@@ -33,6 +33,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { Calendar } from "../ui/calendar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import type { Asset, User } from "@/lib/types";
+import { Separator } from "../ui/separator";
 
 type AssetFormDialogProps = {
   isOpen: boolean;
@@ -52,7 +53,13 @@ const formSchema = z.object({
   purchaseDate: z.date().optional(),
   purchaseValue: z.coerce.number().optional(),
   assigneeId: z.string().optional(),
+  lastMaintenanceDate: z.date().optional(),
+  nextMaintenanceDate: z.date().optional(),
+}).refine(data => !data.nextMaintenanceDate || !data.lastMaintenanceDate || data.nextMaintenanceDate > data.lastMaintenanceDate, {
+    message: "A próxima manutenção deve ser após a última.",
+    path: ["nextMaintenanceDate"],
 });
+
 
 export function AssetFormDialog({ isOpen, onOpenChange, onSave, asset, users }: AssetFormDialogProps) {
   
@@ -73,6 +80,8 @@ export function AssetFormDialog({ isOpen, onOpenChange, onSave, asset, users }: 
         form.reset({
           ...asset,
           purchaseDate: asset.purchaseDate ? new Date(asset.purchaseDate) : undefined,
+          lastMaintenanceDate: asset.lastMaintenanceDate ? new Date(asset.lastMaintenanceDate) : undefined,
+          nextMaintenanceDate: asset.nextMaintenanceDate ? new Date(asset.nextMaintenanceDate) : undefined,
           purchaseValue: asset.purchaseValue || 0,
         });
       } else {
@@ -86,6 +95,8 @@ export function AssetFormDialog({ isOpen, onOpenChange, onSave, asset, users }: 
             assigneeId: undefined,
             type: undefined,
             status: undefined,
+            lastMaintenanceDate: undefined,
+            nextMaintenanceDate: undefined,
         });
       }
     }
@@ -96,6 +107,8 @@ export function AssetFormDialog({ isOpen, onOpenChange, onSave, asset, users }: 
     const assetData = {
         ...values,
         purchaseDate: values.purchaseDate?.toISOString(),
+        lastMaintenanceDate: values.lastMaintenanceDate?.toISOString(),
+        nextMaintenanceDate: values.nextMaintenanceDate?.toISOString(),
     };
     onSave(assetData, asset?.id);
     onOpenChange(false);
@@ -289,6 +302,90 @@ export function AssetFormDialog({ isOpen, onOpenChange, onSave, asset, users }: 
                         </FormItem>
                     )}
                 />
+                <Separator />
+                <div>
+                  <h3 className="text-base font-medium mb-2">Manutenção</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                     <FormField
+                        control={form.control}
+                        name="lastMaintenanceDate"
+                        render={({ field }) => (
+                            <FormItem className="flex flex-col">
+                            <FormLabel>Última Manutenção</FormLabel>
+                            <Popover>
+                                <PopoverTrigger asChild>
+                                <FormControl>
+                                    <Button
+                                    variant={"outline"}
+                                    className={cn(
+                                        "w-full pl-3 text-left font-normal",
+                                        !field.value && "text-muted-foreground"
+                                    )}
+                                    >
+                                    {field.value ? (
+                                        format(field.value, "PPP", { locale: ptBR })
+                                    ) : (
+                                        <span>Escolha uma data</span>
+                                    )}
+                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                    </Button>
+                                </FormControl>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0" align="start">
+                                <Calendar
+                                    mode="single"
+                                    selected={field.value}
+                                    onSelect={field.onChange}
+                                    locale={ptBR}
+                                    initialFocus
+                                />
+                                </PopoverContent>
+                            </Popover>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                     <FormField
+                        control={form.control}
+                        name="nextMaintenanceDate"
+                        render={({ field }) => (
+                            <FormItem className="flex flex-col">
+                            <FormLabel>Próxima Manutenção</FormLabel>
+                            <Popover>
+                                <PopoverTrigger asChild>
+                                <FormControl>
+                                    <Button
+                                    variant={"outline"}
+                                    className={cn(
+                                        "w-full pl-3 text-left font-normal",
+                                        !field.value && "text-muted-foreground"
+                                    )}
+                                    >
+                                    {field.value ? (
+                                        format(field.value, "PPP", { locale: ptBR })
+                                    ) : (
+                                        <span>Escolha uma data</span>
+                                    )}
+                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                    </Button>
+                                </FormControl>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0" align="start">
+                                <Calendar
+                                    mode="single"
+                                    selected={field.value}
+                                    onSelect={field.onChange}
+                                    locale={ptBR}
+                                    initialFocus
+                                />
+                                </PopoverContent>
+                            </Popover>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                  </div>
+                </div>
                 <DialogFooter className="pt-4">
                     <DialogClose asChild>
                         <Button type="button" variant="outline">Cancelar</Button>

@@ -22,7 +22,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuCheckboxItem
 } from "@/components/ui/dropdown-menu"
-import { MoreHorizontal, Pencil, Trash2 } from "lucide-react"
+import { MoreHorizontal, Pencil, Trash2, History } from "lucide-react"
 
 import {
   Table,
@@ -35,8 +35,8 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import type { Asset, User } from "@/lib/types";
-import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
-import { collection, doc } from "firebase/firestore";
+import { useFirestore, useCollection, useMemoFirebase, useUser as useAuthUser } from "@/firebase";
+import { collection, doc, addDoc, serverTimestamp } from "firebase/firestore";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -54,9 +54,11 @@ import dynamic from "next/dynamic";
 import { format } from "date-fns";
 
 const AssetFormDialog = dynamic(() => import('./asset-form-dialog').then(m => m.AssetFormDialog), { ssr: false });
+const AssetHistoryDialog = dynamic(() => import('./asset-history-dialog').then(m => m.AssetHistoryDialog), { ssr: false });
 
 export function AssetDataTable() {
   const firestore = useFirestore();
+  const { user: authUser } = useAuthUser();
   const { toast } = useToast();
 
   const assetsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'assets') : null, [firestore]);
@@ -74,13 +76,31 @@ export function AssetDataTable() {
   
   const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [isAlertOpen, setIsAlertOpen] = React.useState(false);
+  const [isHistoryOpen, setIsHistoryOpen] = React.useState(false);
   const [selectedAsset, setSelectedAsset] = React.useState<Asset | null>(null);
 
   const isLoading = isLoadingAssets || isLoadingUsers;
 
+  const logHistory = React.useCallback(async (assetId: string, event: string, details: Record<string, any> = {}) => {
+      if (!firestore || !authUser) return;
+      const historyCollection = collection(firestore, 'assets', assetId, 'history');
+      await addDoc(historyCollection, {
+        assetId,
+        event,
+        details,
+        actorId: authUser.uid,
+        timestamp: serverTimestamp(),
+      });
+  }, [firestore, authUser]);
+
   const handleEditClick = React.useCallback((asset: Asset) => {
     setSelectedAsset(asset);
     setIsFormOpen(true);
+  }, []);
+  
+  const handleHistoryClick = React.useCallback((asset: Asset) => {
+    setSelectedAsset(asset);
+    setIsHistoryOpen(true);
   }, []);
 
   const handleDeleteClick = React.useCallback((asset: Asset) => {
@@ -88,27 +108,42 @@ export function AssetDataTable() {
     setIsAlertOpen(true);
   }, []);
 
-  const handleSaveAsset = React.useCallback((assetData: Omit<Asset, 'id'>, assetId?: string) => {
+  const handleSaveAsset = React.useCallback(async (assetData: Omit<Asset, 'id'>, assetId?: string) => {
     if (!firestore) return;
     
     if (assetId) {
       const assetRef = doc(firestore, 'assets', assetId);
-      updateDocumentNonBlocking(assetRef, assetData);
+      const originalAsset = assetsData?.find(a => a.id === assetId);
+
+      await updateDocumentNonBlocking(assetRef, assetData);
+
+      if (originalAsset?.assigneeId !== assetData.assigneeId) {
+          await logHistory(assetId, 'Atribuição Alterada', { 
+            from: usersMap.get(originalAsset?.assigneeId || '') || 'Ninguém', 
+            to: usersMap.get(assetData.assigneeId || '') || 'Ninguém'
+          });
+      }
       toast({ title: "Ativo Atualizado", description: "O ativo foi atualizado com sucesso." });
     } else {
-      addDocumentNonBlocking(collection(firestore, 'assets'), assetData);
+      const newDocRef = await addDocumentNonBlocking(collection(firestore, 'assets'), assetData);
+      await logHistory(newDocRef.id, 'Ativo Criado');
+      if (assetData.assigneeId) {
+          await logHistory(newDocRef.id, 'Atribuição Inicial', { to: usersMap.get(assetData.assigneeId) || 'N/A' });
+      }
       toast({ title: "Ativo Adicionado", description: "O novo ativo foi cadastrado." });
     }
-  }, [firestore, toast]);
+  }, [firestore, toast, assetsData, logHistory, usersMap]);
 
-  const handleDeleteAsset = React.useCallback(() => {
+  const handleDeleteAsset = React.useCallback(async () => {
     if (!firestore || !selectedAsset) return;
+    // Log deletion before actually deleting
+    await logHistory(selectedAsset.id, 'Ativo Excluído');
     const assetRef = doc(firestore, 'assets', selectedAsset.id);
     deleteDocumentNonBlocking(assetRef);
     toast({ title: "Ativo Excluído", description: "O ativo foi removido do sistema." });
     setIsAlertOpen(false);
     setSelectedAsset(null);
-  }, [firestore, selectedAsset, toast]);
+  }, [firestore, selectedAsset, toast, logHistory]);
   
   const handleAddNewClick = React.useCallback(() => {
     setSelectedAsset(null);
@@ -140,9 +175,9 @@ export function AssetDataTable() {
       header: "Localização",
     },
     {
-        accessorKey: "purchaseDate",
-        header: "Data da Compra",
-        cell: ({ row }) => row.original.purchaseDate ? format(new Date(row.original.purchaseDate), 'dd/MM/yyyy') : 'N/A',
+        accessorKey: "nextMaintenanceDate",
+        header: "Próxima Manutenção",
+        cell: ({ row }) => row.original.nextMaintenanceDate ? format(new Date(row.original.nextMaintenanceDate), 'dd/MM/yyyy') : <span className="text-muted-foreground">N/A</span>,
     },
     {
       id: "actions",
@@ -162,6 +197,10 @@ export function AssetDataTable() {
                 <Pencil className="mr-2 h-4 w-4" />
                 Editar
               </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleHistoryClick(asset)}>
+                <History className="mr-2 h-4 w-4" />
+                Ver Histórico
+              </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem 
                 className="text-red-600"
@@ -175,7 +214,7 @@ export function AssetDataTable() {
         )
       },
     },
-  ], [usersMap, handleEditClick, handleDeleteClick]);
+  ], [usersMap, handleEditClick, handleDeleteClick, handleHistoryClick]);
 
   const table = useReactTable({
     data,
@@ -234,7 +273,7 @@ export function AssetDataTable() {
                              column.id === 'status' ? 'Status' :
                              column.id === 'assigneeId' ? 'Responsável' :
                              column.id === 'location' ? 'Localização' :
-                             column.id === 'purchaseDate' ? 'Data da Compra' :
+                             column.id === 'nextMaintenanceDate' ? 'Próx. Manutenção' :
                              column.id
                             }
                         </DropdownMenuCheckboxItem>
@@ -314,6 +353,13 @@ export function AssetDataTable() {
         onSave={handleSaveAsset}
         asset={selectedAsset}
         users={usersData || []}
+      />}
+
+      {isHistoryOpen && <AssetHistoryDialog
+        isOpen={isHistoryOpen}
+        onOpenChange={setIsHistoryOpen}
+        asset={selectedAsset}
+        usersMap={usersMap}
       />}
       
       {isAlertOpen && <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>

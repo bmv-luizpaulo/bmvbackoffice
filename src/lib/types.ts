@@ -177,5 +177,26 @@ export type Asset = {
     purchaseDate?: string;
     purchaseValue?: number;
     assigneeId?: string;
+    lastMaintenanceDate?: string;
+    nextMaintenanceDate?: string;
 };
+
+export type AssetHistory = {
+    id: string;
+    assetId: string;
+    event: string;
+    details?: Record<string, any>;
+    actorId: string;
+    timestamp: string;
+}
+
+export type AssetMaintenance = {
+    id: string;
+    assetId: string;
+    scheduledDate: string;
+    completedDate?: string;
+    description: string;
+    cost?: number;
+    status: 'Agendada' | 'Em Andamento' | 'Concluída' | 'Cancelada';
+}
     
