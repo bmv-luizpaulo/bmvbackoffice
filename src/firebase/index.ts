@@ -76,28 +76,8 @@ export function useMemoFirebase<T>(factory: () => T, deps: DependencyList): T {
 }
 
 /**
- * Initiates a setDoc operation for a document reference.
- * Does NOT await the write operation internally.
- */
-export function setDocumentNonBlocking(docRef: DocumentReference, data: any, options: SetOptions) {
-  setDoc(docRef, data, options).catch(error => {
-    errorEmitter.emit(
-      'permission-error',
-      new FirestorePermissionError({
-        path: docRef.path,
-        operation: 'write', // or 'create'/'update' based on options
-        requestResourceData: data,
-      })
-    )
-  })
-  // Execution continues immediately
-}
-
-
-/**
  * Initiates an addDoc operation for a collection reference.
- * Does NOT await the write operation internally.
- * Returns the Promise for the new doc ref, but typically not awaited by caller.
+ * Awaits the write operation internally and returns the DocumentReference.
  */
 export function addDocumentNonBlocking(colRef: CollectionReference, data: any): Promise<DocumentReference<DocumentData>> {
   const promise = addDoc(colRef, data);
@@ -112,6 +92,23 @@ export function addDocumentNonBlocking(colRef: CollectionReference, data: any): 
       )
     });
   return promise;
+}
+
+/**
+ * Initiates a setDoc operation for a document reference.
+ * Does NOT await the write operation internally.
+ */
+export function setDocumentNonBlocking(docRef: DocumentReference, data: any, options?: SetOptions) {
+  setDoc(docRef, data, options || {}).catch(error => {
+    errorEmitter.emit(
+      'permission-error',
+      new FirestorePermissionError({
+        path: docRef.path,
+        operation: 'write', // or 'create'/'update' based on options
+        requestResourceData: data,
+      })
+    )
+  })
 }
 
 
