@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
+import { useForm, useFieldArray } from "react-hook-form";
 import { z } from "zod";
 
 import {
@@ -27,17 +27,33 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from "../ui/textarea";
 import type { Role } from "@/lib/types";
 import { Switch } from "../ui/switch";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "../ui/accordion";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
+import { PlusCircle, Trash2 } from "lucide-react";
+import { ScrollArea } from "../ui/scroll-area";
 
 type RoleFormDialogProps = {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
   onSave: (role: Omit<Role, 'id'>, roleId?: string) => void;
   role?: Role | null;
+  allRoles: Role[];
 };
 
 const formSchema = z.object({
   name: z.string().min(1, "O nome do cargo é obrigatório."),
+  department: z.enum(['Operações', 'TI', 'Financeiro', 'Comercial', 'RH', 'Administrativo'], { required_error: "O departamento é obrigatório."}),
+  hierarchyLevel: z.enum(['Diretoria', 'Gerência', 'Coordenação', 'Analista', 'Assistente', 'Estagiário'], { required_error: "O nível hierárquico é obrigatório."}),
+  supervisorRoleId: z.string().optional(),
   description: z.string().optional(),
+  mission: z.string().optional(),
+  responsibilities: z.array(z.object({ value: z.string() })).optional(),
+  kpis: z.array(z.object({ value: z.string() })).optional(),
+  requiredSkills: z.array(z.object({ value: z.string() })).optional(),
+  salaryRange: z.object({
+    min: z.coerce.number().optional(),
+    max: z.coerce.number().optional(),
+  }).optional(),
   isManager: z.boolean().default(false),
   isDev: z.boolean().default(false),
 });
@@ -45,15 +61,25 @@ const formSchema = z.object({
 const defaultValues = {
   name: '',
   description: '',
+  mission: '',
   isManager: false,
   isDev: false,
+  responsibilities: [],
+  kpis: [],
+  requiredSkills: [],
+  salaryRange: { min: undefined, max: undefined },
 };
 
-export function RoleFormDialog({ isOpen, onOpenChange, onSave, role }: RoleFormDialogProps) {
+export function RoleFormDialog({ isOpen, onOpenChange, onSave, role, allRoles }: RoleFormDialogProps) {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues,
   });
+
+  const { fields: respFields, append: appendResp, remove: removeResp } = useFieldArray({ control: form.control, name: "responsibilities" });
+  const { fields: kpiFields, append: appendKpi, remove: removeKpi } = useFieldArray({ control: form.control, name: "kpis" });
+  const { fields: skillFields, append: appendSkill, remove: removeSkill } = useFieldArray({ control: form.control, name: "requiredSkills" });
+
 
   React.useEffect(() => {
     if (isOpen) {
@@ -61,6 +87,17 @@ export function RoleFormDialog({ isOpen, onOpenChange, onSave, role }: RoleFormD
          form.reset({
           name: role.name, 
           description: role.description || '', 
+          department: role.department,
+          hierarchyLevel: role.hierarchyLevel,
+          supervisorRoleId: role.supervisorRoleId || '',
+          mission: role.mission || '',
+          responsibilities: role.responsibilities?.map(value => ({ value })) || [],
+          kpis: role.kpis?.map(value => ({ value })) || [],
+          requiredSkills: role.requiredSkills?.map(value => ({ value })) || [],
+          salaryRange: {
+            min: role.salaryRange?.min || undefined,
+            max: role.salaryRange?.max || undefined,
+          },
           isManager: role.isManager || false,
           isDev: role.isDev || false,
         });
@@ -72,96 +109,136 @@ export function RoleFormDialog({ isOpen, onOpenChange, onSave, role }: RoleFormD
 
 
   function onSubmit(values: z.infer<typeof formSchema>) {
-    onSave(values, role?.id);
+    const finalData = {
+        ...values,
+        responsibilities: values.responsibilities?.map(item => item.value).filter(Boolean),
+        kpis: values.kpis?.map(item => item.value).filter(Boolean),
+        requiredSkills: values.requiredSkills?.map(item => item.value).filter(Boolean),
+    };
+    onSave(finalData, role?.id);
     onOpenChange(false);
   }
   
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-xl">
+      <DialogContent className="max-w-3xl">
         <DialogHeader>
           <DialogTitle>{role ? 'Editar Cargo' : 'Adicionar Novo Cargo'}</DialogTitle>
           <DialogDescription>
-            Gerencie o nome, a descrição e as permissões do cargo.
+            Preencha todos os detalhes e especificações do cargo.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
-                <FormField
-                    control={form.control}
-                    name="name"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Nome do Cargo</FormLabel>
-                        <FormControl>
-                            <Input placeholder="Ex: Desenvolvedor, Vendedor" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                />
-                <FormField
-                    control={form.control}
-                    name="description"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Descrição</FormLabel>
-                        <FormControl>
-                            <Textarea placeholder="Descreva as responsabilidades deste cargo..." {...field} />
-                        </FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                />
-                 <FormField
-                    control={form.control}
-                    name="isManager"
-                    render={({ field }) => (
-                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
-                            <div className="space-y-0.5">
-                                <FormLabel>Permissão de Gestor</FormLabel>
-                                <FormMessage />
-                                <p className="text-xs text-muted-foreground">
-                                    Concede acesso de visualização a todos os dados do sistema.
-                                </p>
-                            </div>
-                            <FormControl>
-                                <Switch
-                                checked={field.value}
-                                onCheckedChange={field.onChange}
-                                />
-                            </FormControl>
-                        </FormItem>
-                    )}
-                />
-                 <FormField
-                    control={form.control}
-                    name="isDev"
-                    render={({ field }) => (
-                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
-                            <div className="space-y-0.5">
-                                <FormLabel>Permissão de Desenvolvedor</FormLabel>
-                                <FormMessage />
-                                <p className="text-xs text-muted-foreground">
-                                    Concede acesso total de leitura e escrita em todo o sistema.
-                                </p>
-                            </div>
-                            <FormControl>
-                                <Switch
-                                checked={field.value}
-                                onCheckedChange={field.onChange}
-                                />
-                            </FormControl>
-                        </FormItem>
-                    )}
-                />
+            <form onSubmit={form.handleSubmit(onSubmit)}>
+              <ScrollArea className="h-[70vh] pr-6">
+                <Accordion type="multiple" defaultValue={['item-1', 'item-2']} className="w-full space-y-4">
+                  
+                  <AccordionItem value="item-1">
+                    <AccordionTrigger className="font-semibold text-lg">1. Identificação do Cargo</AccordionTrigger>
+                    <AccordionContent className="space-y-4 pt-4">
+                      <FormField control={form.control} name="name" render={({ field }) => (
+                          <FormItem><FormLabel>Nome do Cargo</FormLabel><FormControl><Input placeholder="Ex: Gestor de Operações" {...field} /></FormControl><FormMessage /></FormItem>
+                      )}/>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <FormField control={form.control} name="department" render={({ field }) => (
+                          <FormItem><FormLabel>Departamento</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Selecione um departamento" /></SelectTrigger></FormControl><SelectContent><SelectItem value="Operações">Operações</SelectItem><SelectItem value="TI">TI</SelectItem><SelectItem value="Financeiro">Financeiro</SelectItem><SelectItem value="Comercial">Comercial</SelectItem><SelectItem value="RH">RH</SelectItem><SelectItem value="Administrativo">Administrativo</SelectItem></SelectContent></Select><FormMessage /></FormItem>
+                        )}/>
+                        <FormField control={form.control} name="hierarchyLevel" render={({ field }) => (
+                          <FormItem><FormLabel>Nível Hierárquico</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Selecione um nível" /></SelectTrigger></FormControl><SelectContent><SelectItem value="Diretoria">Diretoria</SelectItem><SelectItem value="Gerência">Gerência</SelectItem><SelectItem value="Coordenação">Coordenação</SelectItem><SelectItem value="Analista">Analista</SelectItem><SelectItem value="Assistente">Assistente</SelectItem><SelectItem value="Estagiário">Estagiário</SelectItem></SelectContent></Select><FormMessage /></FormItem>
+                        )}/>
+                      </div>
+                      <FormField control={form.control} name="supervisorRoleId" render={({ field }) => (
+                        <FormItem><FormLabel>Superior Imediato</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Selecione o cargo supervisor" /></SelectTrigger></FormControl><SelectContent><SelectItem value="">Nenhum</SelectItem>{allRoles.filter(r => r.id !== role?.id).map(r => (<SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>
+                      )}/>
+                    </AccordionContent>
+                  </AccordionItem>
 
-                <DialogFooter>
-                    <DialogClose asChild>
-                        <Button type="button" variant="outline">Cancelar</Button>
-                    </DialogClose>
-                    <Button type="submit">Salvar</Button>
-                </DialogFooter>
+                  <AccordionItem value="item-2">
+                    <AccordionTrigger className="font-semibold text-lg">2. Descrição Geral</AccordionTrigger>
+                    <AccordionContent className="space-y-4 pt-4">
+                      <FormField control={form.control} name="description" render={({ field }) => (
+                        <FormItem><FormLabel>Resumo do Cargo</FormLabel><FormControl><Textarea placeholder="Breve descrição da função e objetivo principal." {...field} /></FormControl><FormMessage /></FormItem>
+                      )}/>
+                      <FormField control={form.control} name="mission" render={({ field }) => (
+                        <FormItem><FormLabel>Missão / Objetivo do Cargo</FormLabel><FormControl><Textarea placeholder="O 'porquê' da função existir — foco estratégico." {...field} /></FormControl><FormMessage /></FormItem>
+                      )}/>
+                    </AccordionContent>
+                  </AccordionItem>
+
+                  <AccordionItem value="item-3">
+                    <AccordionTrigger className="font-semibold text-lg">3. Responsabilidades e KPIs</AccordionTrigger>
+                    <AccordionContent className="space-y-6 pt-4">
+                      <div className="space-y-2">
+                        <FormLabel>Principais Responsabilidades</FormLabel>
+                        {respFields.map((field, index) => (
+                          <div key={field.id} className="flex items-center gap-2">
+                            <FormField control={form.control} name={`responsibilities.${index}.value`} render={({ field }) => (
+                              <FormItem className="flex-1"><FormControl><Input {...field} placeholder={`Responsabilidade #${index + 1}`} /></FormControl><FormMessage /></FormItem>
+                            )}/>
+                            <Button type="button" variant="ghost" size="icon" onClick={() => removeResp(index)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                          </div>
+                        ))}
+                        <Button type="button" variant="outline" size="sm" onClick={() => appendResp({ value: '' })}><PlusCircle className="mr-2 h-4 w-4"/>Adicionar Responsabilidade</Button>
+                      </div>
+                       <div className="space-y-2">
+                        <FormLabel>Indicadores de Desempenho (KPIs)</FormLabel>
+                        {kpiFields.map((field, index) => (
+                          <div key={field.id} className="flex items-center gap-2">
+                            <FormField control={form.control} name={`kpis.${index}.value`} render={({ field }) => (
+                              <FormItem className="flex-1"><FormControl><Input {...field} placeholder={`KPI #${index + 1}`} /></FormControl><FormMessage /></FormItem>
+                            )}/>
+                            <Button type="button" variant="ghost" size="icon" onClick={() => removeKpi(index)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                          </div>
+                        ))}
+                        <Button type="button" variant="outline" size="sm" onClick={() => appendKpi({ value: '' })}><PlusCircle className="mr-2 h-4 w-4"/>Adicionar KPI</Button>
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
+                  
+                   <AccordionItem value="item-4">
+                    <AccordionTrigger className="font-semibold text-lg">4. Competências e Salário</AccordionTrigger>
+                    <AccordionContent className="space-y-6 pt-4">
+                        <div className="space-y-2">
+                            <FormLabel>Competências Técnicas e Comportamentais</FormLabel>
+                            {skillFields.map((field, index) => (
+                            <div key={field.id} className="flex items-center gap-2">
+                                <FormField control={form.control} name={`requiredSkills.${index}.value`} render={({ field }) => (
+                                <FormItem className="flex-1"><FormControl><Input {...field} placeholder={`Competência #${index + 1}`} /></FormControl><FormMessage /></FormItem>
+                                )}/>
+                                <Button type="button" variant="ghost" size="icon" onClick={() => removeSkill(index)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                            </div>
+                            ))}
+                            <Button type="button" variant="outline" size="sm" onClick={() => appendSkill({ value: '' })}><PlusCircle className="mr-2 h-4 w-4"/>Adicionar Competência</Button>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                             <FormField control={form.control} name="salaryRange.min" render={({ field }) => (
+                                <FormItem><FormLabel>Faixa Salarial (Mínimo)</FormLabel><FormControl><Input type="number" placeholder="Ex: 3000" {...field} /></FormControl><FormMessage /></FormItem>
+                            )}/>
+                             <FormField control={form.control} name="salaryRange.max" render={({ field }) => (
+                                <FormItem><FormLabel>Faixa Salarial (Máximo)</FormLabel><FormControl><Input type="number" placeholder="Ex: 5000" {...field} /></FormControl><FormMessage /></FormItem>
+                            )}/>
+                        </div>
+                    </AccordionContent>
+                  </AccordionItem>
+
+                  <AccordionItem value="item-5">
+                    <AccordionTrigger className="font-semibold text-lg">5. Permissões de Acesso</AccordionTrigger>
+                    <AccordionContent className="space-y-4 pt-4">
+                      <FormField control={form.control} name="isManager" render={({ field }) => (
+                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm"><div className="space-y-0.5"><FormLabel>Permissão de Gestor</FormLabel><p className="text-xs text-muted-foreground">Concede acesso de visualização a todos os dados do sistema.</p></div><FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl></FormItem>
+                      )}/>
+                      <FormField control={form.control} name="isDev" render={({ field }) => (
+                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm"><div className="space-y-0.5"><FormLabel>Permissão de Desenvolvedor</FormLabel><p className="text-xs text-muted-foreground">Concede acesso total de leitura e escrita em todo o sistema.</p></div><FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl></FormItem>
+                      )}/>
+                    </AccordionContent>
+                  </AccordionItem>
+
+                </Accordion>
+              </ScrollArea>
+              <DialogFooter className="pt-6">
+                  <DialogClose asChild><Button type="button" variant="outline">Cancelar</Button></DialogClose>
+                  <Button type="submit">Salvar Cargo</Button>
+              </DialogFooter>
             </form>
         </Form>
       </DialogContent>

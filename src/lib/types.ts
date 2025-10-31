@@ -113,9 +113,21 @@ export type Role = {
     id: string;
     name: string;
     description?: string;
+    department?: 'Operações' | 'TI' | 'Financeiro' | 'Comercial' | 'RH' | 'Administrativo';
+    hierarchyLevel?: 'Diretoria' | 'Gerência' | 'Coordenação' | 'Analista' | 'Assistente' | 'Estagiário';
+    supervisorRoleId?: string;
+    mission?: string;
+    responsibilities?: string[];
+    kpis?: string[];
+    requiredSkills?: string[];
+    salaryRange?: {
+        min?: number;
+        max?: number;
+    };
     isManager?: boolean;
     isDev?: boolean;
-}
+};
+
 
 export type ProjectFile = {
     id: string;

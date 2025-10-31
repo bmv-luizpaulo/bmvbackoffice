@@ -32,10 +32,10 @@ import {
 } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import type { Role } from "@/lib/types";
+import type { Role, User } from "@/lib/types";
 import dynamic from "next/dynamic";
 import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
-import { collection, doc } from "firebase/firestore";
+import { collection, doc, query, where, getDocs } from "firebase/firestore";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -58,6 +58,7 @@ export function RoleDataTable() {
   
   const rolesQuery = useMemoFirebase(() => firestore ? collection(firestore, 'roles') : null, [firestore]);
   const { data: rolesData, isLoading: isLoadingRoles } = useCollection<Role>(rolesQuery);
+  const { data: usersData, isLoading: isLoadingUsers } = useCollection<User>(useMemoFirebase(() => firestore ? collection(firestore, 'users') : null, [firestore]));
   
   const data = React.useMemo(() => rolesData ?? [], [rolesData]);
 
@@ -68,7 +69,7 @@ export function RoleDataTable() {
   const [isAlertOpen, setIsAlertOpen] = React.useState(false);
   const [selectedRole, setSelectedRole] = React.useState<Role | null>(null);
   
-  const isLoading = isLoadingRoles;
+  const isLoading = isLoadingRoles || isLoadingUsers;
 
   const handleEditClick = React.useCallback((role: Role) => {
     setSelectedRole(role);
@@ -98,8 +99,24 @@ export function RoleDataTable() {
   const handleDeleteRole = React.useCallback(async () => {
     if (!firestore || !selectedRole) return;
     
-    // TODO: Check if any user has this role before deleting
-    
+    // Check if any user has this role
+    const usersWithRoleQuery = query(collection(firestore, 'users'), where('roleId', '==', selectedRole.id));
+    const usersWithRoleSnap = await getDocs(usersWithRoleQuery);
+    if (!usersWithRoleSnap.empty) {
+        toast({ title: "Exclusão Falhou", description: `Não é possível excluir o cargo "${selectedRole.name}" pois ele está atribuído a ${usersWithRoleSnap.size} usuário(s).`, variant: 'destructive' });
+        setIsAlertOpen(false);
+        return;
+    }
+
+    // Check if this role is a supervisor for another role
+    const subordinateRolesQuery = query(collection(firestore, 'roles'), where('supervisorRoleId', '==', selectedRole.id));
+    const subordinateRolesSnap = await getDocs(subordinateRolesQuery);
+     if (!subordinateRolesSnap.empty) {
+        toast({ title: "Exclusão Falhou", description: `Não é possível excluir o cargo "${selectedRole.name}" pois ele é o supervisor de outros ${subordinateRolesSnap.size} cargo(s).`, variant: 'destructive' });
+        setIsAlertOpen(false);
+        return;
+    }
+
     const roleRef = doc(firestore, 'roles', selectedRole.id);
     deleteDocumentNonBlocking(roleRef);
     
@@ -115,19 +132,24 @@ export function RoleDataTable() {
       cell: ({ row }) => <span className="font-medium">{row.original.name}</span>,
     },
     {
+      accessorKey: "department",
+      header: "Departamento",
+      cell: ({ row }) => row.original.department || <span className="text-muted-foreground">N/D</span>
+    },
+    {
       accessorKey: "description",
       header: "Descrição",
       cell: ({ row }) => <p className="text-muted-foreground max-w-xs truncate">{row.original.description}</p>
     },
     {
         accessorKey: "isManager",
-        header: "Permissões de Gestor",
-        cell: ({ row }) => row.original.isManager ? <Badge>Sim</Badge> : <Badge variant="secondary">Não</Badge>
-    },
-    {
-        accessorKey: "isDev",
-        header: "Permissão de Desenvolvedor",
-        cell: ({ row }) => row.original.isDev ? <Badge variant="destructive">Sim</Badge> : <Badge variant="secondary">Não</Badge>
+        header: "Permissões",
+        cell: ({ row }) => (
+            <div className="flex gap-2">
+                {row.original.isManager && <Badge>Gestor</Badge>}
+                {row.original.isDev && <Badge variant="destructive">Dev</Badge>}
+            </div>
+        )
     },
     {
       id: "actions",
@@ -262,6 +284,7 @@ export function RoleDataTable() {
           onOpenChange={setIsFormOpen}
           onSave={handleSaveRole}
           role={selectedRole}
+          allRoles={rolesData || []}
         />
       )}
 

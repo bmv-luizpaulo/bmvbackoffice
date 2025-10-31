@@ -218,26 +218,67 @@
     "Role": {
       "title": "Role",
       "type": "object",
-      "description": "Represents a user role within the organization.",
+      "description": "Represents a user role within the organization with detailed HR information.",
       "properties": {
         "name": {
           "type": "string",
-          "description": "Name of the role."
+          "description": "Name of the role (e.g., 'Operations Manager')."
         },
         "description": {
           "type": "string",
-          "description": "Description of the role's permissions and responsibilities."
+          "description": "A brief summary of the role's main purpose."
+        },
+        "department": {
+          "type": "string",
+          "description": "The department the role belongs to.",
+          "enum": ["Operações", "TI", "Financeiro", "Comercial", "RH", "Administrativo"]
+        },
+        "hierarchyLevel": {
+          "type": "string",
+          "description": "The hierarchical level of the role.",
+          "enum": ["Diretoria", "Gerência", "Coordenação", "Analista", "Assistente", "Estagiário"]
+        },
+        "supervisorRoleId": {
+          "type": "string",
+          "description": "The ID of the role this role reports to."
+        },
+        "mission": {
+          "type": "string",
+          "description": "The strategic mission or objective of the role."
+        },
+        "responsibilities": {
+          "type": "array",
+          "description": "A list of the main responsibilities.",
+          "items": { "type": "string" }
+        },
+        "kpis": {
+          "type": "array",
+          "description": "Key Performance Indicators for this role.",
+          "items": { "type": "string" }
+        },
+        "requiredSkills": {
+          "type": "array",
+          "description": "List of technical and behavioral skills required for the role.",
+          "items": { "type": "string" }
+        },
+        "salaryRange": {
+          "type": "object",
+          "properties": {
+            "min": { "type": "number" },
+            "max": { "type": "number" }
+          },
+          "description": "The minimum and maximum salary range for this role."
         },
         "isManager": {
-            "type": "boolean",
-            "description": "Indicates if this role has manager-level privileges."
+          "type": "boolean",
+          "description": "Indicates if this role has manager-level privileges, such as viewing all data."
         },
         "isDev": {
-            "type": "boolean",
-            "description": "Indicates if this role has developer-level privileges."
+          "type": "boolean",
+          "description": "Indicates if this role has developer-level privileges with full system access."
         }
       },
-      "required": ["name"]
+      "required": ["name", "department", "hierarchyLevel"]
     },
     "Contact": {
       "title": "Contact",
