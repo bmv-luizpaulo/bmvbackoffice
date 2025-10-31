@@ -68,10 +68,17 @@ export function initializeFirebase() {
  * This is a wrapper around `React.useMemo` that helps to ensure that
  * query objects are not re-created on every render, which can cause
  * infinite loops in `useCollection` or `useDoc`.
+ * It now returns null if any dependency is null or undefined, preventing invalid queries.
  */
-export function useMemoFirebase<T>(factory: () => T, deps: DependencyList): T {
+export function useMemoFirebase<T>(factory: () => T | null, deps: DependencyList): T | null {
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    return useMemo(factory, deps);
+    return useMemo(() => {
+        // If any dependency is null or undefined, don't execute the factory.
+        if (deps.some(dep => dep === null || dep === undefined)) {
+            return null;
+        }
+        return factory();
+    }, deps);
 }
 
 /**

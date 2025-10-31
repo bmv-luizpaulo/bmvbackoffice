@@ -52,14 +52,12 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
 
   const notificationsQuery = useMemoFirebase(
     () =>
-      firestore && user?.uid
-        ? query(
-            collection(firestore, `users/${user.uid}/notifications`),
-            orderBy('createdAt', 'desc'),
-            limit(50)
-          )
-        : null,
-    [firestore, user]
+      query(
+        collection(firestore, `users/${user!.uid}/notifications`),
+        orderBy('createdAt', 'desc'),
+        limit(50)
+      ),
+    [firestore, user?.uid]
   );
 
   const { data: notifications, isLoading } =
