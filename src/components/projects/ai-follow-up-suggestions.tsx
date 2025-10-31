@@ -1,4 +1,3 @@
-// THIS IS A NEW FILE
 'use client';
 
 import { useState } from 'react';

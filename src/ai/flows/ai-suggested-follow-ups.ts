@@ -13,7 +13,7 @@ import {z} from 'genkit';
 const SuggestedFollowUpsInputSchema = z.object({
   opportunityDetails: z
     .string()
-    .describe('Informações detalhadas sobre a oportunidadede vendas, incluindo histórico de comunicação, tamanho do negócio, estágio e principais partes interessadas.'),
+    .describe('Informações detalhadas sobre a oportunidade de vendas, incluindo histórico de comunicação, tamanho do negócio, estágio e principais partes interessadas.'),
   currentPipelineStage: z.string().describe('O estágio atual da oportunidade no pipeline de vendas.'),
   pastFollowUpActions: z
     .string()
@@ -24,10 +24,10 @@ export type SuggestedFollowUpsInput = z.infer<typeof SuggestedFollowUpsInputSche
 const SuggestedFollowUpsOutputSchema = z.object({
   suggestedActions: z
     .array(z.string())
-    .describe('Uma lista de ações de acompanhamento sugeridas, com etapas claras e acionáveis.'),
+    .describe('Uma lista de 2 a 3 ações de acompanhamento sugeridas, com etapas claras e acionáveis.'),
   reasoning: z
     .string()
-    .describe('O raciocínio da IA para sugerir essas ações, incluindo os fatores considerados.'),
+    .describe('O raciocínio da IA para sugerir essas ações, explicando por que elas são os próximos melhores passos.'),
 });
 export type SuggestedFollowUpsOutput = z.infer<typeof SuggestedFollowUpsOutputSchema>;
 
@@ -52,7 +52,7 @@ Ações de Acompanhamento Anteriores: {{{pastFollowUpActions}}}
   - O impacto potencial de cada ação para avançar a oportunidade.
   - A relevância da ação para a oportunidade específica e suas partes interessadas.
 
-  Forneça uma lista de ações de acompanhamento sugeridas e o raciocínio por trás de cada sugestão.
+  Forneça uma lista de 2 a 3 ações de acompanhamento sugeridas e o raciocínio por trás de cada sugestão.
   Formate a saída para ser concisa, com etapas claras e acionáveis.
   `,
 });
