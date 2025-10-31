@@ -101,6 +101,15 @@ export function useCollection<T = any>(
       return;
     }
 
+    // Defensive check to prevent invalid queries from even attempting a snapshot
+    const queryPath = getQueryPath(targetRefOrQuery);
+    if (!queryPath || queryPath.includes('undefined') || queryPath.includes('null')) {
+      setIsLoading(false);
+      setData(null);
+      setError(null); // Not a server error, but an invalid-state error. Silently fail.
+      return;
+    }
+
     setIsLoading(true);
     
     const unsubscribe = onSnapshot(
