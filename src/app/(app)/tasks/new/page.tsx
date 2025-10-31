@@ -57,7 +57,7 @@ export default function NewTaskPage() {
             return;
         }
 
-        const stages = stagesSnapshot.docs.map(d => d.data() as Stage).sort((a,b) => a.order - b.order);
+        const stages = stagesSnapshot.docs.map(d => ({...d.data(), id: d.id}) as Stage).sort((a,b) => a.order - b.order);
         const defaultStage = stages[0];
 
         if (!defaultStage) {
@@ -67,6 +67,7 @@ export default function NewTaskPage() {
 
         const taskData: Omit<Task, 'id'> = {
             ...values,
+            assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
             projectId: values.projectId,
             stageId: defaultStage.id,
             isCompleted: false,
@@ -75,9 +76,9 @@ export default function NewTaskPage() {
 
         const docRef = await addDocumentNonBlocking(collection(firestore, 'projects', values.projectId, 'tasks'), taskData);
 
-        if (values.assigneeId) {
+        if (taskData.assigneeId) {
             const project = projectsData?.find(p => p.id === values.projectId);
-            createNotification(values.assigneeId, {
+            createNotification(taskData.assigneeId, {
                 title: 'Nova Tarefa Atribuída',
                 message: `Você foi atribuído à tarefa "${values.name}" no projeto "${project?.name}".`,
                 link: `/projects?projectId=${values.projectId}&taskId=${docRef.id}`
@@ -182,7 +183,7 @@ export default function NewTaskPage() {
                                     </SelectTrigger>
                                     </FormControl>
                                     <SelectContent>
-                                     <SelectItem value="">Não atribuir</SelectItem>
+                                     <SelectItem value="unassigned">Não atribuir</SelectItem>
                                     {usersData?.map(user => (
                                         <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>
                                     ))}
