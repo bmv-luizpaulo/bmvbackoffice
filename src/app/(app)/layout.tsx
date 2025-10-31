@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import Link from 'next/link';
@@ -82,11 +83,11 @@ const navSections = [
             { href: '/contatos', icon: BookUser, label: 'Contatos' },
             { 
               href: '#', 
-              icon: Award, 
-              label: 'Selos',
+              icon: Package, 
+              label: 'Produtos',
               subItems: [
+                { href: '/products', icon: Package, label: 'Todos os Produtos' },
                 { href: '/selos', icon: Award, label: 'Gestão de Selos' },
-                { href: '/products', icon: Package, label: 'Produtos' },
               ]
             },
         ]
@@ -198,7 +199,6 @@ function NavItem({ item, pathname }: { item: (typeof navSections)[0]['items'][0]
                 isActive={isParentActive}
                 tooltip={item.label}
                 className="justify-between"
-                aria-disabled={item.href === '#'}
             >
                 <div className='flex items-center gap-2'>
                     <item.icon />
@@ -210,7 +210,7 @@ function NavItem({ item, pathname }: { item: (typeof navSections)[0]['items'][0]
         <CollapsibleContent>
              <SidebarMenuSub>
                 {item.subItems?.map(subItem => (
-                     <SidebarMenuItem key={subItem.href}>
+                     <SidebarMenuItem key={subItem.label}>
                         <SidebarMenuSubButton
                           href={subItem.href}
                           isActive={pathname.startsWith(subItem.href)}

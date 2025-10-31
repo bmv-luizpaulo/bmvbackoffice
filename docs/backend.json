@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "User": {
@@ -435,9 +436,14 @@
         "sku": {
           "type": "string",
           "description": "Stock Keeping Unit."
+        },
+        "status": {
+            "type": "string",
+            "description": "The current status of the product.",
+            "enum": ["Ativo", "Inativo"]
         }
       },
-      "required": ["name"]
+      "required": ["name", "status"]
     },
     "Seal": {
       "title": "Seal",

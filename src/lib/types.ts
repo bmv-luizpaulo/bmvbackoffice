@@ -1,4 +1,5 @@
 
+
 export type User = {
   id: string;
   name: string;
@@ -159,6 +160,7 @@ export type Product = {
     name: string;
     description?: string;
     sku?: string;
+    status: 'Ativo' | 'Inativo';
 };
 
 export type Seal = {
@@ -217,4 +219,3 @@ export type AssetMaintenance = {
     cost?: number;
     status: 'Agendada' | 'Em Andamento' | 'Concluída' | 'Cancelada';
 }
-    

@@ -34,8 +34,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import type { Product } from "@/lib/types";
 import { ProductFormDialog } from "./product-form-dialog";
-import { useFirestore, useCollection } from "@/firebase";
-import { collection, doc } from "firebase/firestore";
+import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
+import { collection, doc, query, where } from "firebase/firestore";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -48,10 +48,25 @@ import {
 } from "@/components/ui/alert-dialog"
 import { useToast } from "@/hooks/use-toast";
 import { addDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase"
+import { Badge } from "../ui/badge";
+import { cn } from "@/lib/utils";
 
-export function ProductDataTable() {
+interface ProductDataTableProps {
+  statusFilter?: 'all' | 'Ativo' | 'Inativo';
+}
+
+export function ProductDataTable({ statusFilter = 'all' }: ProductDataTableProps) {
   const firestore = useFirestore();
-  const productsQuery = React.useMemo(() => firestore ? collection(firestore, 'products') : null, [firestore]);
+
+  const productsQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    const baseQuery = collection(firestore, 'products');
+    if (statusFilter !== 'all') {
+        return query(baseQuery, where('status', '==', statusFilter));
+    }
+    return baseQuery;
+  }, [firestore, statusFilter]);
+
   const { data: productsData, isLoading } = useCollection<Product>(productsQuery);
   const data = React.useMemo(() => productsData ?? [], [productsData]);
   const { toast } = useToast();
@@ -106,6 +121,14 @@ export function ProductDataTable() {
       accessorKey: "sku",
       header: "SKU",
     },
+     {
+      accessorKey: "status",
+      header: "Status",
+      cell: ({ row }) => {
+        const status = row.original.status;
+        return <Badge variant={status === 'Ativo' ? 'default' : 'outline'} className={cn(status === 'Ativo' ? 'bg-green-600' : '')}>{status}</Badge>
+      },
+    },
     {
       accessorKey: "description",
       header: "Descrição",
@@ -154,6 +177,7 @@ export function ProductDataTable() {
     getSortedRowModel: getSortedRowModel(),
     onColumnFiltersChange: setColumnFilters,
     getFilteredRowModel: getFilteredRowModel(),
+    initialState: { pagination: { pageSize: 10 } },
     state: {
       sorting,
       columnFilters,
@@ -210,7 +234,7 @@ export function ProductDataTable() {
             ) : (
               <TableRow>
                 <TableCell colSpan={columns.length} className="h-24 text-center">
-                  {isLoading ? `Carregando produtos...` : "Nenhum produto cadastrado."}
+                  {isLoading ? `Carregando produtos...` : "Nenhum produto encontrado."}
                 </TableCell>
               </TableRow>
             )}
@@ -260,5 +284,3 @@ export function ProductDataTable() {
     </div>
   )
 }
-
-    

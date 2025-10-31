@@ -26,6 +26,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from "../ui/textarea";
 import type { Product } from "@/lib/types";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 
 type ProductFormDialogProps = {
   isOpen: boolean;
@@ -38,6 +39,7 @@ const formSchema = z.object({
   name: z.string().min(1, "O nome do produto é obrigatório."),
   sku: z.string().optional(),
   description: z.string().optional(),
+  status: z.enum(['Ativo', 'Inativo']).default('Ativo'),
 });
 
 export function ProductFormDialog({ isOpen, onOpenChange, onSave, product }: ProductFormDialogProps) {
@@ -48,6 +50,7 @@ export function ProductFormDialog({ isOpen, onOpenChange, onSave, product }: Pro
       name: '',
       sku: '',
       description: '',
+      status: 'Ativo',
     }
   });
 
@@ -58,12 +61,14 @@ export function ProductFormDialog({ isOpen, onOpenChange, onSave, product }: Pro
           name: product.name || '',
           sku: product.sku || '',
           description: product.description || '',
+          status: product.status || 'Ativo',
         });
       } else {
         form.reset({
           name: '',
           sku: '',
           description: '',
+          status: 'Ativo',
         });
       }
     }
@@ -86,21 +91,21 @@ export function ProductFormDialog({ isOpen, onOpenChange, onSave, product }: Pro
         </DialogHeader>
         <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                <FormField
+                    control={form.control}
+                    name="name"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Nome do Produto</FormLabel>
+                        <FormControl>
+                            <Input placeholder="Ex: Certificação ISO 9001" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                />
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormField
-                        control={form.control}
-                        name="name"
-                        render={({ field }) => (
-                            <FormItem>
-                            <FormLabel>Nome do Produto</FormLabel>
-                            <FormControl>
-                                <Input placeholder="Ex: Certificação ISO 9001" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                            </FormItem>
-                        )}
-                    />
-                    <FormField
+                     <FormField
                         control={form.control}
                         name="sku"
                         render={({ field }) => (
@@ -109,6 +114,27 @@ export function ProductFormDialog({ isOpen, onOpenChange, onSave, product }: Pro
                             <FormControl>
                                 <Input placeholder="Ex: PROD-00123" {...field} />
                             </FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={form.control}
+                        name="status"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Status</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                                <FormControl>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Selecione o status" />
+                                </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                    <SelectItem value="Ativo">Ativo</SelectItem>
+                                    <SelectItem value="Inativo">Inativo</SelectItem>
+                                </SelectContent>
+                            </Select>
                             <FormMessage />
                             </FormItem>
                         )}
