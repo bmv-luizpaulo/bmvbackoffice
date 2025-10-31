@@ -89,7 +89,7 @@ export function RoleFormDialog({ isOpen, onOpenChange, onSave, role, allRoles }:
           description: role.description || '', 
           department: role.department,
           hierarchyLevel: role.hierarchyLevel,
-          supervisorRoleId: role.supervisorRoleId || '',
+          supervisorRoleId: role.supervisorRoleId || 'unassigned',
           mission: role.mission || '',
           responsibilities: role.responsibilities?.map(value => ({ value })) || [],
           kpis: role.kpis?.map(value => ({ value })) || [],
@@ -111,6 +111,7 @@ export function RoleFormDialog({ isOpen, onOpenChange, onSave, role, allRoles }:
   function onSubmit(values: z.infer<typeof formSchema>) {
     const finalData = {
         ...values,
+        supervisorRoleId: values.supervisorRoleId === 'unassigned' ? undefined : values.supervisorRoleId,
         responsibilities: values.responsibilities?.map(item => item.value).filter(Boolean),
         kpis: values.kpis?.map(item => item.value).filter(Boolean),
         requiredSkills: values.requiredSkills?.map(item => item.value).filter(Boolean),
@@ -148,7 +149,7 @@ export function RoleFormDialog({ isOpen, onOpenChange, onSave, role, allRoles }:
                         )}/>
                       </div>
                       <FormField control={form.control} name="supervisorRoleId" render={({ field }) => (
-                        <FormItem><FormLabel>Superior Imediato</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Selecione o cargo supervisor" /></SelectTrigger></FormControl><SelectContent><SelectItem value="">Nenhum</SelectItem>{allRoles.filter(r => r.id !== role?.id).map(r => (<SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>
+                        <FormItem><FormLabel>Superior Imediato</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Selecione o cargo supervisor" /></SelectTrigger></FormControl><SelectContent><SelectItem value="unassigned">Nenhum</SelectItem>{allRoles.filter(r => r.id !== role?.id).map(r => (<SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>
                       )}/>
                     </AccordionContent>
                   </AccordionItem>
