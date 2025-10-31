@@ -1,5 +1,3 @@
-'use client';
-
 import { firebaseConfig } from '@/firebase/config';
 import { initializeApp, getApps, getApp, type FirebaseApp } from 'firebase/app';
 import { getAuth, type Auth } from 'firebase/auth';
@@ -149,9 +147,8 @@ export function deleteDocumentNonBlocking(docRef: DocumentReference) {
 }
 
 
-export * from './provider';
-export * from './client-provider';
 export * from './firestore/use-collection';
 export * from './firestore/use-doc';
 export * from './errors';
 export * from './error-emitter';
+export { useUser, useAuth, useFirestore, useFirebaseApp } from './provider';

@@ -50,15 +50,15 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { FirebaseClientProvider, useUser } from '@/firebase';
+import { FirebaseProvider, useUser, useAuth } from '@/firebase/provider';
 import { signOut } from 'firebase/auth';
-import { useAuth } from '@/firebase';
 import {
   NotificationsProvider,
 } from '@/components/notifications/notifications-provider';
 import { NotificationBell } from '@/components/notifications/notification-bell';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { cn } from '@/lib/utils';
+import { FirebaseErrorListener } from '@/components/FirebaseErrorListener';
 
 const navSections = [
     {
@@ -122,7 +122,7 @@ function UserAvatar() {
     );
 }
 
-function NavItem({ item, pathname }: { item: (typeof navSections)[0]['items'][0], pathname: string }) {
+function NavItem({ item, pathname }: { item: (typeof navSections)[0]['items'][0] & { subItems?: any[] }, pathname: string }) {
   const { state } = useSidebar();
   const hasSubItems = item.subItems && item.subItems.length > 0;
   const isParentActive = hasSubItems
@@ -299,6 +299,7 @@ function InnerLayout({ children }: { children: React.ReactNode }) {
             </div>
           </header>
           <main className="flex-1 p-4 md:p-6">
+            <FirebaseErrorListener />
             {children}
           </main>
         </SidebarInset>
@@ -308,10 +309,10 @@ function InnerLayout({ children }: { children: React.ReactNode }) {
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
-    <FirebaseClientProvider>
+    <FirebaseProvider>
       <NotificationsProvider>
         <InnerLayout>{children}</InnerLayout>
       </NotificationsProvider>
-    </FirebaseClientProvider>
+    </FirebaseProvider>
   );
 }
