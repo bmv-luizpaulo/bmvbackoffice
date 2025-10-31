@@ -23,6 +23,7 @@ import {
   KanbanSquare,
   CheckCircle2,
   PlusCircle,
+  Package,
 } from 'lucide-react';
 import Image from 'next/image';
 import React, { useEffect } from 'react';
@@ -79,7 +80,15 @@ const navSections = [
         name: 'Comercial',
         items: [
             { href: '/contatos', icon: BookUser, label: 'Contatos' },
-            { href: '/selos', icon: Award, label: 'Selos' },
+            { 
+              href: '#', 
+              icon: Award, 
+              label: 'Selos',
+              subItems: [
+                { href: '/selos', icon: Award, label: 'Gestão de Selos' },
+                { href: '/products', icon: Package, label: 'Produtos' },
+              ]
+            },
         ]
     },
     {
@@ -189,6 +198,7 @@ function NavItem({ item, pathname }: { item: (typeof navSections)[0]['items'][0]
                 isActive={isParentActive}
                 tooltip={item.label}
                 className="justify-between"
+                aria-disabled={item.href === '#'}
             >
                 <div className='flex items-center gap-2'>
                     <item.icon />
@@ -203,7 +213,6 @@ function NavItem({ item, pathname }: { item: (typeof navSections)[0]['items'][0]
                      <SidebarMenuItem key={subItem.href}>
                         <SidebarMenuSubButton
                           href={subItem.href}
-                          asChild={false}
                           isActive={pathname.startsWith(subItem.href)}
                         >
                             <subItem.icon />
@@ -278,9 +287,9 @@ function InnerLayout({ children }: { children: React.ReactNode }) {
           </SidebarHeader>
           <SidebarContent>
              <SidebarMenu>
-                 {navSections.map((section, index) => (
+                 {navSections.map((section) => (
                     <SidebarGroup key={section.name}>
-                        {index > 0 && <SidebarSeparator />}
+                        {section.name !== 'Geral' && <SidebarSeparator />}
                         <SidebarGroupLabel>{section.name}</SidebarGroupLabel>
                         {section.items.map((item) => (
                            <NavItem key={item.label} item={item as any} pathname={pathname} />
