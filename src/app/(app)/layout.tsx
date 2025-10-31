@@ -22,6 +22,9 @@ import React, { useEffect } from 'react';
 
 import {
   SidebarProvider,
+  useSidebar,
+} from '@/components/ui/sidebar-provider';
+import {
   Sidebar,
   SidebarHeader,
   SidebarContent,
@@ -36,8 +39,7 @@ import {
   SidebarSeparator,
   SidebarMenuSub,
   SidebarMenuSubButton,
-  useSidebar,
-} from '@/components/ui/sidebar-provider';
+} from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -123,9 +125,16 @@ function UserAvatar() {
 function NavItem({ item, pathname }: { item: (typeof navSections)[0]['items'][0], pathname: string }) {
   const { state } = useSidebar();
   const hasSubItems = item.subItems && item.subItems.length > 0;
-  const isParentActive = pathname.startsWith(item.href);
+  const isParentActive = hasSubItems
+    ? item.href === '/assets' && (pathname.startsWith('/assets') || pathname.startsWith('/maintenance') || pathname.startsWith('/contracts') || pathname.startsWith('/reports'))
+    : pathname.startsWith(item.href);
+
   const [isOpen, setIsOpen] = React.useState(isParentActive);
 
+  React.useEffect(() => {
+      setIsOpen(isParentActive);
+  }, [isParentActive]);
+  
   useEffect(() => {
     if (state === 'collapsed') {
       setIsOpen(false);
@@ -164,7 +173,7 @@ function NavItem({ item, pathname }: { item: (typeof navSections)[0]['items'][0]
              <SidebarMenuSub>
                 {item.subItems?.map(subItem => (
                      <SidebarMenuItem key={subItem.href}>
-                        <Link href={subItem.href} passHref>
+                        <Link href={subItem.href} passHref asChild>
                             <SidebarMenuSubButton isActive={pathname.startsWith(subItem.href)}>
                                 <subItem.icon />
                                 <span>{subItem.label}</span>
