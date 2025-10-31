@@ -2,13 +2,13 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Building2 } from "lucide-react";
-import dynamic from "next/dynamic";
+import NextDynamic from "next/dynamic";
 import { Suspense } from 'react';
 import { Skeleton } from "@/components/ui/skeleton";
 
 export const dynamic = 'force-dynamic';
 
-const AssetDataTable = dynamic(() => import("@/components/assets/asset-data-table").then(m => m.AssetDataTable));
+const AssetDataTable = NextDynamic(() => import("@/components/assets/asset-data-table").then(m => m.AssetDataTable));
 
 export default function AssetsPage() {
   return (
