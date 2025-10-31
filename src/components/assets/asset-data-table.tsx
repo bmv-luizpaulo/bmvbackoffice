@@ -359,7 +359,7 @@ export function AssetDataTable() {
         isOpen={isHistoryOpen}
         onOpenChange={setIsHistoryOpen}
         asset={selectedAsset}
-        usersMap={usersMap}
+        usersMap={new Map(usersData?.map(u => [u.id, u as any]) || [])}
       />}
       
       {isAlertOpen && <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>

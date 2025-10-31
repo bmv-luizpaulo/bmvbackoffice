@@ -472,9 +472,46 @@
         "assigneeId": {
           "type": "string",
           "description": "The ID of the user the asset is assigned to."
+        },
+        "lastMaintenanceDate": {
+            "type": "string",
+            "format": "date",
+            "description": "Date of the last maintenance performed."
+        },
+        "nextMaintenanceDate": {
+            "type": "string",
+            "format": "date",
+            "description": "Date for the next scheduled maintenance."
         }
       },
       "required": ["name", "type", "status"]
+    },
+    "AssetHistory": {
+        "title": "AssetHistory",
+        "type": "object",
+        "description": "Represents a log entry for an asset's history.",
+        "properties": {
+            "assetId": { "type": "string", "description": "The ID of the associated asset." },
+            "event": { "type": "string", "description": "Description of the event (e.g., 'Criado', 'Atribuído', 'Devolvido')." },
+            "details": { "type": "object", "description": "Additional details about the event, like user IDs involved.", "properties": {} },
+            "actorId": { "type": "string", "description": "The ID of the user who performed the action." },
+            "timestamp": { "type": "string", "format": "date-time", "description": "The timestamp of the history event." }
+        },
+        "required": ["assetId", "event", "actorId", "timestamp"]
+    },
+    "AssetMaintenance": {
+        "title": "AssetMaintenance",
+        "type": "object",
+        "description": "Represents a maintenance schedule for an asset.",
+        "properties": {
+            "assetId": { "type": "string", "description": "The ID of the associated asset." },
+            "scheduledDate": { "type": "string", "format": "date-time", "description": "The date the maintenance is scheduled for." },
+            "completedDate": { "type": "string", "format": "date-time", "description": "The date the maintenance was completed." },
+            "description": { "type": "string", "description": "Description of the maintenance work." },
+            "cost": { "type": "number", "description": "Cost of the maintenance." },
+            "status": { "type": "string", "enum": ["Agendada", "Em Andamento", "Concluída", "Cancelada"], "description": "The status of the maintenance." }
+        },
+        "required": ["assetId", "scheduledDate", "description", "status"]
     }
   },
   "auth": {
@@ -547,6 +584,14 @@
     "/assets/{assetId}": {
       "schema": { "$ref": "#/entities/Asset" },
       "description": "Stores all company assets."
+    },
+    "/assets/{assetId}/history/{historyId}": {
+        "schema": { "$ref": "#/entities/AssetHistory" },
+        "description": "Stores the history of an asset."
+    },
+    "/maintenances/{maintenanceId}": {
+        "schema": { "$ref": "#/entities/AssetMaintenance" },
+        "description": "Stores maintenance records for all assets."
     }
   }
 }
