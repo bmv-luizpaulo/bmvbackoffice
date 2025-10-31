@@ -34,7 +34,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import type { User, Role } from "@/lib/types";
 import dynamic from "next/dynamic";
-import { useAuth, useFirestore, useCollection, useUser as useAuthUser } from "@/firebase";
+import { useAuth, useFirestore, useCollection, useUser as useAuthUser, useMemoFirebase } from "@/firebase";
 import { collection, doc, setDoc } from "firebase/firestore";
 import {
   AlertDialog,
@@ -58,12 +58,12 @@ export function UserDataTable() {
   const { user: currentUser } = useAuthUser();
   const { toast } = useToast();
   
-  const usersCollection = React.useMemo(() => firestore ? collection(firestore, 'users') : null, [firestore]);
-  const { data: usersData, isLoading: isLoadingUsers } = useCollection<User>(usersCollection);
+  const usersQuery = useMemoFirebase(() => firestore ? collection(firestore, 'users') : null, [firestore]);
+  const { data: usersData, isLoading: isLoadingUsers } = useCollection<User>(usersQuery);
   const data = React.useMemo(() => usersData ?? [], [usersData]);
 
-  const rolesCollection = React.useMemo(() => firestore ? collection(firestore, 'roles') : null, [firestore]);
-  const { data: rolesData, isLoading: isLoadingRoles } = useCollection<Role>(rolesCollection);
+  const rolesQuery = useMemoFirebase(() => firestore ? collection(firestore, 'roles') : null, [firestore]);
+  const { data: rolesData, isLoading: isLoadingRoles } = useCollection<Role>(rolesQuery);
   const rolesMap = React.useMemo(() => new Map(rolesData?.map(r => [r.id, r])), [rolesData]);
 
   const [sorting, setSorting] = React.useState<SortingState>([]);
@@ -93,6 +93,7 @@ export function UserDataTable() {
         const userRef = doc(firestore, 'users', selectedUser.id);
         updateDocumentNonBlocking(userRef, userData);
         toast({ title: "Usuário Atualizado", description: `As informações de ${userData.name} foram salvas.` });
+        setIsFormOpen(false);
     } else if (password) {
         // Create
         const adminUserEmail = auth.currentUser.email;
@@ -117,7 +118,7 @@ export function UserDataTable() {
             await setDoc(doc(firestore, "users", newUserId), newUserProfile);
             
             toast({ title: "Usuário Criado", description: `${userData.name} foi adicionado ao sistema.` });
-
+            setIsFormOpen(false);
         } catch (error: any) {
             console.error("Erro ao criar usuário:", error);
             const errorMessage = error.code === 'auth/email-already-in-use' 

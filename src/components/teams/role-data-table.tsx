@@ -91,6 +91,7 @@ export function RoleDataTable() {
         addDocumentNonBlocking(collection(firestore, 'roles'), roleData);
         toast({ title: "Cargo Criado", description: `O cargo "${roleData.name}" foi criado com sucesso.` });
     }
+    setIsFormOpen(false);
   }, [firestore, toast]);
 
 
