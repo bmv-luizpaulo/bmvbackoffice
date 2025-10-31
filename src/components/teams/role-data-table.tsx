@@ -46,7 +46,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { addDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase/non-blocking-updates"
+import { addDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase"
 import { useToast } from "@/hooks/use-toast"
 import { Badge } from "../ui/badge";
 
@@ -80,15 +80,15 @@ export function RoleDataTable() {
     setIsAlertOpen(true);
   }, []);
 
-  const handleSaveRole = React.useCallback((roleData: Omit<Role, 'id'>, roleId?: string) => {
+  const handleSaveRole = React.useCallback(async (roleData: Omit<Role, 'id'>, roleId?: string) => {
     if (!firestore) return;
 
     if (roleId) {
         const roleRef = doc(firestore, 'roles', roleId);
-        updateDocumentNonBlocking(roleRef, roleData);
+        await updateDocumentNonBlocking(roleRef, roleData);
         toast({ title: "Cargo Atualizado", description: `O cargo "${roleData.name}" foi atualizado.` });
     } else {
-        addDocumentNonBlocking(collection(firestore, 'roles'), roleData);
+        await addDocumentNonBlocking(collection(firestore, 'roles'), roleData);
         toast({ title: "Cargo Criado", description: `O cargo "${roleData.name}" foi criado com sucesso.` });
     }
     setIsFormOpen(false);

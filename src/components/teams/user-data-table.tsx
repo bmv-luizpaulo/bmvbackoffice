@@ -48,7 +48,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { useToast } from "@/hooks/use-toast"
 import { createUserWithEmailAndPassword, sendPasswordResetEmail, signInWithEmailAndPassword } from "firebase/auth";
-import { deleteDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase/non-blocking-updates"
+import { deleteDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase"
 
 const UserFormDialog = dynamic(() => import('./user-form-dialog').then(m => m.UserFormDialog), { ssr: false });
 
@@ -91,7 +91,7 @@ export function UserDataTable() {
     if (selectedUser) {
         // Update
         const userRef = doc(firestore, 'users', selectedUser.id);
-        updateDocumentNonBlocking(userRef, userData);
+        await updateDocumentNonBlocking(userRef, userData);
         toast({ title: "Usuário Atualizado", description: `As informações de ${userData.name} foram salvas.` });
         setIsFormOpen(false);
     } else {
@@ -151,10 +151,10 @@ export function UserDataTable() {
     setSelectedUser(null);
   }, [firestore, selectedUser, toast]);
 
-  const handleRoleChange = React.useCallback((user: User, newRoleId: string) => {
+  const handleRoleChange = React.useCallback(async (user: User, newRoleId: string) => {
     if (!firestore) return;
     const userRef = doc(firestore, 'users', user.id);
-    updateDocumentNonBlocking(userRef, { roleId: newRoleId });
+    await updateDocumentNonBlocking(userRef, { roleId: newRoleId });
     const newRole = rolesMap.get(newRoleId);
     toast({ 
         title: "Cargo Alterado", 

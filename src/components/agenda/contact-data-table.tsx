@@ -46,7 +46,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { updateDocumentNonBlocking, deleteDocumentNonBlocking, addDocumentNonBlocking } from "@/firebase/non-blocking-updates";
+import { updateDocumentNonBlocking, deleteDocumentNonBlocking, addDocumentNonBlocking } from "@/firebase";
 
 const ContactFormDialog = dynamic(() => import('./contact-form-dialog').then(m => m.ContactFormDialog), { ssr: false });
 
@@ -92,7 +92,7 @@ export function ContactDataTable({ type }: ContactDataTableProps) {
     setIsAlertOpen(true);
   }, []);
 
-  const handleSaveContact = React.useCallback((contactData: Omit<Contact, 'id' | 'type'>) => {
+  const handleSaveContact = React.useCallback(async (contactData: Omit<Contact, 'id' | 'type'>) => {
     if (!firestore) return;
     
     const dataToSave = { ...contactData, type };
@@ -100,10 +100,10 @@ export function ContactDataTable({ type }: ContactDataTableProps) {
     if (selectedContact) {
       // Update
       const contactRef = doc(firestore, 'contacts', selectedContact.id);
-      updateDocumentNonBlocking(contactRef, dataToSave);
+      await updateDocumentNonBlocking(contactRef, dataToSave);
     } else {
       // Create
-      addDocumentNonBlocking(collection(firestore, 'contacts'), dataToSave);
+      await addDocumentNonBlocking(collection(firestore, 'contacts'), dataToSave);
     }
   }, [firestore, selectedContact, type]);
 

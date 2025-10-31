@@ -16,47 +16,14 @@ const AddProjectDialog = dynamic(() => import('./add-project-dialog').then(m => 
 const ProjectFilesDialog = dynamic(() => import('./project-files-dialog').then(m => m.ProjectFilesDialog), { ssr: false, loading: () => <LoadingFallback /> });
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '../ui/command';
-import { useCollection, useDoc, useFirestore, useUser as useAuthUser } from '@/firebase';
-import { collection, doc, writeBatch, addDoc, updateDoc, deleteDoc, query, where } from 'firebase/firestore';
+import { useCollection, useDoc, useFirestore, useUser as useAuthUser, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
+import { collection, doc, writeBatch, query, where } from 'firebase/firestore';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { useNotifications } from '../notifications/notifications-provider';
 import React from 'react';
 
 const AiFollowUpSuggestions = dynamic(() => import('./ai-follow-up-suggestions').then(m => m.AiFollowUpSuggestions), { ssr: false });
-
-const addDocumentNonBlocking = (ref: any, data: any) => {
-    return addDoc(ref, data).catch(err => {
-        errorEmitter.emit('permission-error', new FirestorePermissionError({
-            path: ref.path,
-            operation: 'create',
-            requestResourceData: data,
-        }));
-        throw err;
-    });
-};
-
-const updateDocumentNonBlocking = (ref: any, data: any) => {
-    return updateDoc(ref, data).catch(err => {
-        errorEmitter.emit('permission-error', new FirestorePermissionError({
-            path: ref.path,
-            operation: 'update',
-            requestResourceData: data,
-        }));
-        throw err;
-    });
-};
-
-const deleteDocumentNonBlocking = (ref: any) => {
-    return deleteDoc(ref).catch(err => {
-        errorEmitter.emit('permission-error', new FirestorePermissionError({
-            path: ref.path,
-            operation: 'delete',
-        }));
-        throw err;
-    });
-};
-
 
 export function KanbanBoard() {
   const firestore = useFirestore();
@@ -181,14 +148,14 @@ export function KanbanBoard() {
     handleSelectProject(newlyCreatedProject as Project)
   }
 
-  const handleSaveTask = (taskData: Omit<Task, 'id' | 'isCompleted'>, taskId?: string) => {
+  const handleSaveTask = async (taskData: Omit<Task, 'id' | 'isCompleted'>, taskId?: string) => {
      if (!firestore || !selectedProject || !authUser) return;
 
     if (taskId) {
         // Update existing task
         const existingTask = tasksData?.find(t => t.id === taskId);
         const taskRef = doc(firestore, 'projects', selectedProject.id, 'tasks', taskId);
-        updateDocumentNonBlocking(taskRef, taskData);
+        await updateDocumentNonBlocking(taskRef, taskData);
 
         // Notify on re-assignment
         if (taskData.assigneeId && taskData.assigneeId !== existingTask?.assigneeId) {
@@ -227,10 +194,10 @@ export function KanbanBoard() {
     }
   }
 
-  const handleUpdateTaskStatus = useCallback((taskId: string, updates: Partial<Omit<Task, 'id'>>) => {
+  const handleUpdateTaskStatus = useCallback(async (taskId: string, updates: Partial<Omit<Task, 'id'>>) => {
       if (!firestore || !selectedProject || !authUser) return;
       const taskRef = doc(firestore, 'projects', selectedProject.id, 'tasks', taskId);
-      updateDocumentNonBlocking(taskRef, updates);
+      await updateDocumentNonBlocking(taskRef, updates);
 
       const task = tasksData?.find(t => t.id === taskId);
       if (task && updates.isCompleted) {

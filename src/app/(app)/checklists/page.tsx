@@ -7,7 +7,7 @@ import { Plus, ListChecks, Trash2, Edit } from "lucide-react";
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, doc, orderBy, query } from 'firebase/firestore';
 import type { Checklist, ChecklistItem, Team } from '@/lib/types';
-import { addDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { addDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import NextDynamic from 'next/dynamic';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -53,13 +53,13 @@ export default function ChecklistsPage() {
     }
   }, [checklists, selectedChecklist]);
 
-  const handleSaveChecklist = React.useCallback((data: Omit<Checklist, 'id'>, id?: string) => {
+  const handleSaveChecklist = React.useCallback(async (data: Omit<Checklist, 'id'>, id?: string) => {
     if (!firestore) return;
     if (id) {
-      updateDocumentNonBlocking(doc(firestore, 'checklists', id), data);
+      await updateDocumentNonBlocking(doc(firestore, 'checklists', id), data);
       toast({ title: "Checklist Atualizado", description: "As alterações foram salvas." });
     } else {
-      addDocumentNonBlocking(collection(firestore, 'checklists'), data);
+      await addDocumentNonBlocking(collection(firestore, 'checklists'), data);
       toast({ title: "Checklist Criado", description: "O novo checklist está pronto." });
     }
     setIsFormOpen(false);

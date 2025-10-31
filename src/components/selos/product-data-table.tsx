@@ -47,7 +47,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { useToast } from "@/hooks/use-toast";
-import { addDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase/non-blocking-updates"
+import { addDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase"
 
 export function ProductDataTable() {
   const firestore = useFirestore();
@@ -73,17 +73,17 @@ export function ProductDataTable() {
     setIsAlertOpen(true);
   }, []);
 
-  const handleSaveProduct = React.useCallback((productData: Omit<Product, 'id'>) => {
+  const handleSaveProduct = React.useCallback(async (productData: Omit<Product, 'id'>) => {
     if (!firestore) return;
     
     if (selectedProduct) {
       // Update
       const productRef = doc(firestore, 'products', selectedProduct.id);
-      updateDocumentNonBlocking(productRef, productData);
+      await updateDocumentNonBlocking(productRef, productData);
       toast({ title: "Produto Atualizado", description: "O produto foi atualizado com sucesso." });
     } else {
       // Create
-      addDocumentNonBlocking(collection(firestore, 'products'), productData);
+      await addDocumentNonBlocking(collection(firestore, 'products'), productData);
       toast({ title: "Produto Adicionado", description: "O novo produto foi cadastrado." });
     }
   }, [firestore, selectedProduct, toast]);

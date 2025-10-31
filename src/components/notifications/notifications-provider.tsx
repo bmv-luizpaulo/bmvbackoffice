@@ -27,7 +27,7 @@ import type { Notification } from '@/lib/types';
 import {
   addDocumentNonBlocking,
   updateDocumentNonBlocking,
-} from '@/firebase/non-blocking-updates';
+} from '@/firebase';
 
 interface NotificationsContextType {
   notifications: Notification[];
@@ -110,7 +110,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
   }, [firestore, user, notifications, unreadCount]);
 
   const createNotification = useCallback(
-    (
+    async (
       userId: string,
       notificationData: Omit<Notification, 'id' | 'isRead' | 'createdAt'>
     ) => {
@@ -125,7 +125,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
         firestore,
         `users/${userId}/notifications`
       );
-      addDocumentNonBlocking(notificationsCollection, newNotification);
+      await addDocumentNonBlocking(notificationsCollection, newNotification);
     },
     [firestore]
   );

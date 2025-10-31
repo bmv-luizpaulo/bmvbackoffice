@@ -50,7 +50,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "../ui/badge";
-import { addDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase/non-blocking-updates"
+import { addDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase";
 import { useNotifications } from "../notifications/notifications-provider";
 import dynamic from "next/dynamic";
 
@@ -108,15 +108,15 @@ export function SealDataTable() {
     setIsAlertOpen(true);
   }, []);
 
-  const handleSaveSeal = React.useCallback((sealData: Omit<Seal, 'id'>, sealId?: string) => {
+  const handleSaveSeal = React.useCallback(async (sealData: Omit<Seal, 'id'>, sealId?: string) => {
     if (!firestore || !authUser) return;
     
     if (sealId) {
       const sealRef = doc(firestore, 'seals', sealId);
-      updateDocumentNonBlocking(sealRef, sealData);
+      await updateDocumentNonBlocking(sealRef, sealData);
       toast({ title: "Selo Atualizado", description: "O selo foi atualizado com sucesso." });
     } else {
-      addDocumentNonBlocking(collection(firestore, 'seals'), sealData);
+      await addDocumentNonBlocking(collection(firestore, 'seals'), sealData);
       toast({ title: "Selo Adicionado", description: "O novo selo foi cadastrado." });
     }
 

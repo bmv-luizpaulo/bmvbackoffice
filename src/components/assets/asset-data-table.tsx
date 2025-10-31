@@ -36,7 +36,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import type { Asset, User } from "@/lib/types";
 import { useFirestore, useCollection, useMemoFirebase, useUser as useAuthUser } from "@/firebase";
-import { collection, doc, addDoc, serverTimestamp } from "firebase/firestore";
+import { collection, doc, serverTimestamp } from "firebase/firestore";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -49,7 +49,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "../ui/badge";
-import { addDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase/non-blocking-updates"
+import { addDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase"
 import dynamic from "next/dynamic";
 import { format } from "date-fns";
 import Link from "next/link";
@@ -85,7 +85,7 @@ export function AssetDataTable() {
   const logHistory = React.useCallback(async (assetId: string, event: string, details: Record<string, any> = {}) => {
       if (!firestore || !authUser) return;
       const historyCollection = collection(firestore, 'assets', assetId, 'history');
-      await addDoc(historyCollection, {
+      await addDocumentNonBlocking(historyCollection, {
         assetId,
         event,
         details,

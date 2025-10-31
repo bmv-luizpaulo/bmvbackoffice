@@ -7,7 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { Folder, Check } from 'lucide-react';
 import {
   updateDocumentNonBlocking,
-} from '@/firebase/non-blocking-updates';
+} from '@/firebase';
 import { useFirestore } from '@/firebase';
 import { doc } from 'firebase/firestore';
 
