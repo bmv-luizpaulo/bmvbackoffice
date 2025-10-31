@@ -102,11 +102,11 @@ const navSections = [
             { href: '/chat', icon: MessageSquare, label: 'Chat' },
             { 
               href: '#', 
-              icon: Users, 
+              icon: Group, 
               label: 'Usuários & Grupos',
               subItems: [
                 { href: '/users', icon: User, label: 'Usuários' },
-                { href: '/teams', icon: Group, label: 'Equipes' },
+                { href: '/teams', icon: Users, label: 'Equipes' },
                 { href: '/roles', icon: Briefcase, label: 'Cargos' },
               ]
             },
@@ -191,13 +191,12 @@ function NavItem({ item, pathname }: { item: (typeof navSections)[0]['items'][0]
                 {item.subItems?.map(subItem => (
                      <SidebarMenuItem key={subItem.href}>
                         <SidebarMenuSubButton
-                          asChild
+                          href={subItem.href}
+                          asChild={false}
                           isActive={pathname.startsWith(subItem.href)}
                         >
-                          <Link href={subItem.href}>
                             <subItem.icon />
                             <span>{subItem.label}</span>
-                          </Link>
                         </SidebarMenuSubButton>
                     </SidebarMenuItem>
                 ))}
