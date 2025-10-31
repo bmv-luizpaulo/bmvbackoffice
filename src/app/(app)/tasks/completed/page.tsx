@@ -42,7 +42,7 @@ export default function CompletedTasksPage() {
   );
   
   const { data: tasksData, isLoading: isLoadingTasks } = useCollection<Task>(tasksQuery);
-  const projectsQuery = useMemoFirebase(() => firestore ? collectionGroup(firestore, 'projects') : null, [firestore]);
+  const projectsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'projects') : null, [firestore]);
   const { data: projectsData, isLoading: isLoadingProjects } = useCollection<Project>(projectsQuery);
   const usersQuery = useMemoFirebase(() => firestore ? collection(firestore, 'users') : null, [firestore]);
   const { data: usersData, isLoading: isLoadingUsers } = useCollection<User>(usersQuery);
