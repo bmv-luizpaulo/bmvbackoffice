@@ -26,7 +26,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import type { User, Team, Role } from "@/lib/types";
 import { Separator } from "../ui/separator";
-import { useCollection, useFirestore } from "@/firebase";
+import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
 import { collection } from "firebase/firestore";
 import { MultiSelect } from "../ui/multi-select";
 import { Loader2, Users } from "lucide-react";
@@ -37,15 +37,14 @@ import { formatCPF, formatPhone } from "@/lib/masks";
 type UserFormDialogProps = {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
-  onSave: (user: Omit<User, 'id' | 'avatarUrl'>, password?: string) => void;
+  onSave: (user: Omit<User, 'id' | 'avatarUrl'>) => void;
   user?: User | null;
 };
 
 // Base schema for user data
-const baseFormSchema = z.object({
+const formSchema = z.object({
   name: z.string().min(1, "O nome é obrigatório."),
   email: z.string().email("O e-mail é inválido."),
-  password: z.string().optional(),
   roleId: z.string().optional(),
   phone: z.string().optional(),
   personalDocument: z.string().optional(),
@@ -65,7 +64,6 @@ const baseFormSchema = z.object({
 const defaultValues = {
     name: '',
     email: '',
-    password: '',
     roleId: undefined,
     phone: '',
     personalDocument: '',
@@ -83,20 +81,11 @@ const defaultValues = {
 
 export function UserFormDialog({ isOpen, onOpenChange, onSave, user }: UserFormDialogProps) {
   const firestore = useFirestore();
-  const teamsQuery = React.useMemo(() => firestore ? collection(firestore, 'teams') : null, [firestore]);
+  const teamsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'teams') : null, [firestore]);
   const { data: teamsData } = useCollection<Team>(teamsQuery);
-  const rolesQuery = React.useMemo(() => firestore ? collection(firestore, 'roles') : null, [firestore]);
+  const rolesQuery = useMemoFirebase(() => firestore ? collection(firestore, 'roles') : null, [firestore]);
   const { data: rolesData } = useCollection<Role>(rolesQuery);
   const [isCepLoading, setIsCepLoading] = React.useState(false);
-
-  // Dynamically create schema based on whether we are creating or editing
-  const formSchema = user
-    ? baseFormSchema // Password optional for edits
-    : baseFormSchema.refine(data => !!data.password && data.password.length >= 6, {
-        message: "A senha é obrigatória e deve ter pelo menos 6 caracteres.",
-        path: ["password"],
-      });
-
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -122,7 +111,6 @@ export function UserFormDialog({ isOpen, onOpenChange, onSave, user }: UserFormD
             zipCode: user.address?.zipCode || '',
           },
           teamIds: user.teamIds || [],
-          password: '',
         });
       } else {
         form.reset(defaultValues);
@@ -152,8 +140,7 @@ export function UserFormDialog({ isOpen, onOpenChange, onSave, user }: UserFormD
   };
 
   function onSubmit(values: z.infer<typeof formSchema>) {
-    const { password, ...userData } = values;
-    onSave(userData, user ? undefined : password); // Só passa a senha na criação
+    onSave(values);
     onOpenChange(false);
   }
 
@@ -197,21 +184,6 @@ export function UserFormDialog({ isOpen, onOpenChange, onSave, user }: UserFormD
                                 </FormItem>
                             )}
                         />
-                        {!user && (
-                             <FormField
-                                control={form.control}
-                                name="password"
-                                render={({ field }) => (
-                                    <FormItem>
-                                    <FormLabel>Senha</FormLabel>
-                                    <FormControl>
-                                        <Input type="password" placeholder="Mínimo 6 caracteres" {...field} />
-                                    </FormControl>
-                                    <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                        )}
                         <FormField
                             control={form.control}
                             name="phone"
