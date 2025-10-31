@@ -37,7 +37,7 @@ import {
   SidebarMenuSub,
   SidebarMenuSubButton,
   useSidebar,
-} from '@/components/ui/sidebar';
+} from '@/components/ui/sidebar-provider';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -164,7 +164,7 @@ function NavItem({ item, pathname }: { item: (typeof navSections)[0]['items'][0]
              <SidebarMenuSub>
                 {item.subItems?.map(subItem => (
                      <SidebarMenuItem key={subItem.href}>
-                        <Link href={subItem.href} passHref>
+                        <Link href={subItem.href} passHref asChild>
                             <SidebarMenuSubButton isActive={pathname.startsWith(subItem.href)}>
                                 <subItem.icon />
                                 <span>{subItem.label}</span>
