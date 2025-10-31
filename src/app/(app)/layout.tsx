@@ -284,7 +284,7 @@ function InnerLayout({ children }: { children: React.ReactNode }) {
                         {index > 0 && <SidebarSeparator />}
                         <SidebarGroupLabel>{section.name}</SidebarGroupLabel>
                         {section.items.map((item) => (
-                           <NavItem key={item.href} item={item as any} pathname={pathname} />
+                           <NavItem key={item.label} item={item as any} pathname={pathname} />
                         ))}
                     </SidebarGroup>
                 ))}
