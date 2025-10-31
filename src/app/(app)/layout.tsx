@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -86,7 +87,7 @@ const navSections = [
         items: [
             { 
               href: '#', 
-              icon: ListChecks, 
+              icon: KanbanSquare, 
               label: 'Tarefas',
               subItems: [
                 { href: '/projects', icon: KanbanSquare, label: 'Funil Kanban' },

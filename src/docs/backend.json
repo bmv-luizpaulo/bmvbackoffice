@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "User": {
@@ -211,6 +212,28 @@
             "description": {
                 "type": "string",
                 "description": "Description of the team's purpose or responsibilities."
+            },
+            "leaderId": {
+                "type": "string",
+                "description": "The ID of the user who is the team leader."
+            },
+            "department": {
+                "type": "string",
+                "description": "The department the team is linked to.",
+                "enum": ["Diretoria Operacional", "Diretoria Administrativa"]
+            },
+            "teamType": {
+                "type": "string",
+                "description": "The type of the team.",
+                "enum": ["Operacional", "Técnica", "Suporte", "Projeto", "Administrativa"]
+            },
+            "responsibilities": {
+                "type": "string",
+                "description": "Main responsibilities of the team."
+            },
+            "kpis": {
+                "type": "string",
+                "description": "Key Performance Indicators for the team."
             }
         },
         "required": ["name"]
