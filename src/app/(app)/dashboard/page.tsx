@@ -30,7 +30,7 @@ function KpiSkeleton() {
   );
 }
 
-export default function DashboardPage() {
+function DashboardInner() {
   const firestore = useFirestore();
 
   const projectsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'projects') : null, [firestore]);
@@ -101,8 +101,8 @@ export default function DashboardPage() {
   }, [projectsData, tasksData, stagesData, sealsData]);
 
   const isLoading = isLoadingProjects || isLoadingTasks || isLoadingStages || isLoadingSeals;
-
-  return (
+  
+   return (
     <div className="flex flex-col gap-6">
       <header>
         <h1 className="font-headline text-3xl font-bold tracking-tight">Painel</h1>
@@ -163,4 +163,27 @@ export default function DashboardPage() {
       </Tabs>
     </div>
   );
+}
+
+export default function DashboardPage() {
+  const firestore = useFirestore();
+
+  if (!firestore) {
+    return (
+      <div className="space-y-6">
+        <header>
+          <h1 className="font-headline text-3xl font-bold tracking-tight">Painel</h1>
+          <p className="text-muted-foreground">Seu centro de comando para vendas e operações.</p>
+        </header>
+         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <KpiSkeleton />
+            <KpiSkeleton />
+            <KpiSkeleton />
+            <KpiSkeleton />
+        </div>
+      </div>
+    );
+  }
+
+  return <DashboardInner />;
 }
