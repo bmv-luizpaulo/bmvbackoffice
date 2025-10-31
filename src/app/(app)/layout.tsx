@@ -190,7 +190,7 @@ function NavItem({ item, pathname }: { item: (typeof navSections)[0]['items'][0]
              <SidebarMenuSub>
                 {item.subItems?.map(subItem => (
                      <SidebarMenuItem key={subItem.href}>
-                        <Link href={subItem.href} passHref asChild>
+                        <Link href={subItem.href} passHref>
                           <SidebarMenuSubButton isActive={pathname.startsWith(subItem.href)}>
                             
                               <subItem.icon />
