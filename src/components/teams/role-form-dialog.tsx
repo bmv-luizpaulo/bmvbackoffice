@@ -168,4 +168,3 @@ export function RoleFormDialog({ isOpen, onOpenChange, onSave, role }: RoleFormD
     </Dialog>
   );
 }
-    

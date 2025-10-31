@@ -1,4 +1,3 @@
-// THIS IS A NEW FILE
 'use client';
 
 import * as React from "react"
@@ -35,7 +34,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import type { Role } from "@/lib/types";
 import dynamic from "next/dynamic";
-import { useFirestore, useCollection } from "@/firebase";
+import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { collection, doc } from "firebase/firestore";
 import {
   AlertDialog,
@@ -57,7 +56,7 @@ export function RoleDataTable() {
   const firestore = useFirestore();
   const { toast } = useToast();
   
-  const rolesQuery = React.useMemo(() => firestore ? collection(firestore, 'roles') : null, [firestore]);
+  const rolesQuery = useMemoFirebase(() => firestore ? collection(firestore, 'roles') : null, [firestore]);
   const { data: rolesData, isLoading: isLoadingRoles } = useCollection<Role>(rolesQuery);
   
   const data = React.useMemo(() => rolesData ?? [], [rolesData]);
@@ -123,6 +122,11 @@ export function RoleDataTable() {
         accessorKey: "isManager",
         header: "Permissões de Gestor",
         cell: ({ row }) => row.original.isManager ? <Badge>Sim</Badge> : <Badge variant="secondary">Não</Badge>
+    },
+    {
+        accessorKey: "isDev",
+        header: "Permissão de Desenvolvedor",
+        cell: ({ row }) => row.original.isDev ? <Badge variant="destructive">Sim</Badge> : <Badge variant="secondary">Não</Badge>
     },
     {
       id: "actions",
