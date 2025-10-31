@@ -3,27 +3,27 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Suspense } from "react";
 import dynamic from "next/dynamic";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Group } from "lucide-react";
+import { User } from "lucide-react";
 
-const TeamDataTable = dynamic(() => import("@/components/teams/team-data-table").then(m => m.TeamDataTable));
+const UserDataTable = dynamic(() => import("@/components/teams/user-data-table").then(m => m.UserDataTable));
 
-export default function TeamsPage() {
+export default function UsersPage() {
   return (
     <div className="space-y-6">
       <header>
         <h1 className="font-headline text-3xl font-bold tracking-tight flex items-center gap-2">
-            <Group className="h-8 w-8 text-primary"/>
-            Equipes
+            <User className="h-8 w-8 text-primary"/>
+            Usuários
         </h1>
         <p className="text-muted-foreground">
-          Crie e gerencie as equipes da sua organização.
+          Gerencie os membros da sua equipe.
         </p>
       </header>
         <Card>
         <CardHeader>
-            <CardTitle>Gerenciamento de Equipes</CardTitle>
+            <CardTitle>Gerenciamento de Usuários</CardTitle>
             <CardDescription>
-                Adicione, edite e organize as equipes da sua organização.
+            Adicione, edite e organize os membros da sua equipe.
             </CardDescription>
         </CardHeader>
         <CardContent>
@@ -38,7 +38,7 @@ export default function TeamsPage() {
                 </div>
             </div>
             }>
-            <TeamDataTable />
+            <UserDataTable />
             </Suspense>
         </CardContent>
         </Card>

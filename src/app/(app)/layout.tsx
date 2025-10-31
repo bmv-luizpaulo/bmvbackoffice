@@ -16,6 +16,9 @@ import {
   FileText,
   Wrench,
   ChevronDown,
+  User,
+  Group,
+  Briefcase,
 } from 'lucide-react';
 import Image from 'next/image';
 import React, { useEffect } from 'react';
@@ -50,7 +53,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { FirebaseProvider, useUser, useAuth } from '@/firebase/provider';
+import { useUser, useAuth } from '@/firebase';
+import { FirebaseClientProvider } from '@/firebase/client-provider';
 import { signOut } from 'firebase/auth';
 import {
   NotificationsProvider,
@@ -96,7 +100,16 @@ const navSections = [
         items: [
             { href: '/agenda/tarefas', icon: Calendar, label: 'Agenda' },
             { href: '/chat', icon: MessageSquare, label: 'Chat' },
-            { href: '/teams', icon: Users, label: 'Usuários & Equipes' },
+            { 
+              href: '/users', 
+              icon: Users, 
+              label: 'Usuários & Grupos',
+              subItems: [
+                { href: '/users', icon: User, label: 'Usuários' },
+                { href: '/teams', icon: Group, label: 'Equipes' },
+                { href: '/roles', icon: Briefcase, label: 'Cargos' },
+              ]
+            },
         ]
     }
 ]
@@ -125,8 +138,9 @@ function UserAvatar() {
 function NavItem({ item, pathname }: { item: (typeof navSections)[0]['items'][0] & { subItems?: any[] }, pathname: string }) {
   const { state } = useSidebar();
   const hasSubItems = item.subItems && item.subItems.length > 0;
+  
   const isParentActive = hasSubItems
-    ? item.href === '/assets' && (pathname.startsWith('/assets') || pathname.startsWith('/maintenance') || pathname.startsWith('/contracts') || pathname.startsWith('/reports'))
+    ? item.href === '/users' ? pathname.startsWith('/users') || pathname.startsWith('/teams') || pathname.startsWith('/roles') : item.subItems.some(sub => pathname.startsWith(sub.href))
     : pathname.startsWith(item.href);
 
   const [isOpen, setIsOpen] = React.useState(isParentActive);
@@ -174,10 +188,12 @@ function NavItem({ item, pathname }: { item: (typeof navSections)[0]['items'][0]
                 {item.subItems?.map(subItem => (
                      <SidebarMenuItem key={subItem.href}>
                         <Link href={subItem.href} passHref asChild>
-                            <SidebarMenuSubButton isActive={pathname.startsWith(subItem.href)}>
-                                <subItem.icon />
-                                <span>{subItem.label}</span>
-                            </SidebarMenuSubButton>
+                          <SidebarMenuSubButton asChild isActive={pathname.startsWith(subItem.href)}>
+                            <a>
+                              <subItem.icon />
+                              <span>{subItem.label}</span>
+                            </a>
+                          </SidebarMenuSubButton>
                         </Link>
                     </SidebarMenuItem>
                 ))}
@@ -309,10 +325,10 @@ function InnerLayout({ children }: { children: React.ReactNode }) {
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
-    <FirebaseProvider>
+    <FirebaseClientProvider>
       <NotificationsProvider>
         <InnerLayout>{children}</InnerLayout>
       </NotificationsProvider>
-    </FirebaseProvider>
+    </FirebaseClientProvider>
   );
 }
