@@ -18,7 +18,7 @@ import {
   ChevronDown,
 } from 'lucide-react';
 import Image from 'next/image';
-import React from 'react';
+import React, { useEffect } from 'react';
 
 import {
   SidebarProvider,
@@ -55,7 +55,6 @@ import {
   NotificationsProvider,
 } from '@/components/notifications/notifications-provider';
 import { NotificationBell } from '@/components/notifications/notification-bell';
-import { useEffect } from 'react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { cn } from '@/lib/utils';
 
@@ -165,7 +164,7 @@ function NavItem({ item, pathname }: { item: (typeof navSections)[0]['items'][0]
              <SidebarMenuSub>
                 {item.subItems?.map(subItem => (
                      <SidebarMenuItem key={subItem.href}>
-                        <Link href={subItem.href}>
+                        <Link href={subItem.href} passHref>
                             <SidebarMenuSubButton isActive={pathname.startsWith(subItem.href)}>
                                 <subItem.icon />
                                 <span>{subItem.label}</span>
