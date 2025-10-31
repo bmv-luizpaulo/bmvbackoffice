@@ -101,7 +101,7 @@ const navSections = [
             { href: '/agenda/tarefas', icon: Calendar, label: 'Agenda' },
             { href: '/chat', icon: MessageSquare, label: 'Chat' },
             { 
-              href: '/users', 
+              href: '#', 
               icon: Users, 
               label: 'Usuários & Grupos',
               subItems: [
@@ -140,7 +140,7 @@ function NavItem({ item, pathname }: { item: (typeof navSections)[0]['items'][0]
   const hasSubItems = item.subItems && item.subItems.length > 0;
   
   const isParentActive = hasSubItems
-    ? item.href === '/users' ? pathname.startsWith('/users') || pathname.startsWith('/teams') || pathname.startsWith('/roles') : item.subItems.some(sub => pathname.startsWith(sub.href))
+    ? item.subItems.some(sub => pathname.startsWith(sub.href))
     : pathname.startsWith(item.href);
 
   const [isOpen, setIsOpen] = React.useState(isParentActive);
@@ -154,6 +154,8 @@ function NavItem({ item, pathname }: { item: (typeof navSections)[0]['items'][0]
       setIsOpen(false);
     }
   }, [state]);
+  
+  const isDummyLink = item.href === '#';
 
   if (!hasSubItems) {
     return (
@@ -175,6 +177,7 @@ function NavItem({ item, pathname }: { item: (typeof navSections)[0]['items'][0]
                 isActive={isParentActive}
                 tooltip={item.label}
                 className="justify-between"
+                disabled={isDummyLink}
             >
                 <div className='flex items-center gap-2'>
                     <item.icon />
@@ -188,11 +191,11 @@ function NavItem({ item, pathname }: { item: (typeof navSections)[0]['items'][0]
                 {item.subItems?.map(subItem => (
                      <SidebarMenuItem key={subItem.href}>
                         <Link href={subItem.href} passHref asChild>
-                          <SidebarMenuSubButton asChild isActive={pathname.startsWith(subItem.href)}>
-                            <a>
+                          <SidebarMenuSubButton isActive={pathname.startsWith(subItem.href)}>
+                            
                               <subItem.icon />
                               <span>{subItem.label}</span>
-                            </a>
+                            
                           </SidebarMenuSubButton>
                         </Link>
                     </SidebarMenuItem>

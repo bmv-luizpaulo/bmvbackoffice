@@ -1,3 +1,4 @@
+'use client';
 import { firebaseConfig } from '@/firebase/config';
 import { initializeApp, getApps, getApp, type FirebaseApp } from 'firebase/app';
 import { getAuth, type Auth } from 'firebase/auth';
@@ -77,9 +78,11 @@ export function useMemoFirebase<T>(factory: () => T, deps: DependencyList): T {
  * Initiates an addDoc operation for a collection reference.
  * Awaits the write operation internally and returns the DocumentReference.
  */
-export function addDocumentNonBlocking(colRef: CollectionReference, data: any): Promise<DocumentReference<DocumentData>> {
-  const promise = addDoc(colRef, data);
-  promise.catch(error => {
+export async function addDocumentNonBlocking(colRef: CollectionReference, data: any): Promise<DocumentReference<DocumentData>> {
+  try {
+    const docRef = await addDoc(colRef, data);
+    return docRef;
+  } catch (error) {
       errorEmitter.emit(
         'permission-error',
         new FirestorePermissionError({
@@ -87,9 +90,10 @@ export function addDocumentNonBlocking(colRef: CollectionReference, data: any): 
           operation: 'create',
           requestResourceData: data,
         })
-      )
-    });
-  return promise;
+      );
+      // Re-throw the error so the caller knows the operation failed
+      throw error;
+  }
 }
 
 /**
@@ -151,5 +155,5 @@ export * from './firestore/use-collection';
 export * from './firestore/use-doc';
 export * from './errors';
 export * from './error-emitter';
-export * from './client-provider';
 export { useUser, useAuth, useFirestore, useFirebaseApp, FirebaseProvider } from './provider';
+

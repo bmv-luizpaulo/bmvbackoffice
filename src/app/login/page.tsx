@@ -3,11 +3,11 @@
 import { LoginForm } from "@/components/auth/login-form";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import Image from 'next/image';
-import { FirebaseProvider } from "@/firebase/provider";
+import { FirebaseClientProvider } from "@/firebase/client-provider";
 
 export default function LoginPage() {
   return (
-    <FirebaseProvider>
+    <FirebaseClientProvider>
       <main className="relative flex min-h-screen items-center justify-center p-4">
         <Image
           src="https://images.unsplash.com/photo-1497215728101-856f4ea42174?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3wzODE4MDB8MHwxfGFsbHx8fHx8fHx8fDE3MjM2OTIzNTV8&ixlib=rb-4.0.3&q=80&w=1080"
@@ -42,6 +42,6 @@ export default function LoginPage() {
           </Card>
         </div>
       </main>
-    </FirebaseProvider>
+    </FirebaseClientProvider>
   );
 }
