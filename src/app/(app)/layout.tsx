@@ -177,7 +177,6 @@ function NavItem({ item, pathname }: { item: (typeof navSections)[0]['items'][0]
                 isActive={isParentActive}
                 tooltip={item.label}
                 className="justify-between"
-                disabled={isDummyLink}
             >
                 <div className='flex items-center gap-2'>
                     <item.icon />
