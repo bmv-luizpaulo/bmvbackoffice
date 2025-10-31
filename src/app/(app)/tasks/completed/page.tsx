@@ -24,7 +24,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import type { Task, Project, User } from "@/lib/types";
 import { useFirestore, useCollection, useMemoFirebase, useUser as useAuthUser } from "@/firebase";
-import { collectionGroup, query, where } from "firebase/firestore";
+import { collection, collectionGroup, query, where } from "firebase/firestore";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CheckCircle2 } from "lucide-react";
 import { format } from "date-fns";
