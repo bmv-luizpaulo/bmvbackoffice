@@ -32,7 +32,7 @@ import {
 } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import type { Team, User } from "@/lib/types";
+import type { Team, User, Role } from "@/lib/types";
 import dynamic from "next/dynamic";
 import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { collection, doc, writeBatch } from "firebase/firestore";
@@ -60,6 +60,9 @@ export function TeamDataTable() {
   
   const usersQuery = useMemoFirebase(() => firestore ? collection(firestore, 'users') : null, [firestore]);
   const { data: users, isLoading: isLoadingUsers } = useCollection<User>(usersQuery);
+  
+  const rolesQuery = useMemoFirebase(() => firestore ? collection(firestore, 'roles') : null, [firestore]);
+  const { data: rolesData, isLoading: isLoadingRoles } = useCollection<Role>(rolesQuery);
 
   const data = React.useMemo(() => teamsData ?? [], [teamsData]);
 
@@ -70,8 +73,10 @@ export function TeamDataTable() {
   const [isAlertOpen, setIsAlertOpen] = React.useState(false);
   const [selectedTeam, setSelectedTeam] = React.useState<Team | null>(null);
   
-  const isLoading = isLoadingTeams || isLoadingUsers;
+  const isLoading = isLoadingTeams || isLoadingUsers || isLoadingRoles;
 
+  const usersMap = React.useMemo(() => new Map(users?.map(u => [u.id, u])), [users]);
+  
   const usersByTeam = React.useMemo(() => {
     if (!users || !teamsData) return new Map<string, User[]>();
     const map = new Map<string, User[]>();
@@ -171,6 +176,11 @@ export function TeamDataTable() {
       cell: ({ row }) => <span className="font-medium">{row.original.name}</span>,
     },
     {
+      accessorKey: "leaderId",
+      header: "Líder da Equipe",
+      cell: ({ row }) => usersMap.get(row.original.leaderId || '')?.name || <span className="text-muted-foreground">N/D</span>,
+    },
+    {
       accessorKey: "description",
       header: "Descrição",
       cell: ({ row }) => <p className="text-muted-foreground max-w-xs truncate">{row.original.description}</p>
@@ -230,7 +240,7 @@ export function TeamDataTable() {
         )
       },
     },
-  ], [usersByTeam, handleEditClick, handleDeleteClick]);
+  ], [usersByTeam, handleEditClick, handleDeleteClick, usersMap]);
 
   const table = useReactTable({
     data,
@@ -332,6 +342,7 @@ export function TeamDataTable() {
           team={selectedTeam}
           users={users || []}
           usersInTeam={selectedTeam ? usersByTeam.get(selectedTeam.id) || [] : []}
+          roles={rolesData || []}
         />
       )}
 

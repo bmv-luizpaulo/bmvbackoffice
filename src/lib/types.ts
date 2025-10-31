@@ -107,6 +107,11 @@ export type Team = {
     id: string;
     name: string;
     description?: string;
+    leaderId?: string;
+    department?: 'Diretoria Operacional' | 'Diretoria Administrativa';
+    teamType?: 'Operacional' | 'Técnica' | 'Suporte' | 'Projeto' | 'Administrativa';
+    responsibilities?: string;
+    kpis?: string;
 };
 
 export type Role = {
