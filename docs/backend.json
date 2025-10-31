@@ -50,6 +50,10 @@
             "items": {
                 "type": "string"
             }
+        },
+        "_tokenRefreshed": {
+          "type": "number",
+          "description": "A timestamp used to trigger client-side token refreshes."
         }
       },
       "required": [
@@ -424,16 +428,59 @@
         "order": { "type": "number", "description": "The numerical order of the item in the list." }
       },
       "required": ["checklistId", "description", "order"]
+    },
+    "Asset": {
+      "title": "Asset",
+      "type": "object",
+      "description": "Represents a physical or digital asset of the company.",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Name of the asset."
+        },
+        "description": {
+          "type": "string",
+          "description": "Description of the asset."
+        },
+        "serialNumber": {
+          "type": "string",
+          "description": "Serial number or unique identifier."
+        },
+        "type": {
+          "type": "string",
+          "description": "Type of asset.",
+          "enum": ["Físico", "Digital"]
+        },
+        "status": {
+          "type": "string",
+          "description": "Current status of the asset.",
+          "enum": ["Em Uso", "Em Manutenção", "Disponível", "Descartado"]
+        },
+        "location": {
+          "type": "string",
+          "description": "Physical or digital location of the asset."
+        },
+        "purchaseDate": {
+          "type": "string",
+          "format": "date",
+          "description": "Date the asset was purchased."
+        },
+        "purchaseValue": {
+          "type": "number",
+          "description": "Purchase value of the asset."
+        },
+        "assigneeId": {
+          "type": "string",
+          "description": "The ID of the user the asset is assigned to."
+        }
+      },
+      "required": ["name", "type", "status"]
     }
   },
   "auth": {
     "providers": [
       "password",
       "anonymous"
-    ],
-    "customClaims": [
-      "isManager",
-      "isDev"
     ]
   },
   "firestore": {
@@ -496,6 +543,10 @@
     "/checklists/{checklistId}/items/{itemId}": {
       "schema": { "$ref": "#/entities/ChecklistItem" },
       "description": "Stores the items for a specific checklist."
+    },
+    "/assets/{assetId}": {
+      "schema": { "$ref": "#/entities/Asset" },
+      "description": "Stores all company assets."
     }
   }
 }

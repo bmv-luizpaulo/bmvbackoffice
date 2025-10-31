@@ -2,8 +2,13 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Building2 } from "lucide-react";
+import dynamic from "next/dynamic";
+import { Suspense } from 'react';
+import { Skeleton } from "@/components/ui/skeleton";
 
 export const dynamic = 'force-dynamic';
+
+const AssetDataTable = dynamic(() => import("@/components/assets/asset-data-table").then(m => m.AssetDataTable));
 
 export default function AssetsPage() {
   return (
@@ -19,18 +24,25 @@ export default function AssetsPage() {
       </header>
       <Card>
         <CardHeader>
-          <CardTitle>Em Construção</CardTitle>
+          <CardTitle>Inventário de Ativos</CardTitle>
           <CardDescription>
-            Esta área está sendo desenvolvida e estará disponível em breve.
+            Adicione, edite e visualize todos os ativos da empresa.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-col items-center justify-center text-center p-8 border-2 border-dashed rounded-lg">
-            <p className="text-lg font-semibold">Página de Ativos</p>
-            <p className="text-muted-foreground mt-2">
-                Aqui você poderá cadastrar, rastrear e gerenciar o ciclo de vida dos ativos da empresa, desde equipamentos a licenças de software.
-            </p>
-          </div>
+            <Suspense fallback={
+                <div className="space-y-3">
+                  <Skeleton className="h-8 w-48" />
+                  <Skeleton className="h-10 w-full" />
+                  <div className="space-y-2">
+                    <Skeleton className="h-6 w-full" />
+                    <Skeleton className="h-6 w-full" />
+                    <Skeleton className="h-6 w-full" />
+                  </div>
+                </div>
+              }>
+                <AssetDataTable />
+            </Suspense>
         </CardContent>
       </Card>
     </div>

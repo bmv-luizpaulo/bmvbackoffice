@@ -165,4 +165,17 @@ export type ChecklistItem = {
   description: string;
   order: number;
 };
+
+export type Asset = {
+    id: string;
+    name: string;
+    description?: string;
+    serialNumber?: string;
+    type: 'Físico' | 'Digital';
+    status: 'Em Uso' | 'Em Manutenção' | 'Disponível' | 'Descartado';
+    location?: string;
+    purchaseDate?: string;
+    purchaseValue?: number;
+    assigneeId?: string;
+};
     
