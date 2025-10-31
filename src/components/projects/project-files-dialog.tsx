@@ -4,9 +4,9 @@ import * as React from "react";
 import { useToast } from "@/hooks/use-toast";
 import type { Project, ProjectFile } from "@/lib/types";
 import { useUser, useCollection, useFirestore, useMemoFirebase } from "@/firebase";
-import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
-import { collection, addDoc, serverTimestamp, query, orderBy } from "firebase/firestore";
-import { Download, File, Loader2, Trash2, UploadCloud, X } from "lucide-react";
+import { collection, query, orderBy } from "firebase/firestore";
+import { Download, File, Loader2, Trash2 } from "lucide-react";
+import { uploadProjectFileAction } from "@/lib/actions";
 
 import {
   Dialog,
@@ -18,7 +18,8 @@ import {
   DialogClose,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { ProjectFileUploader } from "./project-file-uploader";
+
 
 type ProjectFilesDialogProps = {
   isOpen: boolean;
@@ -40,42 +41,28 @@ export function ProjectFilesDialog({ isOpen, onOpenChange, project }: ProjectFil
   
   const { data: files, isLoading: isLoadingFiles } = useCollection<ProjectFile>(filesQuery);
 
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (!project || !user || !event.target.files || event.target.files.length === 0) {
-      return;
-    }
-
-    const file = event.target.files[0];
+  const handleFileUpload = async (file: File) => {
+    if (!project || !user) return;
     setIsUploading(true);
 
     try {
-      const storage = getStorage();
-      const filePath = `projects/${project.id}/${Date.now()}_${file.name}`;
-      const fileStorageRef = storageRef(storage, filePath);
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('projectId', project.id);
+        formData.append('uploaderId', user.uid);
 
-      // Upload file
-      const snapshot = await uploadBytes(fileStorageRef, file);
-      const downloadURL = await getDownloadURL(snapshot.ref);
+        const result = await uploadProjectFileAction(formData);
 
-      // Save metadata to Firestore
-      const filesCollection = collection(firestore, `projects/${project.id}/files`);
-      await addDoc(filesCollection, {
-        name: file.name,
-        url: downloadURL,
-        size: file.size,
-        type: file.type,
-        uploadedAt: serverTimestamp(),
-        uploaderId: user.uid,
-      });
-
-      toast({ title: 'Sucesso', description: `Arquivo "${file.name}" enviado.` });
-    } catch (error) {
-      console.error("File upload error:", error);
-      toast({ variant: 'destructive', title: 'Erro de Upload', description: 'Não foi possível enviar o arquivo.' });
+        if (result.success) {
+            toast({ title: 'Sucesso', description: `Arquivo "${file.name}" enviado.` });
+        } else {
+            throw new Error(result.error);
+        }
+    } catch (error: any) {
+        console.error("File upload error:", error);
+        toast({ variant: 'destructive', title: 'Erro de Upload', description: error.message || 'Não foi possível enviar o arquivo.' });
     } finally {
-      setIsUploading(false);
-      // Reset file input
-      event.target.value = '';
+        setIsUploading(false);
     }
   };
   
@@ -100,17 +87,10 @@ export function ProjectFilesDialog({ isOpen, onOpenChange, project }: ProjectFil
         </DialogHeader>
         
         <div className="py-4 space-y-4">
-            <div className="relative p-6 border-2 border-dashed rounded-lg text-center">
-                <UploadCloud className="mx-auto h-12 w-12 text-gray-400"/>
-                <p className="text-muted-foreground mt-2 mb-4">Arraste e solte arquivos aqui ou clique para selecionar</p>
-                <Button asChild variant="outline" disabled={isUploading}>
-                    <label htmlFor="file-upload">
-                        {isUploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
-                        Selecionar Arquivo
-                    </label>
-                </Button>
-                <Input id="file-upload" type="file" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onChange={handleFileUpload} disabled={isUploading} />
-            </div>
+            <ProjectFileUploader 
+                onFileUpload={handleFileUpload}
+                isUploading={isUploading}
+            />
 
             <div className="space-y-2">
                 <h3 className="font-medium">Arquivos Anexados</h3>

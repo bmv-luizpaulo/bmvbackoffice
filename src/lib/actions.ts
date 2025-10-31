@@ -2,7 +2,8 @@
 
 import { getSuggestedFollowUps, SuggestedFollowUpsInput } from "@/ai/flows/ai-suggested-follow-ups";
 import { generateDailyChatSummary } from "@/ai/flows/daily-chat-summary";
-import { getDocs, collection } from 'firebase/firestore';
+import { getDocs, collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
 import { initializeFirebase } from "@/firebase";
 import type { Project, Task } from "./types";
 import { unstable_noStore as noStore } from 'next/cache';
@@ -109,5 +110,44 @@ export async function getCepInfoAction(cep: string): Promise<{ success: boolean;
     } catch (error) {
         console.error("Erro ao buscar CEP na ViaCEP:", error);
         return { success: false, error: "Não foi possível buscar o CEP." };
+    }
+}
+
+export async function uploadProjectFileAction(formData: FormData) {
+    noStore();
+    const file = formData.get('file') as File;
+    const projectId = formData.get('projectId') as string;
+    const uploaderId = formData.get('uploaderId') as string;
+
+    if (!file || !projectId || !uploaderId) {
+        return { success: false, error: 'Dados inválidos.' };
+    }
+
+    try {
+        const { firestore } = initializeFirebase();
+        const storage = getStorage();
+        const filePath = `projects/${projectId}/${Date.now()}_${file.name}`;
+        const fileStorageRef = storageRef(storage, filePath);
+
+        // Upload file
+        const fileBuffer = await file.arrayBuffer();
+        const snapshot = await uploadBytes(fileStorageRef, fileBuffer, { contentType: file.type });
+        const downloadURL = await getDownloadURL(snapshot.ref);
+
+        // Save metadata to Firestore
+        const filesCollection = collection(firestore, `projects/${projectId}/files`);
+        await addDoc(filesCollection, {
+            name: file.name,
+            url: downloadURL,
+            size: file.size,
+            type: file.type,
+            uploadedAt: serverTimestamp(),
+            uploaderId: uploaderId,
+        });
+
+        return { success: true, data: { url: downloadURL } };
+    } catch (error) {
+        console.error("Erro no upload de arquivo:", error);
+        return { success: false, error: 'Falha ao enviar o arquivo.' };
     }
 }

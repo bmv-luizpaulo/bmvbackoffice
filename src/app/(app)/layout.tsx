@@ -204,7 +204,7 @@ function NavItem({ item, pathname }: { item: (typeof navSections)[0]['items'][0]
                     <item.icon />
                     <span>{item.label}</span>
                 </div>
-                <ChevronDown className={cn("h-4 w-4 transition-transform", isOpen && "rotate-180")} />
+                <ChevronDown className={cn("h-4 w-4 transition-transform", isOpen && "rotate-180", isParentActive && "text-sidebar-accent-foreground")} />
             </SidebarMenuButton>
         </CollapsibleTrigger>
         <CollapsibleContent>

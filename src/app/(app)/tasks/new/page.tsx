@@ -7,8 +7,8 @@ import { z } from "zod";
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useCollection, useUser, useMemoFirebase, addDocumentNonBlocking } from '@/firebase';
-import type { Task, Project, User as UserType } from '@/lib/types';
-import { collection } from 'firebase/firestore';
+import type { Task, Project, User as UserType, Stage } from '@/lib/types';
+import { collection, query, getDocs } from 'firebase/firestore';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
@@ -50,12 +50,18 @@ export default function NewTaskPage() {
 
     try {
         const stagesCollection = collection(firestore, 'projects', values.projectId, 'stages');
-        const defaultStage = (await collection(firestore, 'projects', values.projectId, 'stages').get()).docs
-            .map(d => d.data())
-            .find(s => s.order === 1);
+        const stagesSnapshot = await getDocs(stagesCollection);
+        
+        if (stagesSnapshot.empty) {
+            toast({ variant: 'destructive', title: "Erro de Configuração", description: "O projeto selecionado não possui etapas (stages) configuradas. Adicione etapas ao projeto antes de criar tarefas." });
+            return;
+        }
+
+        const stages = stagesSnapshot.docs.map(d => d.data() as Stage).sort((a,b) => a.order - b.order);
+        const defaultStage = stages[0];
 
         if (!defaultStage) {
-            toast({ variant: 'destructive', title: "Erro", description: "O projeto selecionado não possui uma etapa inicial configurada." });
+            toast({ variant: 'destructive', title: "Erro", description: "Não foi possível encontrar a etapa inicial do projeto." });
             return;
         }
 
