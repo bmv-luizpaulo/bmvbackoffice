@@ -22,7 +22,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuCheckboxItem
 } from "@/components/ui/dropdown-menu"
-import { MoreHorizontal, Pencil, Trash2, History } from "lucide-react"
+import { MoreHorizontal, Pencil, Trash2, History, FileText } from "lucide-react"
 
 import {
   Table,
@@ -52,6 +52,7 @@ import { Badge } from "../ui/badge";
 import { addDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase/non-blocking-updates"
 import dynamic from "next/dynamic";
 import { format } from "date-fns";
+import Link from "next/link";
 
 const AssetFormDialog = dynamic(() => import('./asset-form-dialog').then(m => m.AssetFormDialog), { ssr: false });
 const AssetHistoryDialog = dynamic(() => import('./asset-history-dialog').then(m => m.AssetHistoryDialog), { ssr: false });
@@ -201,6 +202,14 @@ export function AssetDataTable() {
                 <History className="mr-2 h-4 w-4" />
                 Ver Histórico
               </DropdownMenuItem>
+              {asset.assigneeId && (
+                <Link href={`/reports/asset-delivery/${asset.id}`} target="_blank">
+                  <DropdownMenuItem>
+                    <FileText className="mr-2 h-4 w-4" />
+                    Gerar Termo de Entrega
+                  </DropdownMenuItem>
+                </Link>
+              )}
               <DropdownMenuSeparator />
               <DropdownMenuItem 
                 className="text-red-600"

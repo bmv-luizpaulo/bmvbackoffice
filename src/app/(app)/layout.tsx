@@ -13,6 +13,7 @@ import {
   ListChecks,
   Building2,
   Award,
+  FileText,
 } from 'lucide-react';
 import Image from 'next/image';
 
@@ -71,6 +72,7 @@ const navSections = [
             { href: '/assets', icon: Building2, label: 'Ativos' },
             { href: '/contracts', icon: Archive, label: 'Contratos' },
             { href: '/checklists', icon: ListChecks, label: 'Checklists' },
+            { href: '/reports', icon: FileText, label: 'Relatórios' },
         ]
     },
     {
