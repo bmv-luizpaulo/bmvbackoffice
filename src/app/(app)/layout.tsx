@@ -19,6 +19,9 @@ import {
   User,
   Group,
   Briefcase,
+  KanbanSquare,
+  CheckCircle2,
+  PlusCircle,
 } from 'lucide-react';
 import Image from 'next/image';
 import React, { useEffect } from 'react';
@@ -81,12 +84,22 @@ const navSections = [
     {
         name: 'Operacional',
         items: [
-            { href: '/projects', icon: ListChecks, label: 'Tarefas' },
             { 
-              href: '/assets', 
+              href: '#', 
+              icon: ListChecks, 
+              label: 'Tarefas',
+              subItems: [
+                { href: '/projects', icon: KanbanSquare, label: 'Funil Kanban' },
+                { href: '/tasks/completed', icon: CheckCircle2, label: 'Concluídas' },
+                { href: '/tasks/new', icon: PlusCircle, label: 'Nova Tarefa' },
+              ]
+            },
+            { 
+              href: '#', 
               icon: Building2, 
               label: 'Ativos',
               subItems: [
+                { href: '/assets', icon: Building2, label: 'Inventário' },
                 { href: '/maintenance', icon: Wrench, label: 'Manutenções' },
                 { href: '/contracts', icon: Archive, label: 'Contratos' },
                 { href: '/reports', icon: FileText, label: 'Relatórios' },

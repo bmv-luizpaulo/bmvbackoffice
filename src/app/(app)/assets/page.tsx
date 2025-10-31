@@ -16,7 +16,7 @@ export default function AssetsPage() {
       <header>
         <h1 className="font-headline text-3xl font-bold tracking-tight flex items-center gap-2">
           <Building2 className="h-8 w-8 text-primary" />
-          Gestão de Ativos
+          Inventário de Ativos
         </h1>
         <p className="text-muted-foreground">
           Gerencie os ativos físicos e digitais da sua organização.
