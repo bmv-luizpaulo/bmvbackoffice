@@ -106,6 +106,7 @@ export function AssetFormDialog({ isOpen, onOpenChange, onSave, asset, users }: 
   function onSubmit(values: z.infer<typeof formSchema>) {
     const assetData = {
         ...values,
+        assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
         purchaseDate: values.purchaseDate?.toISOString(),
         lastMaintenanceDate: values.lastMaintenanceDate?.toISOString(),
         nextMaintenanceDate: values.nextMaintenanceDate?.toISOString(),
@@ -292,7 +293,7 @@ export function AssetFormDialog({ isOpen, onOpenChange, onSave, asset, users }: 
                             </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                                <SelectItem value="">Ninguém</SelectItem>
+                                <SelectItem value="unassigned">Ninguém</SelectItem>
                                 {userOptions.map(option => (
                                     <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
                                 ))}
