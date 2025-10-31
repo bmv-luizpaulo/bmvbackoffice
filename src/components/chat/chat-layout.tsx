@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Paperclip, Send } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
-import { useUser, useCollection, useFirestore } from '@/firebase';
+import { useUser, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query, where, addDoc, serverTimestamp, orderBy, doc, setDoc } from 'firebase/firestore';
 import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import React from 'react';
@@ -20,18 +20,18 @@ export function ChatLayout() {
   const [newMessage, setNewMessage] = useState('');
 
   // 1. Fetch all users to display in the list
-  const usersQuery = React.useMemo(() => firestore ? collection(firestore, 'users') : null, [firestore]);
+  const usersQuery = useMemoFirebase(() => firestore ? collection(firestore, 'users') : null, [firestore]);
   const { data: allUsers } = useCollection<User>(usersQuery);
 
   // 2. Fetch all chats the current user is a part of
-  const chatsQuery = React.useMemo(() => {
+  const chatsQuery = useMemoFirebase(() => {
     if (!firestore || !currentUser?.uid) return null;
     return query(collection(firestore, 'chats'), where('userIds', 'array-contains', currentUser.uid));
   }, [firestore, currentUser]);
   const { data: userChats, isLoading: isLoadingChats } = useCollection<Chat>(chatsQuery);
 
   // 3. Fetch messages for the currently selected chat
-  const messagesQuery = React.useMemo(() => {
+  const messagesQuery = useMemoFirebase(() => {
     if (!firestore || !selectedChat?.id) return null;
     return query(collection(firestore, 'chats', selectedChat.id, 'messages'), orderBy('timestamp', 'asc'));
   }, [firestore, selectedChat]);
@@ -199,5 +199,3 @@ export function ChatLayout() {
     </div>
   );
 }
-
-    

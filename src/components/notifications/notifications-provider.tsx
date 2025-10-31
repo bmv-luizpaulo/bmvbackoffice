@@ -12,6 +12,7 @@ import {
   useFirestore,
   useUser,
   useCollection,
+  useMemoFirebase
 } from '@/firebase';
 import {
   collection,
@@ -49,7 +50,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
   const { user } = useUser();
   const [unreadCount, setUnreadCount] = useState(0);
 
-  const notificationsQuery = React.useMemo(
+  const notificationsQuery = useMemoFirebase(
     () =>
       firestore && user?.uid
         ? query(

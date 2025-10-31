@@ -37,7 +37,7 @@ export default function TaskAgendaPage() {
     // A role lookup is required, but this is a temporary workaround.
     if (userRole === 'Gestor' || userRole === 'Desenvolvedor') {
       if (selectedUserId === 'all') {
-        return tasksCollection;
+        return query(tasksCollection);
       }
       return query(tasksCollection, where('assigneeId', '==', selectedUserId));
     }
