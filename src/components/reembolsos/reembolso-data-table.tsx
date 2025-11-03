@@ -13,7 +13,14 @@ import {
   getFilteredRowModel,
 } from "@tanstack/react-table"
 import { MoreHorizontal, Pencil, CheckCircle2, XCircle, Clock, Link as LinkIcon, HandCoins } from "lucide-react"
-
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import {
   Table,
   TableBody,
@@ -87,7 +94,7 @@ export function ReembolsoDataTable() {
     setIsFormOpen(true);
   };
   
-  const handleSaveReimbursement = async (reimbursementData: Omit<Reimbursement, 'id'>, receiptFile?: File) => {
+  const handleSaveReimbursement = async (reimbursementData: Omit<Reimbursement, 'id' | 'requesterId'>, receiptFile?: File) => {
       if (!firestore || !authUser) return;
 
       let receiptUrl = selectedReimbursement?.receiptUrl;
@@ -103,13 +110,13 @@ export function ReembolsoDataTable() {
           }
       }
 
-      const finalData = { ...reimbursementData, receiptUrl: receiptUrl || '' };
-
       if (selectedReimbursement) {
+          const finalData = { ...reimbursementData, receiptUrl: receiptUrl || '', requesterId: selectedReimbursement.requesterId };
           await updateDocumentNonBlocking(doc(firestore, 'reimbursements', selectedReimbursement.id), finalData);
           toast({ title: "Reembolso Atualizado", description: "Sua solicitação foi atualizada." });
       } else {
-          await addDocumentNonBlocking(collection(firestore, 'reimbursements'), { ...finalData, requesterId: authUser.uid });
+          const finalData = { ...reimbursementData, receiptUrl: receiptUrl || '', requesterId: authUser.uid };
+          await addDocumentNonBlocking(collection(firestore, 'reimbursements'), finalData);
           toast({ title: "Reembolso Solicitado", description: "Sua solicitação foi enviada para aprovação." });
       }
       setIsFormOpen(false);
@@ -185,7 +192,7 @@ export function ReembolsoDataTable() {
         )
       },
     },
-  ], [isManager, usersMap, authUser?.uid]);
+  ], [isManager, usersMap, authUser?.uid, handleStatusChange, handleEditClick]);
 
   const table = useReactTable({
     data,

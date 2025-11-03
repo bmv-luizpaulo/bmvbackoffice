@@ -61,7 +61,7 @@ const formSchema = z.object({
 });
 
 
-export default function ContractFormDialog({ isOpen, onOpenChange, onSave, contract, assets, projects }: ContractFormDialogProps) {
+export function ContractFormDialog({ isOpen, onOpenChange, onSave, contract, assets, projects }: ContractFormDialogProps) {
   const { toast } = useToast();
   const [file, setFile] = React.useState<File | undefined>();
   const [isSubmitting, setIsSubmitting] = React.useState(false);

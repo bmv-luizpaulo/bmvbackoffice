@@ -51,8 +51,8 @@ import { useToast } from "@/hooks/use-toast"
 import { uploadContractFileAction } from "@/lib/actions";
 import { format } from 'date-fns';
 import { Badge } from "../ui/badge";
+import { ContractFormDialog } from './contract-form-dialog';
 
-const ContractFormDialog = dynamic(() => import('./contract-form-dialog').then(m => m.ContractFormDialog), { ssr: false });
 
 export function ContractDataTable() {
   const firestore = useFirestore();
@@ -107,15 +107,17 @@ export function ContractDataTable() {
       }
     }
 
-    if (!fileUrl) {
+    if (!fileUrl && !contractId) {
       toast({ title: "Arquivo Faltando", description: 'É necessário anexar o arquivo do contrato.', variant: 'destructive' });
       return;
     }
 
-    const finalData = { 
-      ...contractData, 
-      fileUrl,
+    const finalData: Partial<Contract> = { 
+      ...contractData,
     };
+    if (fileUrl) {
+      finalData.fileUrl = fileUrl;
+    }
 
     if (contractId) {
         const contractRef = doc(firestore, 'contracts', contractId);
