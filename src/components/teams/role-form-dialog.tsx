@@ -66,6 +66,16 @@ const formSchema = z.object({
   }).optional(),
   isManager: z.boolean().default(false),
   isDev: z.boolean().default(false),
+}).refine(data => {
+  // Supervisor is not required for CEO or Diretoria
+  if (data.hierarchyLevel === 'CEO' || data.hierarchyLevel === 'Diretoria') {
+    return true;
+  }
+  // For other levels, supervisor is required
+  return !!data.supervisorRoleId && data.supervisorRoleId !== 'unassigned';
+}, {
+  message: "O superior imediato é obrigatório para este nível hierárquico.",
+  path: ["supervisorRoleId"],
 });
 
 const defaultValues = {
@@ -140,6 +150,9 @@ export function RoleFormDialog({ isOpen, onOpenChange, onSave, role, allRoles }:
             form.setValue('supervisorRoleId', undefined, { shouldValidate: true });
         }
     }
+     if (selectedHierarchyLevel === 'CEO') {
+        form.setValue('supervisorRoleId', 'unassigned');
+    }
   }, [selectedHierarchyLevel, supervisorOptions, form]);
 
 
@@ -202,7 +215,7 @@ export function RoleFormDialog({ isOpen, onOpenChange, onSave, role, allRoles }:
                         )}/>
                       </div>
                       <FormField control={form.control} name="supervisorRoleId" render={({ field }) => (
-                        <FormItem><FormLabel>Superior Imediato</FormLabel><Select onValueChange={field.onChange} value={field.value} disabled={!selectedHierarchyLevel}><FormControl><SelectTrigger><SelectValue placeholder="Selecione o cargo supervisor" /></SelectTrigger></FormControl><SelectContent><SelectItem value="unassigned">Nenhum</SelectItem>{supervisorOptions.map(r => (<SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>
+                        <FormItem><FormLabel>Superior Imediato</FormLabel><Select onValueChange={field.onChange} value={field.value} disabled={selectedHierarchyLevel === 'CEO'}><FormControl><SelectTrigger><SelectValue placeholder="Selecione o cargo supervisor" /></SelectTrigger></FormControl><SelectContent><SelectItem value="unassigned">Nenhum</SelectItem>{supervisorOptions.map(r => (<SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>
                       )}/>
                     </AccordionContent>
                   </AccordionItem>
