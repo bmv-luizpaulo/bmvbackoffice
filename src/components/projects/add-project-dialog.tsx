@@ -210,7 +210,6 @@ export function AddProjectDialog({ isOpen, onOpenChange, onAddProject }: AddProj
                                 )}
                             />
                         </div>
-
                     </div>
                     <div className="space-y-6">
                          <FormField
