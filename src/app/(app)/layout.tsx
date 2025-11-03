@@ -27,6 +27,7 @@ import {
   ListPlus,
   HandCoins,
   Wallet,
+  ClipboardList,
 } from 'lucide-react';
 import Image from 'next/image';
 import React, { useEffect } from 'react';
@@ -106,18 +107,15 @@ const navSections = [
                 { href: '/tasks/new', icon: ListPlus, label: 'Nova Tarefa' },
               ]
             },
-            { 
-              href: '#', 
-              icon: Building2, 
-              label: 'Ativos',
-              subItems: [
-                { href: '/assets', icon: Building2, label: 'Inventário' },
-                { href: '/maintenance', icon: Wrench, label: 'Manutenções' },
-                { href: '/contracts', icon: Archive, label: 'Contratos' },
-                { href: '/reports', icon: FileText, label: 'Relatórios' },
-              ]
-            },
             { href: '/checklists', icon: ListChecks, label: 'Checklists' },
+        ]
+    },
+    {
+        name: 'Gestão de Ativos',
+        items: [
+            { href: '/assets', icon: ClipboardList, label: 'Todos os Ativos' },
+            { href: '/maintenance', icon: Wrench, label: 'Manutenções' },
+            { href: '/reports', icon: FileText, label: 'Relatórios' },
         ]
     },
     {
@@ -125,6 +123,7 @@ const navSections = [
         items: [
             { href: '/reembolsos', icon: HandCoins, label: 'Reembolsos' },
             { href: '/cost-centers', icon: Wallet, label: 'Centro de Custos' },
+            { href: '/contracts', icon: Archive, label: 'Contratos' },
         ]
     },
     {
