@@ -15,7 +15,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { Loader2, PlusCircle } from 'lucide-react';
+import { Loader2, ListPlus } from 'lucide-react';
 import { useNotifications } from '@/components/notifications/notifications-provider';
 
 const formSchema = z.object({
@@ -100,7 +100,7 @@ export default function NewTaskPage() {
     <div className="space-y-6">
       <header>
         <h1 className="font-headline text-3xl font-bold tracking-tight flex items-center gap-2">
-            <PlusCircle className="h-8 w-8 text-primary"/>
+            <ListPlus className="h-8 w-8 text-primary"/>
             Criar Nova Tarefa
         </h1>
         <p className="text-muted-foreground">

@@ -21,9 +21,10 @@ import {
   Briefcase,
   KanbanSquare,
   CheckCircle2,
-  PlusCircle,
   Package,
   Building,
+  ListTodo,
+  ListPlus,
 } from 'lucide-react';
 import Image from 'next/image';
 import React, { useEffect } from 'react';
@@ -95,12 +96,12 @@ const navSections = [
         items: [
             { 
               href: '#', 
-              icon: KanbanSquare, 
+              icon: ListTodo, 
               label: 'Tarefas',
               subItems: [
                 { href: '/projects', icon: KanbanSquare, label: 'Funil Kanban' },
                 { href: '/tasks/completed', icon: CheckCircle2, label: 'Concluídas' },
-                { href: '/tasks/new', icon: PlusCircle, label: 'Nova Tarefa' },
+                { href: '/tasks/new', icon: ListPlus, label: 'Nova Tarefa' },
               ]
             },
             { 
