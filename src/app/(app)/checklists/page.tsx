@@ -1,5 +1,3 @@
-
-
 'use client';
 
 import * as React from 'react';
@@ -125,18 +123,19 @@ export default function ChecklistsPage() {
             <CardTitle>Todos os Checklists</CardTitle>
           </CardHeader>
           <CardContent className="p-2">
-            <div className="space-y-2 max-h-[60vh] overflow-y-auto">
+            <div className="space-y-1 max-h-[60vh] overflow-y-auto">
               {isLoadingChecklists ? (
-                Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-10 w-full" />)
+                Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-12 w-full" />)
               ) : checklists && checklists.length > 0 ? (
                 checklists.map(checklist => (
                   <Button
                     key={checklist.id}
                     variant={selectedChecklist?.id === checklist.id ? "secondary" : "ghost"}
-                    className="w-full justify-start"
+                    className="w-full h-auto justify-start text-left flex flex-col items-start p-2"
                     onClick={() => setSelectedChecklist(checklist)}
                   >
-                    {checklist.name}
+                    <span className="font-medium">{checklist.name}</span>
+                    <span className="text-xs text-muted-foreground">{teamsMap.get(checklist.teamId) || 'Equipe desconhecida'}</span>
                   </Button>
                 ))
               ) : (
