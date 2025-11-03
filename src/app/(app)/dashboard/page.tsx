@@ -2,17 +2,23 @@
 
 import { useMemo } from 'react';
 import { KpiCard } from "@/components/dashboard/kpi-card";
-import { CheckCircle, Target, FolderKanban, ListChecks, Award } from "lucide-react";
+import { CheckCircle, Target, FolderKanban, Award, DollarSign } from "lucide-react";
 import { PipelineChart } from "@/components/dashboard/pipeline-chart";
 import { ChatSummary } from "@/components/dashboard/chat-summary";
 import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { collection, collectionGroup, query } from "firebase/firestore";
 import type { Project, Task, Stage, Seal } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { differenceInDays, isPast } from 'date-fns';
 import React from 'react';
+import dynamic from 'next/dynamic';
+
+const RecentTasksCard = dynamic(() => import('@/components/dashboard/recent-tasks-card'), {
+  loading: () => <Skeleton className="h-[400px]" />,
+});
+const ActiveForumsCard = dynamic(() => import('@/components/dashboard/active-forums-card'), {
+  loading: () => <Skeleton className="h-[400px]" />,
+});
 
 
 function KpiSkeleton() {
@@ -46,9 +52,9 @@ function DashboardInner() {
   const { data: sealsData, isLoading: isLoadingSeals } = useCollection<Seal>(sealsQuery);
 
 
-  const { activeProjects, completedProjects, openTasks, tasksByStage, totalTasks, expiringSeals } = useMemo(() => {
+  const { activeProjects, completedProjects, openTasks, tasksByStage, expiringSeals, totalBudgetValue } = useMemo(() => {
     if (!projectsData || !tasksData || !stagesData || !sealsData) {
-      return { activeProjects: 0, completedProjects: 0, openTasks: 0, tasksByStage: [], totalTasks: 0, expiringSeals: 0 };
+      return { activeProjects: 0, completedProjects: 0, openTasks: 0, tasksByStage: [], totalBudgetValue: 0, expiringSeals: 0 };
     }
 
     const tasksPerProject = tasksData.reduce((acc, task) => {
@@ -60,7 +66,9 @@ function DashboardInner() {
     }, {} as Record<string, Task[]>);
 
     let completedProjectsCount = 0;
+    let totalBudget = 0;
     projectsData.forEach(project => {
+      totalBudget += project.budget || 0;
       const projectTasks = tasksPerProject[project.id] || [];
       const allTasksCompleted = projectTasks.length > 0 && projectTasks.every(t => t.isCompleted);
       if (allTasksCompleted) {
@@ -83,8 +91,6 @@ function DashboardInner() {
 
     const chartData = Object.entries(tasksByStage).map(([name, total]) => ({ name, total }));
     
-    const totalTasks = tasksData.length;
-
     const expiringSealsCount = sealsData.filter(seal => {
         const expiryDate = new Date(seal.expiryDate);
         return isPast(expiryDate) || differenceInDays(expiryDate, new Date()) <= 30;
@@ -95,7 +101,7 @@ function DashboardInner() {
       completedProjects: completedProjectsCount,
       openTasks: openTasksCount,
       tasksByStage: chartData,
-      totalTasks: totalTasks,
+      totalBudgetValue: totalBudget,
       expiringSeals: expiringSealsCount,
     };
   }, [projectsData, tasksData, stagesData, sealsData]);
@@ -108,21 +114,14 @@ function DashboardInner() {
         <h1 className="font-headline text-3xl font-bold tracking-tight">Painel</h1>
         <p className="text-muted-foreground">Seu centro de comando para vendas e operações.</p>
       </header>
-
-      <Tabs defaultValue="overview">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="overview">Visão Geral</TabsTrigger>
-          <TabsTrigger value="tasks">Análise de Tarefas</TabsTrigger>
-          <TabsTrigger value="collab">Colaboração</TabsTrigger>
-        </TabsList>
-        <TabsContent value="overview" className="mt-6">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
             {isLoading ? (
               <>
-                <KpiSkeleton />
-                <KpiSkeleton />
-                <KpiSkeleton />
-                <KpiSkeleton />
+                <Skeleton className="h-28" />
+                <Skeleton className="h-28" />
+                <Skeleton className="h-28" />
+                <Skeleton className="h-28" />
+                <Skeleton className="h-28" />
               </>
             ) : (
               <>
@@ -150,17 +149,25 @@ function DashboardInner() {
                   description="Selos vencidos ou vencendo em 30 dias"
                   icon={<Award className="text-red-500"/>}
                 />
+                 <KpiCard 
+                  title="Valor Total de Projetos" 
+                  value={totalBudgetValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL'})}
+                  description="Soma dos orçamentos de projetos ativos"
+                  icon={<DollarSign className="text-blue-500"/>}
+                />
               </>
             )}
-          </div>
-        </TabsContent>
-        <TabsContent value="tasks" className="mt-6">
-           <PipelineChart data={tasksByStage} isLoading={isLoading} />
-        </TabsContent>
-        <TabsContent value="collab" className="mt-6">
-            <ChatSummary />
-        </TabsContent>
-      </Tabs>
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2 space-y-6">
+                <PipelineChart data={tasksByStage} isLoading={isLoading} />
+                <ChatSummary />
+            </div>
+            <div className="lg:col-span-1 space-y-6">
+                <RecentTasksCard />
+                <ActiveForumsCard />
+            </div>
+        </div>
     </div>
   );
 }
@@ -176,10 +183,10 @@ export default function DashboardPage() {
           <p className="text-muted-foreground">Seu centro de comando para vendas e operações.</p>
         </header>
          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <KpiSkeleton />
-            <KpiSkeleton />
-            <KpiSkeleton />
-            <KpiSkeleton />
+            <Skeleton className="h-28" />
+            <Skeleton className="h-28" />
+            <Skeleton className="h-28" />
+            <Skeleton className="h-28" />
         </div>
       </div>
     );

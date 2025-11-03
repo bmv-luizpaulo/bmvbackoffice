@@ -71,6 +71,7 @@ export default function NewTaskPage() {
             projectId: values.projectId,
             stageId: defaultStage.id,
             isCompleted: false,
+            createdAt: new Date().toISOString(),
             description: values.description || '',
         };
 

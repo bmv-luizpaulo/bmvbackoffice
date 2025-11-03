@@ -106,6 +106,7 @@ export type Task = {
     projectId: string;
     stageId: string;
     isCompleted: boolean;
+    createdAt: string; // ISO string
     dependentTaskIds?: string[];
     assigneeId?: string;
     dueDate?: string;
@@ -119,7 +120,7 @@ export type Team = {
     name: string;
     description?: string;
     leaderId?: string;
-    directorateId?: string;
+    directorateId: string;
     teamType?: 'Operacional' | 'Técnica' | 'Suporte' | 'Projeto' | 'Administrativa';
     responsibilities?: string;
     kpis?: string;
@@ -136,8 +137,8 @@ export type Role = {
     id: string;
     name: string;
     description?: string;
-    department?: 'Operações' | 'TI' | 'Financeiro' | 'Comercial' | 'RH' | 'Administrativo';
-    hierarchyLevel?: 'CEO' | 'Diretoria' | 'Gerência' | 'Coordenação' | 'Analista' | 'Assistente' | 'Estagiário';
+    department: 'Operações' | 'TI' | 'Financeiro' | 'Comercial' | 'RH' | 'Administrativo';
+    hierarchyLevel: 'CEO' | 'Diretoria' | 'Gerência' | 'Coordenação' | 'Analista' | 'Assistente' | 'Estagiário';
     supervisorRoleId?: string;
     mission?: string;
     responsibilities?: string[];

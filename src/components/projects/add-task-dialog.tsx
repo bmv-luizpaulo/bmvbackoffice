@@ -124,6 +124,7 @@ export function AddTaskDialog({ isOpen, onOpenChange, onSaveTask, stages, tasks,
     onSaveTask({ 
         ...values,
         projectId,
+        createdAt: taskToEdit?.createdAt || new Date().toISOString(),
         description: values.description || '',
         dependentTaskIds: values.dependentTaskIds || [],
         dueDate: values.dueDate?.toISOString(),
