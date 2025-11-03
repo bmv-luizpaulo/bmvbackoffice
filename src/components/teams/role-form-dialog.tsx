@@ -67,11 +67,9 @@ const formSchema = z.object({
   isManager: z.boolean().default(false),
   isDev: z.boolean().default(false),
 }).refine(data => {
-  // Supervisor is not required for CEO or Diretoria
   if (data.hierarchyLevel === 'CEO' || data.hierarchyLevel === 'Diretoria') {
     return true;
   }
-  // For other levels, supervisor is required
   return !!data.supervisorRoleId && data.supervisorRoleId !== 'unassigned';
 }, {
   message: "O superior imediato é obrigatório para este nível hierárquico.",
@@ -109,7 +107,7 @@ export function RoleFormDialog({ isOpen, onOpenChange, onSave, role, allRoles }:
           description: role.description || '', 
           department: role.department,
           hierarchyLevel: role.hierarchyLevel,
-          supervisorRoleId: role.supervisorRoleId || 'unassigned',
+          supervisorRoleId: role.supervisorRoleId || undefined,
           mission: role.mission || '',
           responsibilities: role.responsibilities?.map(value => ({ value })) || [],
           kpis: role.kpis?.map(value => ({ value })) || [],
@@ -142,7 +140,6 @@ export function RoleFormDialog({ isOpen, onOpenChange, onSave, role, allRoles }:
   }, [selectedHierarchyLevel, allRoles, role]);
 
   React.useEffect(() => {
-    // When the hierarchy level changes, check if the current supervisor is still valid.
     const currentSupervisorId = form.getValues('supervisorRoleId');
     if (currentSupervisorId && currentSupervisorId !== 'unassigned') {
         const isSupervisorValid = supervisorOptions.some(opt => opt.id === currentSupervisorId);
@@ -151,7 +148,7 @@ export function RoleFormDialog({ isOpen, onOpenChange, onSave, role, allRoles }:
         }
     }
      if (selectedHierarchyLevel === 'CEO') {
-        form.setValue('supervisorRoleId', 'unassigned');
+        form.setValue('supervisorRoleId', undefined, { shouldValidate: true });
     }
   }, [selectedHierarchyLevel, supervisorOptions, form]);
 
@@ -159,7 +156,7 @@ export function RoleFormDialog({ isOpen, onOpenChange, onSave, role, allRoles }:
   function onSubmit(values: z.infer<typeof formSchema>) {
     const { salaryRange, ...restOfValues } = values;
 
-    const finalData: Partial<Omit<Role, 'id'>> = {
+    const finalData = {
         ...restOfValues,
         supervisorRoleId: values.supervisorRoleId === 'unassigned' ? undefined : values.supervisorRoleId,
         responsibilities: values.responsibilities?.map(item => item.value).filter(Boolean),
@@ -171,11 +168,14 @@ export function RoleFormDialog({ isOpen, onOpenChange, onSave, role, allRoles }:
         },
     };
     
-    // Clean up undefined salary fields
-    if (finalData.salaryRange?.min === undefined) delete finalData.salaryRange.min;
-    if (finalData.salaryRange?.max === undefined) delete finalData.salaryRange.max;
+    if (finalData.salaryRange?.min === undefined) {
+        delete finalData.salaryRange.min;
+    }
+    if (finalData.salaryRange?.max === undefined) {
+        delete finalData.salaryRange.max;
+    }
     if (Object.keys(finalData.salaryRange || {}).length === 0) {
-        delete finalData.salaryRange;
+        delete (finalData as Partial<typeof finalData>).salaryRange;
     }
     
     if (finalData.supervisorRoleId === undefined) {
