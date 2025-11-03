@@ -4,8 +4,10 @@ service cloud.firestore {
   match /databases/{database}/documents {
     
     match /users/{userId} {
-      allow read, update, delete: if request.auth.uid == userId;
-      allow create: if request.auth.uid != null;
+      // Allow any authenticated user to read user profiles (for selectors, etc.)
+      allow read: if request.auth != null;
+      // Allow a user to create their own profile, or update their own profile.
+      allow write: if request.auth.uid == userId;
 
       // Allow user to manage their own notifications
       match /notifications/{notificationId} {
