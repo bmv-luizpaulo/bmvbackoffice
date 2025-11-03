@@ -222,6 +222,7 @@ export function ProfileSettings({ user }: ProfileSettingsProps) {
                     <FormControl>
                       <Input 
                         {...field}
+                        value={field.value || ''}
                         onChange={(e) => {
                           field.onChange(formatPhone(e.target.value))
                         }}
@@ -240,6 +241,7 @@ export function ProfileSettings({ user }: ProfileSettingsProps) {
                     <FormControl>
                        <Input 
                         {...field}
+                        value={field.value || ''}
                         onChange={(e) => {
                           field.onChange(formatCPF(e.target.value))
                         }}
@@ -263,6 +265,7 @@ export function ProfileSettings({ user }: ProfileSettingsProps) {
                                 <div className="relative">
                                 <Input 
                                     {...field}
+                                    value={field.value || ''}
                                     onBlur={(e) => {
                                         field.onBlur();
                                         handleCepLookup(e.target.value);
@@ -282,7 +285,7 @@ export function ProfileSettings({ user }: ProfileSettingsProps) {
                             <FormItem className="md:col-span-2">
                             <FormLabel>Rua</FormLabel>
                             <FormControl>
-                                <Input {...field} />
+                                <Input {...field} value={field.value || ''} />
                             </FormControl>
                             <FormMessage />
                             </FormItem>
@@ -295,7 +298,7 @@ export function ProfileSettings({ user }: ProfileSettingsProps) {
                             <FormItem>
                             <FormLabel>Número</FormLabel>
                             <FormControl>
-                                <Input {...field} />
+                                <Input {...field} value={field.value || ''} />
                             </FormControl>
                             <FormMessage />
                             </FormItem>
@@ -308,7 +311,7 @@ export function ProfileSettings({ user }: ProfileSettingsProps) {
                             <FormItem className="md:col-span-2">
                             <FormLabel>Complemento</FormLabel>
                             <FormControl>
-                                <Input {...field} />
+                                <Input {...field} value={field.value || ''} />
                             </FormControl>
                             <FormMessage />
                             </FormItem>
@@ -321,7 +324,7 @@ export function ProfileSettings({ user }: ProfileSettingsProps) {
                             <FormItem>
                             <FormLabel>Bairro</FormLabel>
                             <FormControl>
-                                <Input {...field} />
+                                <Input {...field} value={field.value || ''} />
                             </FormControl>
                             <FormMessage />
                             </FormItem>
@@ -334,7 +337,7 @@ export function ProfileSettings({ user }: ProfileSettingsProps) {
                             <FormItem>
                             <FormLabel>Cidade</FormLabel>
                             <FormControl>
-                                <Input {...field} />
+                                <Input {...field} value={field.value || ''} />
                             </FormControl>
                             <FormMessage />
                             </FormItem>
@@ -347,7 +350,7 @@ export function ProfileSettings({ user }: ProfileSettingsProps) {
                             <FormItem>
                             <FormLabel>Estado</FormLabel>
                             <FormControl>
-                                <Input {...field} />
+                                <Input {...field} value={field.value || ''} />
                             </FormControl>
                             <FormMessage />
                             </FormItem>

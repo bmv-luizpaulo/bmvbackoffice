@@ -35,6 +35,7 @@ import { MultiSelect } from "../ui/multi-select";
 import { useCollection, useFirestore } from "@/firebase";
 import { collection } from "firebase/firestore";
 import React from "react";
+import { formatPhone } from "@/lib/masks";
 
 type AddProjectDialogProps = {
   isOpen: boolean;
@@ -69,6 +70,9 @@ export function AddProjectDialog({ isOpen, onOpenChange, onAddProject }: AddProj
       teamMembers: [],
       contactPhone: "",
       technicalDetails: "",
+      ownerId: undefined,
+      startDate: undefined,
+      endDate: undefined,
     },
   });
 
@@ -254,7 +258,11 @@ export function AddProjectDialog({ isOpen, onOpenChange, onAddProject }: AddProj
                                 <FormItem>
                                 <FormLabel>Telefone de Contato</FormLabel>
                                 <FormControl>
-                                    <Input placeholder="(XX) XXXXX-XXXX" {...field} />
+                                    <Input
+                                        placeholder="(XX) XXXXX-XXXX"
+                                        {...field}
+                                        onChange={(e) => field.onChange(formatPhone(e.target.value))}
+                                    />
                                 </FormControl>
                                 <FormMessage />
                                 </FormItem>
