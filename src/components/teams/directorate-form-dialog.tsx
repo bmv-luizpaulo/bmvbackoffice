@@ -24,7 +24,10 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from "../ui/textarea";
-import type { Directorate } from "@/lib/types";
+import type { Directorate, User } from "@/lib/types";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
+import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
+import { collection } from "firebase/firestore";
 
 type DirectorateFormDialogProps = {
   isOpen: boolean;
@@ -36,15 +39,20 @@ type DirectorateFormDialogProps = {
 const formSchema = z.object({
   name: z.string().min(1, "O nome da diretoria é obrigatório."),
   description: z.string().optional(),
+  directorId: z.string().optional(),
 });
 
 export function DirectorateFormDialog({ isOpen, onOpenChange, onSave, directorate }: DirectorateFormDialogProps) {
-  
+  const firestore = useFirestore();
+  const usersQuery = useMemoFirebase(() => firestore ? collection(firestore, 'users') : null, [firestore]);
+  const { data: users } = useCollection<User>(usersQuery);
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: '',
       description: '',
+      directorId: undefined,
     }
   });
 
@@ -54,11 +62,13 @@ export function DirectorateFormDialog({ isOpen, onOpenChange, onSave, directorat
         form.reset({
           name: directorate.name,
           description: directorate.description || '',
+          directorId: directorate.directorId || undefined,
         });
       } else {
         form.reset({
           name: '',
           description: '',
+          directorId: undefined,
         });
       }
     }
@@ -66,7 +76,11 @@ export function DirectorateFormDialog({ isOpen, onOpenChange, onSave, directorat
 
 
   function onSubmit(values: z.infer<typeof formSchema>) {
-    onSave(values, directorate?.id);
+    const dataToSave = {
+      ...values,
+      directorId: values.directorId === 'unassigned' ? undefined : values.directorId,
+    };
+    onSave(dataToSave, directorate?.id);
     onOpenChange(false);
   }
   
@@ -90,6 +104,29 @@ export function DirectorateFormDialog({ isOpen, onOpenChange, onSave, directorat
                         <FormControl>
                             <Input placeholder="Ex: Diretoria Operacional" {...field} />
                         </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                />
+                 <FormField
+                    control={form.control}
+                    name="directorId"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Diretor Responsável</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                            <SelectTrigger>
+                                <SelectValue placeholder="Selecione um diretor" />
+                            </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                                <SelectItem value="unassigned">Nenhum</SelectItem>
+                                {users?.map(user => (
+                                    <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
                         <FormMessage />
                         </FormItem>
                     )}

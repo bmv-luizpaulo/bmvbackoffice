@@ -31,7 +31,7 @@ import {
 } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import type { Directorate } from "@/lib/types";
+import type { Directorate, User } from "@/lib/types";
 import dynamic from "next/dynamic";
 import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { collection, doc } from "firebase/firestore";
@@ -55,8 +55,11 @@ export function DirectorateDataTable() {
   const { toast } = useToast();
   
   const directoratesQuery = useMemoFirebase(() => firestore ? collection(firestore, 'directorates') : null, [firestore]);
-  const { data: directoratesData, isLoading } = useCollection<Directorate>(directoratesQuery);
+  const { data: directoratesData, isLoading: isLoadingDirectorates } = useCollection<Directorate>(directoratesQuery);
+  const usersQuery = useMemoFirebase(() => firestore ? collection(firestore, 'users') : null, [firestore]);
+  const { data: usersData, isLoading: isLoadingUsers } = useCollection<User>(usersQuery);
   
+  const usersMap = React.useMemo(() => new Map(usersData?.map(u => [u.id, u.name])), [usersData]);
   const data = React.useMemo(() => directoratesData ?? [], [directoratesData]);
 
   const [sorting, setSorting] = React.useState<SortingState>([]);
@@ -66,6 +69,8 @@ export function DirectorateDataTable() {
   const [isAlertOpen, setIsAlertOpen] = React.useState(false);
   const [selectedDirectorate, setSelectedDirectorate] = React.useState<Directorate | null>(null);
   
+  const isLoading = isLoadingDirectorates || isLoadingUsers;
+
   const handleEditClick = React.useCallback((directorate: Directorate) => {
     setSelectedDirectorate(directorate);
     setIsFormOpen(true);
@@ -110,6 +115,11 @@ export function DirectorateDataTable() {
       header: "Nome da Diretoria",
       cell: ({ row }) => <span className="font-medium">{row.original.name}</span>,
     },
+     {
+      accessorKey: "directorId",
+      header: "Diretor Responsável",
+      cell: ({ row }) => usersMap.get(row.original.directorId || '') || <span className="text-muted-foreground">N/D</span>,
+    },
     {
       accessorKey: "description",
       header: "Descrição",
@@ -148,7 +158,7 @@ export function DirectorateDataTable() {
         )
       },
     },
-  ], [handleEditClick, handleDeleteClick]);
+  ], [handleEditClick, handleDeleteClick, usersMap]);
 
   const table = useReactTable({
     data,

@@ -249,6 +249,10 @@
             "description": {
                 "type": "string",
                 "description": "A brief description of the directorate's purpose."
+            },
+            "directorId": {
+                "type": "string",
+                "description": "The ID of the user who is the director."
             }
         },
         "required": ["name"]

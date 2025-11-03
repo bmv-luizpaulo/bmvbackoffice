@@ -123,6 +123,7 @@ export type Directorate = {
     id: string;
     name: string;
     description?: string;
+    directorId?: string;
 };
 
 export type Role = {
