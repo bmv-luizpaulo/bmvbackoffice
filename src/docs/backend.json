@@ -217,10 +217,9 @@
                 "type": "string",
                 "description": "The ID of the user who is the team leader."
             },
-            "department": {
+            "directorateId": {
                 "type": "string",
-                "description": "The department the team is linked to.",
-                "enum": ["Diretoria Operacional", "Diretoria Administrativa"]
+                "description": "The ID of the directorate the team is linked to."
             },
             "teamType": {
                 "type": "string",
@@ -234,6 +233,22 @@
             "kpis": {
                 "type": "string",
                 "description": "Key Performance Indicators for the team."
+            }
+        },
+        "required": ["name", "directorateId"]
+    },
+    "Directorate": {
+        "title": "Directorate",
+        "type": "object",
+        "description": "Represents a directorate or division within the organization.",
+        "properties": {
+            "name": {
+                "type": "string",
+                "description": "Name of the directorate."
+            },
+            "description": {
+                "type": "string",
+                "description": "A brief description of the directorate's purpose."
             }
         },
         "required": ["name"]
@@ -360,6 +375,25 @@
       },
       "required": ["name", "url", "size", "type", "uploadedAt", "uploaderId"]
     },
+    "Contract": {
+        "title": "Contract",
+        "type": "object",
+        "description": "Represents a contract or important document.",
+        "properties": {
+            "title": { "type": "string", "description": "The title of the contract." },
+            "description": { "type": "string", "description": "A brief description of the contract." },
+            "contractType": { "type": "string", "description": "The type of contract.", "enum": ["Garantia", "Serviço", "Acordo de Nível de Serviço (SLA)", "Aluguel", "Outros"] },
+            "vendor": { "type": "string", "description": "The vendor or third-party associated with the contract." },
+            "assetId": { "type": "string", "description": "Optional: The ID of the asset this contract is linked to." },
+            "projectId": { "type": "string", "description": "Optional: The ID of the project this contract is linked to." },
+            "startDate": { "type": "string", "format": "date", "description": "The start date of the contract." },
+            "endDate": { "type": "string", "format": "date", "description": "The end date of the contract." },
+            "fileUrl": { "type": "string", "format": "uri", "description": "The URL of the uploaded contract file in Firebase Storage." },
+            "uploaderId": { "type": "string", "description": "The ID of the user who uploaded the contract." },
+            "uploadedAt": { "type": "string", "format": "date-time", "description": "The timestamp when the file was uploaded." }
+        },
+        "required": ["title", "contractType", "startDate", "endDate", "fileUrl", "uploaderId"]
+    },
      "Chat": {
       "title": "Chat",
       "type": "object",
@@ -436,9 +470,14 @@
         "sku": {
           "type": "string",
           "description": "Stock Keeping Unit."
+        },
+        "status": {
+            "type": "string",
+            "description": "The current status of the product.",
+            "enum": ["Ativo", "Inativo"]
         }
       },
-      "required": ["name"]
+      "required": ["name", "status"]
     },
     "Seal": {
       "title": "Seal",
@@ -597,6 +636,10 @@
       "schema": { "$ref": "#/entities/Team" },
       "description": "Represents a team. Contains 'id', 'name', and 'description'."
     },
+    "/directorates/{directorateId}": {
+      "schema": { "$ref": "#/entities/Directorate" },
+      "description": "Represents a directorate or division. Contains 'name' and 'description'."
+    },
     "/roles/{roleId}": {
         "schema": { "$ref": "#/entities/Role" },
         "description": "Represents a user role. Contains 'id', 'name', 'description', and 'isManager'."
@@ -620,6 +663,10 @@
     "/projects/{projectId}/files/{fileId}": {
       "schema": { "$ref": "#/entities/ProjectFile" },
       "description": "Represents a file associated with a specific project."
+    },
+    "/contracts/{contractId}": {
+        "schema": { "$ref": "#/entities/Contract" },
+        "description": "Stores all contracts and important documents."
     },
     "/chats/{chatId}": {
       "schema": { "$ref": "#/entities/Chat" },

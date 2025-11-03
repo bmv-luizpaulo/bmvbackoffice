@@ -2,6 +2,11 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Archive } from "lucide-react";
+import dynamic from "next/dynamic";
+import { Suspense } from "react";
+import { Skeleton } from "@/components/ui/skeleton";
+
+const ContractDataTable = dynamic(() => import('@/components/contracts/contract-data-table').then(m => m.ContractDataTable), { ssr: false });
 
 export default function ContractsPage() {
   return (
@@ -17,18 +22,25 @@ export default function ContractsPage() {
       </header>
       <Card>
         <CardHeader>
-          <CardTitle>Em Construção</CardTitle>
+          <CardTitle>Gestão de Contratos</CardTitle>
           <CardDescription>
-            Esta área está sendo desenvolvida e estará disponível em breve.
+            Adicione, edite e visualize todos os contratos da empresa.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-col items-center justify-center text-center p-8 border-2 border-dashed rounded-lg">
-            <p className="text-lg font-semibold">Página de Contratos</p>
-            <p className="text-muted-foreground mt-2">
-                Aqui você poderá fazer upload, versionar, e controlar as datas de vencimento de todos os seus contratos e documentos.
-            </p>
-          </div>
+           <Suspense fallback={
+            <div className="space-y-3">
+                <Skeleton className="h-8 w-48" />
+                <Skeleton className="h-10 w-full" />
+                <div className="space-y-2">
+                <Skeleton className="h-6 w-full" />
+                <Skeleton className="h-6 w-full" />
+                <Skeleton className="h-6 w-full" />
+                </div>
+            </div>
+          }>
+            <ContractDataTable />
+          </Suspense>
         </CardContent>
       </Card>
     </div>

@@ -152,6 +152,21 @@ export type ProjectFile = {
     uploaderId: string;
 }
 
+export type Contract = {
+    id: string;
+    title: string;
+    description?: string;
+    contractType: 'Garantia' | 'Serviço' | 'Acordo de Nível de Serviço (SLA)' | 'Aluguel' | 'Outros';
+    vendor?: string;
+    assetId?: string;
+    projectId?: string;
+    startDate: string;
+    endDate: string;
+    fileUrl: string;
+    uploaderId: string;
+    uploadedAt: string;
+}
+
 export type Notification = {
   id: string;
   title: string;
