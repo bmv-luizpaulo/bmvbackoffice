@@ -40,10 +40,19 @@ type RoleFormDialogProps = {
   allRoles: Role[];
 };
 
+const hierarchyOrder = {
+  "Diretoria": 5,
+  "Gerência": 4,
+  "Coordenação": 3,
+  "Analista": 2,
+  "Assistente": 1,
+  "Estagiário": 0,
+};
+
 const formSchema = z.object({
   name: z.string().min(1, "O nome do cargo é obrigatório."),
   department: z.enum(['Operações', 'TI', 'Financeiro', 'Comercial', 'RH', 'Administrativo'], { required_error: "O departamento é obrigatório."}),
-  hierarchyLevel: z.enum(['Diretoria', 'Gerência', 'Coordenação', 'Analista', 'Assistente', 'Estagiário'], { required_error: "O nível hierárquico é obrigatório."}),
+  hierarchyLevel: z.enum(Object.keys(hierarchyOrder) as [keyof typeof hierarchyOrder], { required_error: "O nível hierárquico é obrigatório."}),
   supervisorRoleId: z.string().optional(),
   description: z.string().optional(),
   mission: z.string().optional(),
@@ -107,6 +116,31 @@ export function RoleFormDialog({ isOpen, onOpenChange, onSave, role, allRoles }:
     }
   }, [role, isOpen, form]);
 
+  const selectedHierarchyLevel = form.watch('hierarchyLevel');
+
+  const supervisorOptions = React.useMemo(() => {
+    if (!selectedHierarchyLevel || !allRoles) {
+      return [];
+    }
+    const currentLevelOrder = hierarchyOrder[selectedHierarchyLevel];
+    return allRoles.filter(r => {
+      if (r.id === role?.id) return false; // a role cannot be its own supervisor
+      const supervisorLevel = r.hierarchyLevel ? hierarchyOrder[r.hierarchyLevel] : -1;
+      return supervisorLevel >= currentLevelOrder;
+    });
+  }, [selectedHierarchyLevel, allRoles, role]);
+
+  React.useEffect(() => {
+    // When the hierarchy level changes, check if the current supervisor is still valid.
+    const currentSupervisorId = form.getValues('supervisorRoleId');
+    if (currentSupervisorId && currentSupervisorId !== 'unassigned') {
+        const isSupervisorValid = supervisorOptions.some(opt => opt.id === currentSupervisorId);
+        if (!isSupervisorValid) {
+            form.setValue('supervisorRoleId', undefined, { shouldValidate: true });
+        }
+    }
+  }, [selectedHierarchyLevel, supervisorOptions, form]);
+
 
   function onSubmit(values: z.infer<typeof formSchema>) {
     const finalData = {
@@ -149,7 +183,7 @@ export function RoleFormDialog({ isOpen, onOpenChange, onSave, role, allRoles }:
                         )}/>
                       </div>
                       <FormField control={form.control} name="supervisorRoleId" render={({ field }) => (
-                        <FormItem><FormLabel>Superior Imediato</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Selecione o cargo supervisor" /></SelectTrigger></FormControl><SelectContent><SelectItem value="unassigned">Nenhum</SelectItem>{allRoles.filter(r => r.id !== role?.id).map(r => (<SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>
+                        <FormItem><FormLabel>Superior Imediato</FormLabel><Select onValueChange={field.onChange} value={field.value} disabled={!selectedHierarchyLevel}><FormControl><SelectTrigger><SelectValue placeholder="Selecione o cargo supervisor" /></SelectTrigger></FormControl><SelectContent><SelectItem value="unassigned">Nenhum</SelectItem>{supervisorOptions.map(r => (<SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>
                       )}/>
                     </AccordionContent>
                   </AccordionItem>
