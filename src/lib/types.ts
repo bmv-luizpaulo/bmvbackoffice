@@ -1,4 +1,5 @@
 
+
 'use client';
 
 
@@ -207,6 +208,7 @@ export type ChecklistItem = {
   checklistId: string;
   description: string;
   order: number;
+  isCompleted: boolean;
 };
 
 export type Asset = {

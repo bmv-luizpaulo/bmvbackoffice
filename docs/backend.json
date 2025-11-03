@@ -546,9 +546,10 @@
       "properties": {
         "checklistId": { "type": "string", "description": "The ID of the parent checklist." },
         "description": { "type": "string", "description": "The text of the checklist item/step." },
-        "order": { "type": "number", "description": "The numerical order of the item in the list." }
+        "order": { "type": "number", "description": "The numerical order of the item in the list." },
+        "isCompleted": { "type": "boolean", "description": "Indicates if the checklist item is completed." }
       },
-      "required": ["checklistId", "description", "order"]
+      "required": ["checklistId", "description", "order", "isCompleted"]
     },
     "Asset": {
       "title": "Asset",

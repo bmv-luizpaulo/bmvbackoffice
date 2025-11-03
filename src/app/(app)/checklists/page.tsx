@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import * as React from 'react';
@@ -14,6 +15,8 @@ import NextDynamic from 'next/dynamic';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { Checkbox } from '@/components/ui/checkbox';
+import { cn } from '@/lib/utils';
 
 export const dynamic = 'force-dynamic';
 
@@ -82,6 +85,7 @@ export default function ChecklistsPage() {
       description: newItemText.trim(),
       order: newOrder,
       checklistId: selectedChecklist.id,
+      isCompleted: false,
     });
     setNewItemText('');
   };
@@ -89,6 +93,12 @@ export default function ChecklistsPage() {
   const handleDeleteItem = (itemId: string) => {
     if (!firestore || !selectedChecklist) return;
     deleteDocumentNonBlocking(doc(firestore, `checklists/${selectedChecklist.id}/items`, itemId));
+  };
+  
+  const handleToggleItem = (item: ChecklistItem) => {
+    if (!firestore || !selectedChecklist) return;
+    const itemRef = doc(firestore, `checklists/${selectedChecklist.id}/items`, item.id);
+    updateDocumentNonBlocking(itemRef, { isCompleted: !item.isCompleted });
   };
 
 
@@ -186,10 +196,10 @@ export default function ChecklistsPage() {
                       {isLoadingItems ? (
                         Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-10 w-full" />)
                       ) : checklistItems && checklistItems.length > 0 ? (
-                        checklistItems.map((item, index) => (
-                          <div key={item.id} className="flex items-center gap-2 bg-muted/50 p-2 rounded-md">
-                            <span className="font-bold text-sm text-primary">{index + 1}.</span>
-                            <p className="flex-1 text-sm">{item.description}</p>
+                        checklistItems.map((item) => (
+                          <div key={item.id} className="flex items-center gap-3 bg-muted/50 p-3 rounded-md">
+                            <Checkbox id={`item-${item.id}`} checked={item.isCompleted} onCheckedChange={() => handleToggleItem(item)} />
+                            <label htmlFor={`item-${item.id}`} className={cn("flex-1 text-sm cursor-pointer", item.isCompleted && "line-through text-muted-foreground")}>{item.description}</label>
                             <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive/70 hover:text-destructive/100" onClick={() => handleDeleteItem(item.id)}>
                               <Trash2 className="h-4 w-4" />
                             </Button>
