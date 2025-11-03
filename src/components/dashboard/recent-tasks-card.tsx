@@ -7,19 +7,31 @@ import { ListTodo, Folder } from "lucide-react";
 import { Skeleton } from "../ui/skeleton";
 import Link from "next/link";
 import { Button } from "../ui/button";
+import React from 'react';
 
-function RecentTasksCard() {
+interface RecentTasksCardProps {
+    userId?: string;
+}
+
+function RecentTasksCard({ userId }: RecentTasksCardProps) {
     const firestore = useFirestore();
-    const tasksQuery = useMemoFirebase(() => 
-        firestore 
-        ? query(
+    
+    const tasksQuery = useMemoFirebase(() => {
+        if (!firestore) return null;
+        
+        let q = query(
             collectionGroup(firestore, 'tasks'), 
             where('isCompleted', '==', false),
             orderBy('createdAt', 'desc'),
             limit(5)
-          ) 
-        : null, 
-    [firestore]);
+        );
+
+        if (userId) {
+            q = query(q, where('assigneeId', '==', userId));
+        }
+        
+        return q;
+    }, [firestore, userId]);
 
     const { data: tasks, isLoading: isLoadingTasks } = useCollection<Task>(tasksQuery);
     
@@ -35,10 +47,10 @@ function RecentTasksCard() {
             <CardHeader>
                 <CardTitle className="font-headline flex items-center gap-2">
                     <ListTodo className="text-primary"/>
-                    Tarefas Recentes
+                    {userId ? 'Minhas Tarefas Recentes' : 'Tarefas Recentes'}
                 </CardTitle>
                 <CardDescription>
-                    As últimas tarefas que precisam de atenção.
+                    {userId ? 'Suas tarefas mais recentes que precisam de atenção.' : 'As últimas tarefas da empresa que precisam de atenção.'}
                 </CardDescription>
             </CardHeader>
             <CardContent>

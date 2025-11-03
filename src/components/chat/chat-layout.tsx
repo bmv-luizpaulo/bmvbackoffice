@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import type { User, Message, Chat } from '@/lib/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
@@ -9,40 +9,16 @@ import { Paperclip, Send, Hash } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { useUser, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, where, addDoc, serverTimestamp, orderBy, doc, setDoc, getDocs, writeBatch } from 'firebase/firestore';
+import { collection, query, where, addDoc, serverTimestamp, orderBy, doc, setDoc, updateDoc } from 'firebase/firestore';
 import React from 'react';
 import { Separator } from '../ui/separator';
-
-
-async function ensureGlobalForumExists(firestore: any, allUsers: User[]) {
-    const forumQuery = query(collection(firestore, 'chats'), where('isGlobal', '==', true));
-    const querySnapshot = await getDocs(forumQuery);
-    if (querySnapshot.empty && allUsers.length > 0) {
-        console.log("Creating global forum...");
-        const userIds = allUsers.map(u => u.id);
-        const usersData = allUsers.reduce((acc, user) => {
-            acc[user.id] = { name: user.name, avatarUrl: user.avatarUrl, email: user.email };
-            return acc;
-        }, {} as Record<string, any>);
-
-        const newForumData: Omit<Chat, 'id'> = {
-            name: 'Geral',
-            type: 'forum',
-            isGlobal: true,
-            userIds: userIds,
-            lastMessage: null,
-            users: usersData,
-        };
-        await addDoc(collection(firestore, 'chats'), newForumData);
-    }
-}
-
 
 export function ChatLayout() {
   const firestore = useFirestore();
   const { user: currentUser } = useUser();
   const [selectedChat, setSelectedChat] = useState<Chat | null>(null);
   const [newMessage, setNewMessage] = useState('');
+  const messageEndRef = useRef<HTMLDivElement>(null);
 
   const usersQuery = useMemoFirebase(() => firestore ? collection(firestore, 'users') : null, [firestore]);
   const { data: allUsers } = useCollection<User>(usersQuery);
@@ -53,17 +29,16 @@ export function ChatLayout() {
   }, [firestore, currentUser]);
   const { data: userChats, isLoading: isLoadingChats } = useCollection<Chat>(chatsQuery);
 
-  useEffect(() => {
-      if (firestore && allUsers && allUsers.length > 0) {
-        ensureGlobalForumExists(firestore, allUsers);
-      }
-  }, [firestore, allUsers]);
-
   const messagesQuery = useMemoFirebase(() => {
     if (!firestore || !selectedChat?.id) return null;
     return query(collection(firestore, 'chats', selectedChat.id, 'messages'), orderBy('timestamp', 'asc'));
   }, [firestore, selectedChat]);
   const { data: messages, isLoading: isLoadingMessages } = useCollection<Message>(messagesQuery);
+  
+  useEffect(() => {
+    messageEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
 
   const handleSendMessage = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
@@ -71,14 +46,26 @@ export function ChatLayout() {
 
     const messagesCollection = collection(firestore, 'chats', selectedChat.id, 'messages');
     
+    const timestamp = serverTimestamp();
+
     await addDoc(messagesCollection, {
       chatId: selectedChat.id,
       senderId: currentUser.uid,
       text: newMessage,
-      timestamp: serverTimestamp(),
+      timestamp: timestamp,
       read: false,
     });
     
+    // Update last message on the chat itself
+    const chatRef = doc(firestore, 'chats', selectedChat.id);
+    await updateDoc(chatRef, {
+        lastMessage: {
+            text: newMessage,
+            timestamp: timestamp,
+            senderId: currentUser.uid
+        }
+    });
+
     setNewMessage('');
   }, [newMessage, selectedChat, currentUser, firestore]);
 
@@ -228,7 +215,6 @@ export function ChatLayout() {
                     {chatDisplayInfo.avatar}
                     <div>
                         <p className="font-semibold">{chatDisplayInfo.name}</p>
-                        {selectedChat.type === 'direct' && <p className="text-sm text-muted-foreground">Online</p>}
                     </div>
                 </div>
                 <ScrollArea className="flex-1 p-4">
@@ -239,10 +225,10 @@ export function ChatLayout() {
                             return (
                              <div key={msg.id} className={cn("flex items-end gap-2", isCurrentUserSender ? "justify-end" : "justify-start")}>
                                  {!isCurrentUserSender && <Avatar className="h-8 w-8"><AvatarImage src={sender?.avatarUrl} /><AvatarFallback>{sender?.name?.charAt(0)}</AvatarFallback></Avatar>}
-                                 <div className={cn("max-w-xs rounded-lg p-3 text-sm", isCurrentUserSender ? "bg-primary text-primary-foreground" : "bg-muted")}>
-                                    {!isCurrentUserSender && selectedChat.type === 'forum' && <p className='text-xs font-bold mb-1'>{sender?.name || 'Usuário'}</p>}
+                                 <div className={cn("max-w-xs lg:max-w-md rounded-lg p-3 text-sm", isCurrentUserSender ? "bg-primary text-primary-foreground" : "bg-muted")}>
+                                    {!isCurrentUserSender && selectedChat.type === 'forum' && <p className='text-xs font-bold mb-1 text-primary'>{sender?.name || 'Usuário'}</p>}
                                     <p className='whitespace-pre-wrap'>{msg.text}</p>
-                                    <p className={cn("text-xs mt-1 text-right", isCurrentUserSender ? "text-primary-foreground/70" : "text-muted-foreground")}>
+                                    <p className={cn("text-xs mt-1 text-right", isCurrentUserSender ? "text-primary-foreground/70" : "text-muted-foreground/70")}>
                                         {msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'enviando...'}
                                     </p>
                                  </div>
@@ -250,6 +236,7 @@ export function ChatLayout() {
                             )
                         })}
                     </div>
+                    <div ref={messageEndRef} />
                 </ScrollArea>
                 <div className="p-4 border-t bg-background">
                     <form onSubmit={handleSendMessage} className="relative">
