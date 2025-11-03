@@ -407,7 +407,8 @@
             "decisionDate": { "type": "string", "format": "date-time", "description": "The date the request was approved or rejected." },
             "approverId": { "type": "string", "description": "The ID of the user who approved or rejected the request." },
             "receiptUrl": { "type": "string", "format": "uri", "description": "URL of the uploaded receipt image or document." },
-            "notes": { "type": "string", "description": "Additional notes from the requester or approver." }
+            "notes": { "type": "string", "description": "Additional notes from the requester or approver." },
+            "costCenterId": { "type": "string", "description": "The ID of the cost center this reimbursement is associated with." }
         },
         "required": ["requesterId", "description", "amount", "status", "requestDate"]
     },
@@ -632,6 +633,26 @@
             "status": { "type": "string", "enum": ["Agendada", "Em Andamento", "Concluída", "Cancelada"], "description": "The status of the maintenance." }
         },
         "required": ["assetId", "scheduledDate", "description", "status"]
+    },
+    "CostCenter": {
+      "title": "CostCenter",
+      "type": "object",
+      "description": "Represents a cost center for financial tracking.",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The name of the cost center (e.g., 'Marketing', 'Operations')."
+        },
+        "code": {
+          "type": "string",
+          "description": "A unique code for the cost center (e.g., 'MKT-001')."
+        },
+        "description": {
+          "type": "string",
+          "description": "A brief description of the cost center's purpose."
+        }
+      },
+      "required": ["name"]
     }
   },
   "auth": {
@@ -724,6 +745,10 @@
     "/maintenances/{maintenanceId}": {
         "schema": { "$ref": "#/entities/AssetMaintenance" },
         "description": "Stores maintenance records for all assets."
+    },
+    "/costCenters/{costCenterId}": {
+      "schema": { "$ref": "#/entities/CostCenter" },
+      "description": "Stores all company cost centers for financial tracking."
     }
   }
 }

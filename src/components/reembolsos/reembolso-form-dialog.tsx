@@ -31,8 +31,11 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from "../ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { Calendar } from "../ui/calendar";
-import type { Reimbursement } from "@/lib/types";
+import type { CostCenter, Reimbursement } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
+import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
+import { collection } from "firebase/firestore";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 
 type ReembolsoFormDialogProps = {
   isOpen: boolean;
@@ -45,14 +48,19 @@ const formSchema = z.object({
   description: z.string().min(1, "A descrição é obrigatória."),
   amount: z.coerce.number().min(0.01, "O valor deve ser maior que zero."),
   requestDate: z.date({ required_error: "A data da despesa é obrigatória." }),
+  costCenterId: z.string().optional(),
   notes: z.string().optional(),
   receipt: z.any().optional(),
 });
 
 export function ReembolsoFormDialog({ isOpen, onOpenChange, onSave, reimbursement }: ReembolsoFormDialogProps) {
   const { toast } = useToast();
+  const firestore = useFirestore();
   const [receiptFile, setReceiptFile] = React.useState<File | undefined>();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+
+  const costCentersQuery = useMemoFirebase(() => firestore ? collection(firestore, 'costCenters') : null, [firestore]);
+  const { data: costCentersData } = useCollection<CostCenter>(costCentersQuery);
   
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -66,11 +74,12 @@ export function ReembolsoFormDialog({ isOpen, onOpenChange, onSave, reimbursemen
           description: reimbursement.description,
           amount: reimbursement.amount,
           requestDate: new Date(reimbursement.requestDate),
+          costCenterId: reimbursement.costCenterId,
           notes: reimbursement.notes || '',
         });
         setReceiptFile(undefined);
       } else {
-        form.reset({ description: '', amount: 0, requestDate: new Date(), notes: '' });
+        form.reset({ description: '', amount: 0, requestDate: new Date(), notes: '', costCenterId: undefined });
         setReceiptFile(undefined);
       }
     }
@@ -156,6 +165,28 @@ export function ReembolsoFormDialog({ isOpen, onOpenChange, onSave, reimbursemen
                         )}
                     />
                 </div>
+                 <FormField
+                    control={form.control}
+                    name="costCenterId"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Centro de Custo (Opcional)</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                            <SelectTrigger>
+                                <SelectValue placeholder="Associe a um centro de custo" />
+                            </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                                {costCentersData?.map(cc => (
+                                    <SelectItem key={cc.id} value={cc.id}>{cc.name}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                />
                  <FormField
                     control={form.control}
                     name="notes"

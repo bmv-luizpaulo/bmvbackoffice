@@ -253,4 +253,12 @@ export type Reimbursement = {
     approverId?: string;
     receiptUrl?: string;
     notes?: string;
+    costCenterId?: string;
 };
+
+export type CostCenter = {
+    id: string;
+    name: string;
+    code?: string;
+    description?: string;
+}

@@ -26,6 +26,7 @@ import {
   ListTodo,
   ListPlus,
   HandCoins,
+  Wallet,
 } from 'lucide-react';
 import Image from 'next/image';
 import React, { useEffect } from 'react';
@@ -123,6 +124,7 @@ const navSections = [
         name: 'Financeiro',
         items: [
             { href: '/reembolsos', icon: HandCoins, label: 'Reembolsos' },
+            { href: '/cost-centers', icon: Wallet, label: 'Centro de Custos' },
         ]
     },
     {
