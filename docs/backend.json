@@ -375,6 +375,42 @@
       },
       "required": ["name", "url", "size", "type", "uploadedAt", "uploaderId"]
     },
+    "Contract": {
+        "title": "Contract",
+        "type": "object",
+        "description": "Represents a contract or important document.",
+        "properties": {
+            "title": { "type": "string", "description": "The title of the contract." },
+            "description": { "type": "string", "description": "A brief description of the contract." },
+            "contractType": { "type": "string", "description": "The type of contract.", "enum": ["Garantia", "Serviço", "Acordo de Nível de Serviço (SLA)", "Aluguel", "Outros"] },
+            "vendor": { "type": "string", "description": "The vendor or third-party associated with the contract." },
+            "assetId": { "type": "string", "description": "Optional: The ID of the asset this contract is linked to." },
+            "projectId": { "type": "string", "description": "Optional: The ID of the project this contract is linked to." },
+            "startDate": { "type": "string", "format": "date", "description": "The start date of the contract." },
+            "endDate": { "type": "string", "format": "date", "description": "The end date of the contract." },
+            "fileUrl": { "type": "string", "format": "uri", "description": "The URL of the uploaded contract file in Firebase Storage." },
+            "uploaderId": { "type": "string", "description": "The ID of the user who uploaded the contract." },
+            "uploadedAt": { "type": "string", "format": "date-time", "description": "The timestamp when the file was uploaded." }
+        },
+        "required": ["title", "contractType", "startDate", "endDate", "fileUrl", "uploaderId"]
+    },
+    "Reimbursement": {
+        "title": "Reimbursement",
+        "type": "object",
+        "description": "Represents a reimbursement request from a user.",
+        "properties": {
+            "requesterId": { "type": "string", "description": "The ID of the user requesting the reimbursement." },
+            "description": { "type": "string", "description": "Description of the expense." },
+            "amount": { "type": "number", "description": "The amount to be reimbursed." },
+            "status": { "type": "string", "enum": ["Pendente", "Aprovado", "Recusado"], "description": "The current status of the request." },
+            "requestDate": { "type": "string", "format": "date-time", "description": "The date the request was made." },
+            "decisionDate": { "type": "string", "format": "date-time", "description": "The date the request was approved or rejected." },
+            "approverId": { "type": "string", "description": "The ID of the user who approved or rejected the request." },
+            "receiptUrl": { "type": "string", "format": "uri", "description": "URL of the uploaded receipt image or document." },
+            "notes": { "type": "string", "description": "Additional notes from the requester or approver." }
+        },
+        "required": ["requesterId", "description", "amount", "status", "requestDate"]
+    },
      "Chat": {
       "title": "Chat",
       "type": "object",
@@ -644,6 +680,14 @@
     "/projects/{projectId}/files/{fileId}": {
       "schema": { "$ref": "#/entities/ProjectFile" },
       "description": "Represents a file associated with a specific project."
+    },
+    "/contracts/{contractId}": {
+        "schema": { "$ref": "#/entities/Contract" },
+        "description": "Stores all contracts and important documents."
+    },
+    "/reimbursements/{reimbursementId}": {
+        "schema": { "$ref": "#/entities/Reimbursement" },
+        "description": "Stores all reimbursement requests."
     },
     "/chats/{chatId}": {
       "schema": { "$ref": "#/entities/Chat" },

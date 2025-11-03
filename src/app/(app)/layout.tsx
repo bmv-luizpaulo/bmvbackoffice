@@ -25,6 +25,7 @@ import {
   Building,
   ListTodo,
   ListPlus,
+  HandCoins,
 } from 'lucide-react';
 import Image from 'next/image';
 import React, { useEffect } from 'react';
@@ -116,6 +117,12 @@ const navSections = [
               ]
             },
             { href: '/checklists', icon: ListChecks, label: 'Checklists' },
+        ]
+    },
+    {
+        name: 'Financeiro',
+        items: [
+            { href: '/reembolsos', icon: HandCoins, label: 'Reembolsos' },
         ]
     },
     {

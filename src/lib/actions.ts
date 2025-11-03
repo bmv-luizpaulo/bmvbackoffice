@@ -151,3 +151,52 @@ export async function uploadProjectFileAction(formData: FormData) {
         return { success: false, error: 'Falha ao enviar o arquivo.' };
     }
 }
+
+
+export async function uploadReimbursementReceiptAction(formData: FormData) {
+    noStore();
+    const file = formData.get('file') as File;
+
+    if (!file) {
+        return { success: false, error: 'Nenhum arquivo enviado.' };
+    }
+
+    try {
+        const storage = getStorage();
+        const filePath = `reimbursements/${Date.now()}_${file.name}`;
+        const fileStorageRef = storageRef(storage, filePath);
+
+        const fileBuffer = await file.arrayBuffer();
+        const snapshot = await uploadBytes(fileStorageRef, fileBuffer, { contentType: file.type });
+        const downloadURL = await getDownloadURL(snapshot.ref);
+
+        return { success: true, data: { url: downloadURL } };
+    } catch (error) {
+        console.error("Erro no upload de comprovante:", error);
+        return { success: false, error: 'Falha ao enviar o comprovante.' };
+    }
+}
+
+export async function uploadContractFileAction(formData: FormData) {
+    noStore();
+    const file = formData.get('file') as File;
+
+    if (!file) {
+        return { success: false, error: 'Nenhum arquivo de contrato enviado.' };
+    }
+
+    try {
+        const storage = getStorage();
+        const filePath = `contracts/${Date.now()}_${file.name}`;
+        const fileStorageRef = storageRef(storage, filePath);
+
+        const fileBuffer = await file.arrayBuffer();
+        const snapshot = await uploadBytes(fileStorageRef, fileBuffer, { contentType: file.type });
+        const downloadURL = await getDownloadURL(snapshot.ref);
+
+        return { success: true, data: { url: downloadURL } };
+    } catch (error) {
+        console.error("Erro no upload de contrato:", error);
+        return { success: false, error: 'Falha ao enviar o arquivo do contrato.' };
+    }
+}

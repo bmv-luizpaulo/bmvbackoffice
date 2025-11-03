@@ -1,3 +1,4 @@
+'use client';
 
 
 export type User = {
@@ -240,3 +241,16 @@ export type AssetMaintenance = {
     cost?: number;
     status: 'Agendada' | 'Em Andamento' | 'Concluída' | 'Cancelada';
 }
+
+export type Reimbursement = {
+    id: string;
+    requesterId: string;
+    description: string;
+    amount: number;
+    status: 'Pendente' | 'Aprovado' | 'Recusado';
+    requestDate: string;
+    decisionDate?: string;
+    approverId?: string;
+    receiptUrl?: string;
+    notes?: string;
+};
