@@ -67,6 +67,8 @@ export function AddProjectDialog({ isOpen, onOpenChange, onAddProject }: AddProj
       name: "",
       description: "",
       teamMembers: [],
+      contactPhone: "",
+      technicalDetails: "",
     },
   });
 
@@ -286,5 +288,3 @@ export function AddProjectDialog({ isOpen, onOpenChange, onAddProject }: AddProj
     </Dialog>
   );
 }
-
-    
