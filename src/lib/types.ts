@@ -1,3 +1,4 @@
+
 'use client';
 
 
@@ -261,4 +262,5 @@ export type CostCenter = {
     name: string;
     code?: string;
     description?: string;
+    responsibleId?: string;
 }

@@ -24,22 +24,25 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from "../ui/textarea";
-import type { CostCenter } from "@/lib/types";
+import type { CostCenter, User } from "@/lib/types";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 
 type CostCenterFormDialogProps = {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
   onSave: (costCenter: Omit<CostCenter, 'id'>, id?: string) => void;
   costCenter?: CostCenter | null;
+  users: User[];
 };
 
 const formSchema = z.object({
   name: z.string().min(1, "O nome é obrigatório."),
   code: z.string().optional(),
   description: z.string().optional(),
+  responsibleId: z.string().optional(),
 });
 
-export function CostCenterFormDialog({ isOpen, onOpenChange, onSave, costCenter }: CostCenterFormDialogProps) {
+export function CostCenterFormDialog({ isOpen, onOpenChange, onSave, costCenter, users }: CostCenterFormDialogProps) {
   
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -47,6 +50,7 @@ export function CostCenterFormDialog({ isOpen, onOpenChange, onSave, costCenter 
       name: '',
       code: '',
       description: '',
+      responsibleId: undefined,
     }
   });
 
@@ -57,12 +61,14 @@ export function CostCenterFormDialog({ isOpen, onOpenChange, onSave, costCenter 
           name: costCenter.name,
           code: costCenter.code || '',
           description: costCenter.description || '',
+          responsibleId: costCenter.responsibleId || undefined,
         });
       } else {
         form.reset({
           name: '',
           code: '',
           description: '',
+          responsibleId: undefined,
         });
       }
     }
@@ -107,6 +113,29 @@ export function CostCenterFormDialog({ isOpen, onOpenChange, onSave, costCenter 
                         <FormControl>
                             <Input placeholder="Ex: MKT-001" {...field} />
                         </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                />
+                 <FormField
+                    control={form.control}
+                    name="responsibleId"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Responsável</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                            <SelectTrigger>
+                                <SelectValue placeholder="Selecione um responsável" />
+                            </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                                <SelectItem value="unassigned">Nenhum</SelectItem>
+                                {users.map(user => (
+                                    <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
                         <FormMessage />
                         </FormItem>
                     )}

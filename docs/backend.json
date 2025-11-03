@@ -650,6 +650,10 @@
         "description": {
           "type": "string",
           "description": "A brief description of the cost center's purpose."
+        },
+        "responsibleId": {
+          "type": "string",
+          "description": "The ID of the user responsible for this cost center."
         }
       },
       "required": ["name"]
