@@ -144,14 +144,27 @@ export function RoleFormDialog({ isOpen, onOpenChange, onSave, role, allRoles }:
 
 
   function onSubmit(values: z.infer<typeof formSchema>) {
+    const { salaryRange, ...restOfValues } = values;
+
     const finalData: Partial<Omit<Role, 'id'>> = {
-        ...values,
+        ...restOfValues,
         supervisorRoleId: values.supervisorRoleId === 'unassigned' ? undefined : values.supervisorRoleId,
         responsibilities: values.responsibilities?.map(item => item.value).filter(Boolean),
         kpis: values.kpis?.map(item => item.value).filter(Boolean),
         requiredSkills: values.requiredSkills?.map(item => item.value).filter(Boolean),
+        salaryRange: {
+            min: salaryRange?.min || undefined,
+            max: salaryRange?.max || undefined,
+        },
     };
-
+    
+    // Clean up undefined salary fields
+    if (finalData.salaryRange?.min === undefined) delete finalData.salaryRange.min;
+    if (finalData.salaryRange?.max === undefined) delete finalData.salaryRange.max;
+    if (Object.keys(finalData.salaryRange || {}).length === 0) {
+        delete finalData.salaryRange;
+    }
+    
     if (finalData.supervisorRoleId === undefined) {
       delete finalData.supervisorRoleId;
     }
