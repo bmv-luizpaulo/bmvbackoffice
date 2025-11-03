@@ -3,74 +3,87 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
+    function isDev() {
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.roleId in get(/databases/$(database)/documents/roles).data &&
+             get(/databases/$(database)/documents/roles/$(get(/databases/$(database)/documents/users/$(request.auth.uid)).data.roleId)).data.isDev == true;
+    }
+
+    function isManager() {
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.roleId in get(/databases/$(database)/documents/roles).data &&
+             get(/databases/$(database)/documents/roles/$(get(/databases/$(database)/documents/users/$(request.auth.uid)).data.roleId)).data.isManager == true;
+    }
+
     match /users/{userId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth.uid == userId;
+      allow read: if isDev() || request.auth != null;
+      allow write: if isDev() || request.auth.uid == userId;
 
       match /notifications/{notificationId} {
-        allow read, write: if request.auth.uid == userId;
+        allow read, write: if isDev() || request.auth.uid == userId;
       }
     }
 
     match /projects/{projectId}/{document=**} {
-      allow read, write: if request.auth != null;
+      allow read, write: if isDev() || request.auth != null;
     }
 
     match /teams/{teamId} {
-      allow read, write: if request.auth != null;
+      allow read, write: if isDev() || request.auth != null;
     }
     
     match /directorates/{directorateId} {
-      allow read, write: if request.auth != null;
+      allow read, write: if isDev() || request.auth != null;
     }
 
     match /roles/{roleId} {
-      allow read, write: if request.auth != null;
+      allow read, write: if isDev() || request.auth != null;
     }
 
     match /contacts/{contactId} {
-      allow read, write: if request.auth != null;
+      allow read, write: if isDev() || request.auth != null;
     }
     
     match /contracts/{contractId} {
-      allow read, write: if request.auth != null;
+      allow read, write: if isDev() || request.auth != null;
     }
 
     match /chats/{chatId} {
-      allow get, write: if request.auth.uid in resource.data.userIds;
-      allow list: if request.auth != null;
+      allow get: if isDev() || request.auth.uid in resource.data.userIds;
+      allow list: if isDev() || request.auth != null;
+      allow write: if isDev() || request.auth.uid in resource.data.userIds;
 
       match /messages/{messageId} {
-         allow read, write: if request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.userIds;
+         allow read, write: if isDev() || request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.userIds;
       }
     }
     
     match /products/{productId} {
-      allow read, write: if request.auth != null;
+      allow read, write: if isDev() || request.auth != null;
     }
 
     match /seals/{sealId} {
-        allow read, write: if request.auth != null;
+        allow read, write: if isDev() || request.auth != null;
     }
 
     match /checklists/{checklistId}/{document=**} {
-        allow read, write: if request.auth != null;
+        allow read, write: if isDev() || request.auth != null;
     }
     
     match /assets/{assetId}/{document=**} {
-        allow read, write: if request.auth != null;
+        allow read, write: if isDev() || request.auth != null;
     }
     
     match /maintenances/{maintenanceId} {
-        allow read, write: if request.auth != null;
+        allow read, write: if isDev() || request.auth != null;
     }
 
     match /reimbursements/{reimbursementId} {
-      allow read, write: if request.auth != null;
+      allow read, write: if isDev() || isManager() || request.auth.uid == resource.data.requesterId;
     }
     
     match /costCenters/{costCenterId} {
-      allow read, write: if request.auth != null;
+      allow read, write: if isDev() || request.auth != null;
     }
   }
 }

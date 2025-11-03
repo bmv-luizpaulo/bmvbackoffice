@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { DndContext, type DragEndEvent, useSensor, useSensors, PointerSensor } from '@dnd-kit/core';
 import { useToast } from '@/hooks/use-toast';
 import { KanbanColumn } from './kanban-column';
-import type { Task, Stage, Project, User } from '@/lib/types';
+import type { Task, Stage, Project, User, Role } from '@/lib/types';
 import { Button } from '../ui/button';
 import { Plus, FolderPlus, ChevronsUpDown, Files } from 'lucide-react';
 import dynamic from 'next/dynamic';
@@ -32,7 +32,11 @@ export function KanbanBoard() {
 
   const userProfileQuery = React.useMemo(() => firestore && authUser?.uid ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser?.uid]);
   const { data: userProfile, isLoading: isLoadingUserProfile } = useDoc<User>(userProfileQuery);
-  const userRole = userProfile?.roleId;
+  const userRoleId = userProfile?.roleId;
+
+  const roleQuery = React.useMemo(() => firestore && userRoleId ? doc(firestore, 'roles', userRoleId) : null, [firestore, userRoleId]);
+  const { data: role, isLoading: isLoadingRole } = useDoc<Role>(roleQuery);
+  const isPrivilegedUser = role?.isDev || role?.isManager;
 
 
   const projectsQuery = React.useMemo(() => firestore ? collection(firestore, 'projects') : null, [firestore]);
@@ -55,16 +59,16 @@ export function KanbanBoard() {
   const { data: stagesData, isLoading: isLoadingStages } = useCollection<Stage>(stagesQuery);
 
   const tasksQuery = React.useMemo(() => {
-    if (!firestore || !selectedProject?.id || !userRole || !authUser?.uid) return null;
+    if (!firestore || !selectedProject?.id || !role || !authUser?.uid) return null;
     
     const tasksCollection = collection(firestore, 'projects', selectedProject.id, 'tasks');
     
-    if (userRole === 'Gestor' || userRole === 'Desenvolvedor') {
+    if (isPrivilegedUser) {
       return tasksCollection;
     } else {
       return query(tasksCollection, where('assigneeId', '==', authUser?.uid));
     }
-  }, [firestore, selectedProject?.id, userRole, authUser?.uid]);
+  }, [firestore, selectedProject?.id, role, authUser?.uid, isPrivilegedUser]);
 
   const { data: tasksData, isLoading: isLoadingTasks } = useCollection<Task>(tasksQuery);
   
@@ -301,7 +305,7 @@ export function KanbanBoard() {
     return [...stagesData].sort((a,b) => a.order - b.order);
   }, [stagesData]);
 
-  if (isLoadingProjects || isLoadingUserProfile) {
+  if (isLoadingProjects || isLoadingUserProfile || isLoadingRole) {
     return <div className="flex justify-center items-center h-full">Carregando...</div>;
   }
   
