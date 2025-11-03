@@ -115,6 +115,12 @@ export function useCollection<T = any>(
     const unsubscribe = onSnapshot(
       targetRefOrQuery,
       (snapshot: QuerySnapshot<DocumentData>) => {
+        if (!snapshot || !snapshot.docs) {
+          setData([]);
+          setError(null);
+          setIsLoading(false);
+          return;
+        }
         const results: ResultItemType[] = snapshot.docs.map(doc => {
            const docData = doc.data() as T;
            const dataWithConvertedTimestamps = convertTimestampsToISO(docData);
