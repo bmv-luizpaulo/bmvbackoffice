@@ -1,5 +1,3 @@
-
-
 'use client';
 
 
@@ -56,7 +54,11 @@ export type Opportunity = {
 
 export type Chat = {
   id: string;
-  userIds: string[];
+  name?: string; // For forum channels
+  type: 'direct' | 'forum';
+  isGlobal?: boolean; // For the global, all-hands forum
+  teamId?: string; // For team-specific forums
+  userIds: string[]; // For direct messages, this will be 2 users. For forums, it can be more.
   lastMessage: {
     text: string;
     timestamp: string;
@@ -64,6 +66,7 @@ export type Chat = {
   } | null;
   users: { [key: string]: Pick<User, 'name' | 'avatarUrl' | 'email'> };
 }
+
 
 export type Message = {
   id: string;
@@ -80,6 +83,7 @@ export type Project = {
     id: string;
     name: string;
     description: string;
+    budget?: number;
     startDate: string;
     endDate?: string;
     ownerId: string;
@@ -260,6 +264,7 @@ export type Reimbursement = {
     receiptUrl?: string;
     notes?: string;
     costCenterId?: string;
+    projectId?: string;
 };
 
 export type CostCenter = {

@@ -80,6 +80,10 @@
           "type": "string",
           "description": "Description of the project."
         },
+        "budget": {
+            "type": "number",
+            "description": "The allocated budget for the project."
+        },
         "startDate": {
           "type": "string",
           "description": "Start date of the project.",
@@ -422,18 +426,37 @@
             "approverId": { "type": "string", "description": "The ID of the user who approved or rejected the request." },
             "receiptUrl": { "type": "string", "format": "uri", "description": "URL of the uploaded receipt image or document." },
             "notes": { "type": "string", "description": "Additional notes from the requester or approver." },
-            "costCenterId": { "type": "string", "description": "The ID of the cost center this reimbursement is associated with." }
+            "costCenterId": { "type": "string", "description": "The ID of the cost center this reimbursement is associated with." },
+            "projectId": { "type": "string", "description": "Optional: The ID of the project this reimbursement is associated with." }
         },
         "required": ["requesterId", "description", "amount", "status", "requestDate"]
     },
      "Chat": {
       "title": "Chat",
       "type": "object",
-      "description": "Represents a chat conversation between two or more users.",
+      "description": "Represents a chat conversation between users or a forum.",
       "properties": {
+        "name": {
+          "type": "string",
+          "description": "The name of the chat, used for forum channels."
+        },
+        "type": {
+          "type": "string",
+          "description": "The type of chat.",
+          "enum": ["direct", "forum"],
+          "default": "direct"
+        },
+        "isGlobal": {
+            "type": "boolean",
+            "description": "If true, this forum is visible to all users."
+        },
+        "teamId": {
+            "type": "string",
+            "description": "If it's a forum for a specific team, this is the team ID."
+        },
         "userIds": {
           "type": "array",
-          "description": "An array of user IDs participating in the chat.",
+          "description": "An array of user IDs participating in the chat. For direct messages, this will be 2 users. For forums, it can be more.",
           "items": { "type": "string" }
         },
         "lastMessage": {
@@ -458,7 +481,7 @@
           }
         }
       },
-      "required": ["userIds"]
+      "required": ["userIds", "type"]
     },
     "Message": {
       "title": "Message",

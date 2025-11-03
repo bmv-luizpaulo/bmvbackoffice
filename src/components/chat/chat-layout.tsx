@@ -1,16 +1,42 @@
 'use client';
 
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import type { User, Message, Chat } from '@/lib/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Paperclip, Send } from 'lucide-react';
+import { Paperclip, Send, Hash } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { useUser, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, where, addDoc, serverTimestamp, orderBy, doc, setDoc } from 'firebase/firestore';
+import { collection, query, where, addDoc, serverTimestamp, orderBy, doc, setDoc, getDocs, writeBatch } from 'firebase/firestore';
 import React from 'react';
+import { Separator } from '../ui/separator';
+
+
+async function ensureGlobalForumExists(firestore: any, allUsers: User[]) {
+    const forumQuery = query(collection(firestore, 'chats'), where('isGlobal', '==', true));
+    const querySnapshot = await getDocs(forumQuery);
+    if (querySnapshot.empty && allUsers.length > 0) {
+        console.log("Creating global forum...");
+        const userIds = allUsers.map(u => u.id);
+        const usersData = allUsers.reduce((acc, user) => {
+            acc[user.id] = { name: user.name, avatarUrl: user.avatarUrl, email: user.email };
+            return acc;
+        }, {} as Record<string, any>);
+
+        const newForumData: Omit<Chat, 'id'> = {
+            name: 'Geral',
+            type: 'forum',
+            isGlobal: true,
+            userIds: userIds,
+            lastMessage: null,
+            users: usersData,
+        };
+        await addDoc(collection(firestore, 'chats'), newForumData);
+    }
+}
+
 
 export function ChatLayout() {
   const firestore = useFirestore();
@@ -18,18 +44,21 @@ export function ChatLayout() {
   const [selectedChat, setSelectedChat] = useState<Chat | null>(null);
   const [newMessage, setNewMessage] = useState('');
 
-  // 1. Fetch all users to display in the list
   const usersQuery = useMemoFirebase(() => firestore ? collection(firestore, 'users') : null, [firestore]);
   const { data: allUsers } = useCollection<User>(usersQuery);
 
-  // 2. Fetch all chats the current user is a part of
   const chatsQuery = useMemoFirebase(() => {
     if (!firestore || !currentUser?.uid) return null;
     return query(collection(firestore, 'chats'), where('userIds', 'array-contains', currentUser.uid));
   }, [firestore, currentUser]);
   const { data: userChats, isLoading: isLoadingChats } = useCollection<Chat>(chatsQuery);
 
-  // 3. Fetch messages for the currently selected chat
+  useEffect(() => {
+      if (firestore && allUsers && allUsers.length > 0) {
+        ensureGlobalForumExists(firestore, allUsers);
+      }
+  }, [firestore, allUsers]);
+
   const messagesQuery = useMemoFirebase(() => {
     if (!firestore || !selectedChat?.id) return null;
     return query(collection(firestore, 'chats', selectedChat.id, 'messages'), orderBy('timestamp', 'asc'));
@@ -42,7 +71,6 @@ export function ChatLayout() {
 
     const messagesCollection = collection(firestore, 'chats', selectedChat.id, 'messages');
     
-    // This is a core user action, so we can await it to clear the input confidently.
     await addDoc(messagesCollection, {
       chatId: selectedChat.id,
       senderId: currentUser.uid,
@@ -54,21 +82,27 @@ export function ChatLayout() {
     setNewMessage('');
   }, [newMessage, selectedChat, currentUser, firestore]);
 
-  const handleSelectUser = useCallback(async (user: User) => {
+  const handleSelectChat = useCallback(async (chatOrUser: Chat | User) => {
       if (!currentUser?.uid || !firestore || !allUsers) return;
+
+      if ('type' in chatOrUser) { // It's a Chat object
+          setSelectedChat(chatOrUser);
+          return;
+      }
       
-      // Check if a chat already exists
-      const existingChat = userChats?.find(c => c.userIds.length === 2 && c.userIds.includes(user.id));
+      // It's a User object, find or create direct chat
+      const user = chatOrUser;
+      const existingChat = userChats?.find(c => c.type === 'direct' && c.userIds.length === 2 && c.userIds.includes(user.id));
       if (existingChat) {
           setSelectedChat(existingChat);
           return;
       }
 
-      // Create a new chat if it doesn't exist
       const currentUserData = allUsers.find(u => u.id === currentUser.uid);
       if (!currentUserData) return;
       
-      const newChatData = {
+      const newChatData: Omit<Chat, 'id'> = {
+          type: 'direct',
           userIds: [currentUser.uid, user.id],
           lastMessage: null,
           users: {
@@ -90,15 +124,40 @@ export function ChatLayout() {
       setSelectedChat({ id: newChatRef.id, ...newChatData } as Chat);
   }, [currentUser, firestore, userChats, allUsers]);
   
-  const otherUser = useMemo(() => {
-    if (!selectedChat || !currentUser) return null;
+  const chatDisplayInfo = useMemo(() => {
+    if (!selectedChat || !currentUser) return { avatar: null, name: 'Selecione uma conversa' };
+    
+    if (selectedChat.type === 'forum') {
+        return { 
+            avatar: <Avatar><AvatarFallback><Hash /></AvatarFallback></Avatar>,
+            name: selectedChat.name || 'Fórum' 
+        };
+    }
+    
+    // Direct message
     const otherUserId = selectedChat.userIds.find(id => id !== currentUser.uid);
-    if (!otherUserId || !selectedChat.users) return null;
-    return selectedChat.users[otherUserId];
+    if (!otherUserId || !selectedChat.users) return { avatar: null, name: 'Carregando...' };;
+    const otherUser = selectedChat.users[otherUserId];
+    return {
+        avatar: <Avatar><AvatarImage src={otherUser.avatarUrl} /><AvatarFallback>{otherUser.name.charAt(0)}</AvatarFallback></Avatar>,
+        name: otherUser.name
+    };
   }, [selectedChat, currentUser]);
 
-
-  const otherUsersInList = useMemo(() => allUsers?.filter(u => u.id !== currentUser?.uid) || [], [allUsers, currentUser]);
+  const { forums, directMessages } = useMemo(() => {
+    const forums: Chat[] = [];
+    const directMessages: Chat[] = [];
+    userChats?.forEach(chat => {
+      if (chat.type === 'forum') {
+        forums.push(chat);
+      } else {
+        directMessages.push(chat);
+      }
+    });
+    return { forums, directMessages };
+  }, [userChats]);
+  
+  const directMessageUsers = useMemo(() => allUsers?.filter(u => u.id !== currentUser?.uid) || [], [allUsers, currentUser]);
 
   return (
     <div className="flex h-full">
@@ -108,43 +167,68 @@ export function ChatLayout() {
         </div>
         <ScrollArea className="h-[calc(100%-65px)]">
             {isLoadingChats ? (
-              <div className="p-4 text-sm text-muted-foreground">Carregando conversas...</div>
-            ) : otherUsersInList.map(user => {
-                const chatWithUser = userChats?.find(c => c.userIds.includes(user.id));
-                return (
-                    <button
-                        key={user.id}
-                        className={cn(
-                            "flex w-full items-center gap-3 p-4 text-left hover:bg-muted/50 transition-colors",
-                            selectedChat?.id === chatWithUser?.id && "bg-muted"
-                        )}
-                        onClick={() => handleSelectUser(user)}
-                    >
-                        <Avatar>
-                            <AvatarImage src={user.avatarUrl} />
-                            <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
-                        </Avatar>
-                        <div className='min-w-0'>
-                            <p className="font-semibold truncate">{user.name}</p>
-                            <p className="text-sm text-muted-foreground truncate">{chatWithUser?.lastMessage?.text || user.email}</p>
+              <div className="p-4 text-sm text-muted-foreground">Carregando...</div>
+            ) : (
+                <>
+                    {forums.length > 0 && (
+                        <div className="p-2">
+                            <h3 className="px-2 text-xs font-semibold text-muted-foreground uppercase">Fóruns</h3>
+                             {forums.map(forum => (
+                                <button
+                                    key={forum.id}
+                                    className={cn(
+                                        "flex w-full items-center gap-3 p-2 rounded-md text-left hover:bg-muted/50 transition-colors",
+                                        selectedChat?.id === forum.id && "bg-muted"
+                                    )}
+                                    onClick={() => handleSelectChat(forum)}
+                                >
+                                    <Avatar><AvatarFallback><Hash /></AvatarFallback></Avatar>
+                                    <div className='min-w-0'>
+                                        <p className="font-semibold truncate">{forum.name}</p>
+                                        <p className="text-sm text-muted-foreground truncate">{forum.lastMessage?.text || 'Nenhuma mensagem recente'}</p>
+                                    </div>
+                                </button>
+                            ))}
                         </div>
-                    </button>
-                )
-            })}
+                    )}
+                    <Separator className="my-2" />
+                    <div className="p-2">
+                        <h3 className="px-2 text-xs font-semibold text-muted-foreground uppercase">Mensagens Diretas</h3>
+                        {directMessageUsers.map(user => {
+                            const chatWithUser = directMessages.find(c => c.userIds.includes(user.id));
+                            return (
+                                <button
+                                    key={user.id}
+                                    className={cn(
+                                        "flex w-full items-center gap-3 p-2 rounded-md text-left hover:bg-muted/50 transition-colors",
+                                        selectedChat?.id === chatWithUser?.id && "bg-muted"
+                                    )}
+                                    onClick={() => handleSelectChat(user)}
+                                >
+                                    <Avatar>
+                                        <AvatarImage src={user.avatarUrl} />
+                                        <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+                                    </Avatar>
+                                    <div className='min-w-0'>
+                                        <p className="font-semibold truncate">{user.name}</p>
+                                        <p className="text-sm text-muted-foreground truncate">{chatWithUser?.lastMessage?.text || user.email}</p>
+                                    </div>
+                                </button>
+                            )
+                        })}
+                    </div>
+                </>
+            )}
         </ScrollArea>
       </div>
       <div className="w-2/3 flex flex-col">
-        {selectedChat && otherUser ? (
+        {selectedChat ? (
             <>
                 <div className="flex items-center gap-3 p-4 border-b">
-                    <Avatar>
-                        <AvatarImage src={otherUser.avatarUrl} />
-                        <AvatarFallback>{otherUser.name.charAt(0)}</AvatarFallback>
-                    </Avatar>
+                    {chatDisplayInfo.avatar}
                     <div>
-                        <p className="font-semibold">{otherUser.name}</p>
-                        {/* Static "Online" status for simplicity */}
-                        <p className="text-sm text-muted-foreground">Online</p>
+                        <p className="font-semibold">{chatDisplayInfo.name}</p>
+                        {selectedChat.type === 'direct' && <p className="text-sm text-muted-foreground">Online</p>}
                     </div>
                 </div>
                 <ScrollArea className="flex-1 p-4">
@@ -156,6 +240,7 @@ export function ChatLayout() {
                              <div key={msg.id} className={cn("flex items-end gap-2", isCurrentUserSender ? "justify-end" : "justify-start")}>
                                  {!isCurrentUserSender && <Avatar className="h-8 w-8"><AvatarImage src={sender?.avatarUrl} /><AvatarFallback>{sender?.name?.charAt(0)}</AvatarFallback></Avatar>}
                                  <div className={cn("max-w-xs rounded-lg p-3 text-sm", isCurrentUserSender ? "bg-primary text-primary-foreground" : "bg-muted")}>
+                                    {!isCurrentUserSender && selectedChat.type === 'forum' && <p className='text-xs font-bold mb-1'>{sender?.name || 'Usuário'}</p>}
                                     <p className='whitespace-pre-wrap'>{msg.text}</p>
                                     <p className={cn("text-xs mt-1 text-right", isCurrentUserSender ? "text-primary-foreground/70" : "text-muted-foreground")}>
                                         {msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'enviando...'}
@@ -190,7 +275,7 @@ export function ChatLayout() {
              <div className="flex flex-1 items-center justify-center">
                 <div className="text-center">
                     <p className="text-lg font-semibold">Selecione uma conversa</p>
-                    <p className="text-muted-foreground">Escolha um usuário na lista à esquerda para começar a conversar.</p>
+                    <p className="text-muted-foreground">Escolha um fórum ou um usuário para começar a conversar.</p>
                 </div>
             </div>
         )}
