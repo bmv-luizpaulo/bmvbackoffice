@@ -40,7 +40,7 @@ type RoleFormDialogProps = {
   allRoles: Role[];
 };
 
-const hierarchyOrder = {
+const hierarchyOrder: Record<string, number> = {
   "CEO": 6,
   "Diretoria": 5,
   "Gerência": 4,
@@ -144,14 +144,19 @@ export function RoleFormDialog({ isOpen, onOpenChange, onSave, role, allRoles }:
 
 
   function onSubmit(values: z.infer<typeof formSchema>) {
-    const finalData = {
+    const finalData: Partial<Omit<Role, 'id'>> = {
         ...values,
         supervisorRoleId: values.supervisorRoleId === 'unassigned' ? undefined : values.supervisorRoleId,
         responsibilities: values.responsibilities?.map(item => item.value).filter(Boolean),
         kpis: values.kpis?.map(item => item.value).filter(Boolean),
         requiredSkills: values.requiredSkills?.map(item => item.value).filter(Boolean),
     };
-    onSave(finalData, role?.id);
+
+    if (finalData.supervisorRoleId === undefined) {
+      delete finalData.supervisorRoleId;
+    }
+
+    onSave(finalData as Omit<Role, 'id'>, role?.id);
     onOpenChange(false);
   }
   
