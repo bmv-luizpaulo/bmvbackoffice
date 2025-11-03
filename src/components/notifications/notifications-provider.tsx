@@ -120,7 +120,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
       const newNotification = {
         ...notificationData,
         isRead: false,
-        createdAt: serverTimestamp(),
+        createdAt: new Date().toISOString(),
       };
       const notificationsCollection = collection(
         firestore,
