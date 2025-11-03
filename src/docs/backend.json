@@ -28,6 +28,11 @@
           "type": "string",
           "description": "The user's phone number (WhatsApp)."
         },
+        "linkedinUrl": {
+          "type": "string",
+          "format": "uri",
+          "description": "URL of the user's LinkedIn profile."
+        },
         "address": {
           "type": "object",
           "description": "The user's full address.",
@@ -249,6 +254,10 @@
             "description": {
                 "type": "string",
                 "description": "A brief description of the directorate's purpose."
+            },
+            "directorId": {
+                "type": "string",
+                "description": "The ID of the user who is the director."
             }
         },
         "required": ["name"]
@@ -274,7 +283,7 @@
         "hierarchyLevel": {
           "type": "string",
           "description": "The hierarchical level of the role.",
-          "enum": ["Diretoria", "Gerência", "Coordenação", "Analista", "Assistente", "Estagiário"]
+          "enum": ["CEO", "Diretoria", "Gerência", "Coordenação", "Analista", "Assistente", "Estagiário"]
         },
         "supervisorRoleId": {
           "type": "string",
@@ -345,6 +354,11 @@
           "description": "The type of contact.",
           "enum": ["cliente", "fornecedor", "parceiro"]
         },
+        "linkedinUrl": {
+          "type": "string",
+          "format": "uri",
+          "description": "URL of the contact's LinkedIn profile."
+        },
         "address": {
           "type": "object",
           "description": "The contact's full address.",
@@ -393,6 +407,24 @@
             "uploadedAt": { "type": "string", "format": "date-time", "description": "The timestamp when the file was uploaded." }
         },
         "required": ["title", "contractType", "startDate", "endDate", "fileUrl", "uploaderId"]
+    },
+    "Reimbursement": {
+        "title": "Reimbursement",
+        "type": "object",
+        "description": "Represents a reimbursement request from a user.",
+        "properties": {
+            "requesterId": { "type": "string", "description": "The ID of the user requesting the reimbursement." },
+            "description": { "type": "string", "description": "Description of the expense." },
+            "amount": { "type": "number", "description": "The amount to be reimbursed." },
+            "status": { "type": "string", "enum": ["Pendente", "Aprovado", "Recusado"], "description": "The current status of the request." },
+            "requestDate": { "type": "string", "format": "date-time", "description": "The date the request was made." },
+            "decisionDate": { "type": "string", "format": "date-time", "description": "The date the request was approved or rejected." },
+            "approverId": { "type": "string", "description": "The ID of the user who approved or rejected the request." },
+            "receiptUrl": { "type": "string", "format": "uri", "description": "URL of the uploaded receipt image or document." },
+            "notes": { "type": "string", "description": "Additional notes from the requester or approver." },
+            "costCenterId": { "type": "string", "description": "The ID of the cost center this reimbursement is associated with." }
+        },
+        "required": ["requesterId", "description", "amount", "status", "requestDate"]
     },
      "Chat": {
       "title": "Chat",
@@ -528,9 +560,10 @@
       "properties": {
         "checklistId": { "type": "string", "description": "The ID of the parent checklist." },
         "description": { "type": "string", "description": "The text of the checklist item/step." },
-        "order": { "type": "number", "description": "The numerical order of the item in the list." }
+        "order": { "type": "number", "description": "The numerical order of the item in the list." },
+        "isCompleted": { "type": "boolean", "description": "Indicates if the checklist item is completed." }
       },
-      "required": ["checklistId", "description", "order"]
+      "required": ["checklistId", "description", "order", "isCompleted"]
     },
     "Asset": {
       "title": "Asset",
@@ -615,6 +648,30 @@
             "status": { "type": "string", "enum": ["Agendada", "Em Andamento", "Concluída", "Cancelada"], "description": "The status of the maintenance." }
         },
         "required": ["assetId", "scheduledDate", "description", "status"]
+    },
+    "CostCenter": {
+      "title": "CostCenter",
+      "type": "object",
+      "description": "Represents a cost center for financial tracking.",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The name of the cost center (e.g., 'Marketing', 'Operations')."
+        },
+        "code": {
+          "type": "string",
+          "description": "A unique code for the cost center (e.g., 'MKT-001')."
+        },
+        "description": {
+          "type": "string",
+          "description": "A brief description of the cost center's purpose."
+        },
+        "responsibleId": {
+          "type": "string",
+          "description": "The ID of the user responsible for this cost center."
+        }
+      },
+      "required": ["name"]
     }
   },
   "auth": {
@@ -668,6 +725,10 @@
         "schema": { "$ref": "#/entities/Contract" },
         "description": "Stores all contracts and important documents."
     },
+    "/reimbursements/{reimbursementId}": {
+        "schema": { "$ref": "#/entities/Reimbursement" },
+        "description": "Stores all reimbursement requests."
+    },
     "/chats/{chatId}": {
       "schema": { "$ref": "#/entities/Chat" },
       "description": "Represents a chat conversation metadata."
@@ -703,6 +764,10 @@
     "/maintenances/{maintenanceId}": {
         "schema": { "$ref": "#/entities/AssetMaintenance" },
         "description": "Stores maintenance records for all assets."
+    },
+    "/costCenters/{costCenterId}": {
+      "schema": { "$ref": "#/entities/CostCenter" },
+      "description": "Stores all company cost centers for financial tracking."
     }
   }
 }

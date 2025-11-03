@@ -47,6 +47,7 @@ const formSchema = z.object({
   email: z.string().email("O e-mail é inválido."),
   roleId: z.string().optional(),
   phone: z.string().optional(),
+  linkedinUrl: z.string().url("URL do LinkedIn inválida.").optional().or(z.literal('')),
   personalDocument: z.string().optional(),
   address: z.object({
     street: z.string().optional(),
@@ -66,6 +67,7 @@ const defaultValues = {
     email: '',
     roleId: undefined,
     phone: '',
+    linkedinUrl: '',
     personalDocument: '',
     address: {
         street: '',
@@ -100,6 +102,7 @@ export function UserFormDialog({ isOpen, onOpenChange, onSave, user }: UserFormD
           email: user.email || '',
           roleId: user.roleId || undefined,
           phone: user.phone || '',
+          linkedinUrl: user.linkedinUrl || '',
           personalDocument: user.personalDocument || '',
           address: {
             street: user.address?.street || '',
@@ -217,6 +220,19 @@ export function UserFormDialog({ isOpen, onOpenChange, onSave, user }: UserFormD
                                         field.onChange(formatCPF(e.target.value))
                                       }}
                                     />
+                                </FormControl>
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={form.control}
+                            name="linkedinUrl"
+                            render={({ field }) => (
+                                <FormItem className="md:col-span-2">
+                                <FormLabel>URL do LinkedIn</FormLabel>
+                                <FormControl>
+                                    <Input placeholder="https://www.linkedin.com/in/seu-perfil" {...field} value={field.value || ''} />
                                 </FormControl>
                                 <FormMessage />
                                 </FormItem>

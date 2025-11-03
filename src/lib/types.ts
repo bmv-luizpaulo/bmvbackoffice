@@ -10,6 +10,7 @@ export type User = {
   avatarUrl: string;
   roleId?: string;
   phone?: string;
+  linkedinUrl?: string;
   address?: {
     street?: string;
     number?: string;
@@ -30,6 +31,7 @@ export type Contact = {
   phone?: string;
   companyName?: string;
   type: 'cliente' | 'fornecedor' | 'parceiro';
+  linkedinUrl?: string;
   address?: {
     street?: string;
     number?: string;

@@ -43,6 +43,7 @@ const formSchema = z.object({
   email: z.string().email("O e-mail é inválido."),
   phone: z.string().optional(),
   companyName: z.string().optional(),
+  linkedinUrl: z.string().url("URL do LinkedIn inválida.").optional().or(z.literal('')),
   address: z.object({
     street: z.string().optional(),
     number: z.string().optional(),
@@ -59,6 +60,7 @@ const defaultValues = {
   email: '',
   phone: '',
   companyName: '',
+  linkedinUrl: '',
   address: {
     street: '',
     number: '',
@@ -86,6 +88,7 @@ export function ContactFormDialog({ isOpen, onOpenChange, onSave, contact, type 
           email: contact.email || '',
           phone: contact.phone || '',
           companyName: contact.companyName || '',
+          linkedinUrl: contact.linkedinUrl || '',
           address: {
             street: contact.address?.street || '',
             number: contact.address?.number || '',
@@ -196,6 +199,19 @@ export function ContactFormDialog({ isOpen, onOpenChange, onSave, contact, type 
                                         field.onChange(formatPhone(e.target.value))
                                       }}
                                     />
+                                </FormControl>
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={form.control}
+                            name="linkedinUrl"
+                            render={({ field }) => (
+                                <FormItem className="md:col-span-2">
+                                <FormLabel>URL do LinkedIn</FormLabel>
+                                <FormControl>
+                                    <Input placeholder="https://www.linkedin.com/in/seu-perfil" {...field} />
                                 </FormControl>
                                 <FormMessage />
                                 </FormItem>
@@ -325,5 +341,3 @@ export function ContactFormDialog({ isOpen, onOpenChange, onSave, contact, type 
     </Dialog>
   );
 }
-
-    
