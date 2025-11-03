@@ -41,6 +41,7 @@ type RoleFormDialogProps = {
 };
 
 const hierarchyOrder = {
+  "CEO": 6,
   "Diretoria": 5,
   "Gerência": 4,
   "Coordenação": 3,
@@ -179,7 +180,7 @@ export function RoleFormDialog({ isOpen, onOpenChange, onSave, role, allRoles }:
                           <FormItem><FormLabel>Departamento</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Selecione um departamento" /></SelectTrigger></FormControl><SelectContent><SelectItem value="Operações">Operações</SelectItem><SelectItem value="TI">TI</SelectItem><SelectItem value="Financeiro">Financeiro</SelectItem><SelectItem value="Comercial">Comercial</SelectItem><SelectItem value="RH">RH</SelectItem><SelectItem value="Administrativo">Administrativo</SelectItem></SelectContent></Select><FormMessage /></FormItem>
                         )}/>
                         <FormField control={form.control} name="hierarchyLevel" render={({ field }) => (
-                          <FormItem><FormLabel>Nível Hierárquico</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Selecione um nível" /></SelectTrigger></FormControl><SelectContent><SelectItem value="Diretoria">Diretoria</SelectItem><SelectItem value="Gerência">Gerência</SelectItem><SelectItem value="Coordenação">Coordenação</SelectItem><SelectItem value="Analista">Analista</SelectItem><SelectItem value="Assistente">Assistente</SelectItem><SelectItem value="Estagiário">Estagiário</SelectItem></SelectContent></Select><FormMessage /></FormItem>
+                          <FormItem><FormLabel>Nível Hierárquico</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Selecione um nível" /></SelectTrigger></FormControl><SelectContent><SelectItem value="CEO">CEO</SelectItem><SelectItem value="Diretoria">Diretoria</SelectItem><SelectItem value="Gerência">Gerência</SelectItem><SelectItem value="Coordenação">Coordenação</SelectItem><SelectItem value="Analista">Analista</SelectItem><SelectItem value="Assistente">Assistente</SelectItem><SelectItem value="Estagiário">Estagiário</SelectItem></SelectContent></Select><FormMessage /></FormItem>
                         )}/>
                       </div>
                       <FormField control={form.control} name="supervisorRoleId" render={({ field }) => (

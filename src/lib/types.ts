@@ -131,7 +131,7 @@ export type Role = {
     name: string;
     description?: string;
     department?: 'Operações' | 'TI' | 'Financeiro' | 'Comercial' | 'RH' | 'Administrativo';
-    hierarchyLevel?: 'Diretoria' | 'Gerência' | 'Coordenação' | 'Analista' | 'Assistente' | 'Estagiário';
+    hierarchyLevel?: 'CEO' | 'Diretoria' | 'Gerência' | 'Coordenação' | 'Analista' | 'Assistente' | 'Estagiário';
     supervisorRoleId?: string;
     mission?: string;
     responsibilities?: string[];

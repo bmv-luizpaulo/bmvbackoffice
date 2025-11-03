@@ -278,7 +278,7 @@
         "hierarchyLevel": {
           "type": "string",
           "description": "The hierarchical level of the role.",
-          "enum": ["Diretoria", "Gerência", "Coordenação", "Analista", "Assistente", "Estagiário"]
+          "enum": ["CEO", "Diretoria", "Gerência", "Coordenação", "Analista", "Assistente", "Estagiário"]
         },
         "supervisorRoleId": {
           "type": "string",
