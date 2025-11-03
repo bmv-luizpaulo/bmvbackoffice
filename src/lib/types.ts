@@ -110,10 +110,16 @@ export type Team = {
     name: string;
     description?: string;
     leaderId?: string;
-    department?: 'Diretoria Operacional' | 'Diretoria Administrativa';
+    directorateId?: string;
     teamType?: 'Operacional' | 'Técnica' | 'Suporte' | 'Projeto' | 'Administrativa';
     responsibilities?: string;
     kpis?: string;
+};
+
+export type Directorate = {
+    id: string;
+    name: string;
+    description?: string;
 };
 
 export type Role = {

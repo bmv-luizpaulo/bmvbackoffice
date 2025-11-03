@@ -217,10 +217,9 @@
                 "type": "string",
                 "description": "The ID of the user who is the team leader."
             },
-            "department": {
+            "directorateId": {
                 "type": "string",
-                "description": "The department the team is linked to.",
-                "enum": ["Diretoria Operacional", "Diretoria Administrativa"]
+                "description": "The ID of the directorate the team is linked to."
             },
             "teamType": {
                 "type": "string",
@@ -234,6 +233,22 @@
             "kpis": {
                 "type": "string",
                 "description": "Key Performance Indicators for the team."
+            }
+        },
+        "required": ["name", "directorateId"]
+    },
+    "Directorate": {
+        "title": "Directorate",
+        "type": "object",
+        "description": "Represents a directorate or division within the organization.",
+        "properties": {
+            "name": {
+                "type": "string",
+                "description": "Name of the directorate."
+            },
+            "description": {
+                "type": "string",
+                "description": "A brief description of the directorate's purpose."
             }
         },
         "required": ["name"]
@@ -601,6 +616,10 @@
     "/teams/{teamId}": {
       "schema": { "$ref": "#/entities/Team" },
       "description": "Represents a team. Contains 'id', 'name', and 'description'."
+    },
+    "/directorates/{directorateId}": {
+      "schema": { "$ref": "#/entities/Directorate" },
+      "description": "Represents a directorate or division. Contains 'name' and 'description'."
     },
     "/roles/{roleId}": {
         "schema": { "$ref": "#/entities/Role" },

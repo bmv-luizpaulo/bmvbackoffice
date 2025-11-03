@@ -26,9 +26,11 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from "../ui/textarea";
-import type { Team, User as UserType, Role } from "@/lib/types";
+import type { Team, User as UserType, Role, Directorate } from "@/lib/types";
 import { MultiSelect } from "../ui/multi-select";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
+import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
+import { collection } from "firebase/firestore";
 
 type TeamFormDialogProps = {
   isOpen: boolean;
@@ -44,7 +46,7 @@ const formSchema = z.object({
   name: z.string().min(1, "O nome da equipe é obrigatório."),
   description: z.string().optional(),
   leaderId: z.string().optional(),
-  department: z.enum(['Diretoria Operacional', 'Diretoria Administrativa']).optional(),
+  directorateId: z.string({ required_error: "A diretoria é obrigatória." }),
   teamType: z.enum(['Operacional', 'Técnica', 'Suporte', 'Projeto', 'Administrativa']).optional(),
   responsibilities: z.string().optional(),
   kpis: z.string().optional(),
@@ -55,7 +57,7 @@ const defaultValues = {
   name: '',
   description: '',
   leaderId: undefined,
-  department: undefined,
+  directorateId: undefined,
   teamType: undefined,
   responsibilities: '',
   kpis: '',
@@ -63,6 +65,10 @@ const defaultValues = {
 };
 
 export function TeamFormDialog({ isOpen, onOpenChange, onSave, team, users, usersInTeam }: TeamFormDialogProps) {
+  const firestore = useFirestore();
+  const directoratesQuery = useMemoFirebase(() => firestore ? collection(firestore, 'directorates') : null, [firestore]);
+  const { data: directoratesData } = useCollection<Directorate>(directoratesQuery);
+  
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues,
@@ -75,7 +81,7 @@ export function TeamFormDialog({ isOpen, onOpenChange, onSave, team, users, user
           name: team.name, 
           description: team.description || '', 
           leaderId: team.leaderId || undefined,
-          department: team.department,
+          directorateId: team.directorateId,
           teamType: team.teamType,
           responsibilities: team.responsibilities || '',
           kpis: team.kpis || '',
@@ -93,7 +99,7 @@ export function TeamFormDialog({ isOpen, onOpenChange, onSave, team, users, user
       name: values.name,
       description: values.description,
       leaderId: values.leaderId,
-      department: values.department,
+      directorateId: values.directorateId,
       teamType: values.teamType,
       responsibilities: values.responsibilities,
       kpis: values.kpis,
@@ -167,19 +173,20 @@ export function TeamFormDialog({ isOpen, onOpenChange, onSave, team, users, user
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FormField
                       control={form.control}
-                      name="department"
+                      name="directorateId"
                       render={({ field }) => (
                           <FormItem>
-                          <FormLabel>Departamento Vinculado</FormLabel>
+                          <FormLabel>Diretoria Vinculada</FormLabel>
                           <Select onValueChange={field.onChange} value={field.value}>
                               <FormControl>
                                   <SelectTrigger>
-                                  <SelectValue placeholder="Selecione um departamento" />
+                                  <SelectValue placeholder="Selecione uma diretoria" />
                                   </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                <SelectItem value="Diretoria Operacional">Diretoria Operacional</SelectItem>
-                                <SelectItem value="Diretoria Administrativa">Diretoria Administrativa</SelectItem>
+                                {directoratesData?.map(dir => (
+                                    <SelectItem key={dir.id} value={dir.id}>{dir.name}</SelectItem>
+                                ))}
                               </SelectContent>
                           </Select>
                           <FormMessage />

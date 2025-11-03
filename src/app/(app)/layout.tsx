@@ -23,6 +23,7 @@ import {
   CheckCircle2,
   PlusCircle,
   Package,
+  Building,
 } from 'lucide-react';
 import Image from 'next/image';
 import React, { useEffect } from 'react';
@@ -128,6 +129,7 @@ const navSections = [
               subItems: [
                 { href: '/users', icon: User, label: 'Usuários' },
                 { href: '/teams', icon: Users, label: 'Equipes' },
+                { href: '/directorates', icon: Building, label: 'Diretorias' },
                 { href: '/roles', icon: Briefcase, label: 'Cargos' },
               ]
             },
@@ -211,7 +213,7 @@ function NavItem({ item, pathname }: { item: (typeof navSections)[0]['items'][0]
         <CollapsibleContent>
              <SidebarMenuSub>
                 {item.subItems?.map(subItem => (
-                     <SidebarMenuItem key={subItem.label}>
+                     <SidebarMenuItem key={subItem.href}>
                         <SidebarMenuSubButton
                           href={subItem.href}
                           isActive={pathname.startsWith(subItem.href)}
