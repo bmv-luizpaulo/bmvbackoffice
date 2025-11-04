@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useUser, useCollection, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, collectionGroup, doc, query, where } from 'firebase/firestore';
-import type { Task, User, Project } from '@/lib/types';
+import type { Task, User, Project, Role } from '@/lib/types';
 import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -28,7 +28,7 @@ export default function TaskAgendaPage() {
   const { data: userProfile } = useDoc<User>(userProfileQuery);
   
   const roleQuery = useMemoFirebase(() => firestore && userProfile?.roleId ? doc(firestore, 'roles', userProfile.roleId) : null, [firestore, userProfile?.roleId]);
-  const { data: role } = useDoc(roleQuery);
+  const { data: role } = useDoc<Role>(roleQuery);
 
   const allUsersQuery = useMemoFirebase(() => firestore ? collection(firestore, 'users') : null, [firestore]);
   const { data: allUsers } = useCollection<User>(allUsersQuery);
@@ -44,7 +44,7 @@ export default function TaskAgendaPage() {
   }, [filterParam, authUser?.uid]);
 
   const tasksQuery = useMemoFirebase(() => {
-    if (!firestore || !role || !authUser?.uid) return null;
+    if (!firestore || !role || !authUser?.uid) return null; // Wait for role to be loaded
 
     const tasksCollection = collectionGroup(firestore, 'tasks');
     
@@ -57,6 +57,7 @@ export default function TaskAgendaPage() {
     
     return query(tasksCollection, where('assigneeId', '==', authUser.uid));
   }, [firestore, role, selectedUserId, authUser?.uid]);
+  
   const { data: tasksData, isLoading: isLoadingTasks } = useCollection<Task>(tasksQuery);
   
   const projectsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'projects') : null, [firestore]);

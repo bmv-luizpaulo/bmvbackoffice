@@ -117,7 +117,13 @@ export function ContactDataTable({ type }: ContactDataTableProps) {
     setIsFormOpen(true);
   }, []);
   
-  const typeLabel = React.useMemo(() => type.charAt(0).toUpperCase() + type.slice(1), [type]);
+  const typeLabel = React.useMemo(() => {
+      switch(type) {
+          case 'cliente': return 'Cliente';
+          case 'fornecedor': return 'Fornecedor';
+          case 'parceiro': return 'Parceiro';
+      }
+  }, [type]);
 
   const columns: ColumnDef<Contact>[] = React.useMemo(() => [
     {
@@ -298,7 +304,7 @@ export function ContactDataTable({ type }: ContactDataTableProps) {
                 <AlertDialogHeader>
                   <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    Esta ação não pode ser desfeita. Isso excluirá permanentemente o contato "{selectedContact?.fullName || selectedContact?.tradeName}".
+                    Esta ação não pode ser desfeita. Isso excluirá permanentemente o contato.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>

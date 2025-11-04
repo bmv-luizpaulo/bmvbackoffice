@@ -55,7 +55,7 @@ export default function ContatosPage() {
               <CardDescription>Adicione, edite e visualize os clientes da sua empresa.</CardDescription>
             </CardHeader>
             <CardContent>
-                <ContactDataTable key="clientes" type="cliente" />
+                {tab === 'clientes' && <ContactDataTable key="clientes" type="cliente" />}
             </CardContent>
           </Card>
         </TabsContent>
@@ -66,7 +66,7 @@ export default function ContatosPage() {
               <CardDescription>Gerencie as informações dos seus fornecedores.</CardDescription>
             </CardHeader>
             <CardContent>
-              <ContactDataTable key="fornecedores" type="fornecedor" />
+              {tab === 'fornecedores' && <ContactDataTable key="fornecedores" type="fornecedor" />}
             </CardContent>
           </Card>
         </TabsContent>
@@ -77,7 +77,7 @@ export default function ContatosPage() {
               <CardDescription>Gerencie as informações dos seus parceiros.</CardDescription>
             </CardHeader>
             <CardContent>
-              <ContactDataTable key="parceiros" type="parceiro" />
+              {tab === 'parceiros' && <ContactDataTable key="parceiros" type="parceiro" />}
             </CardContent>
           </Card>
         </TabsContent>
