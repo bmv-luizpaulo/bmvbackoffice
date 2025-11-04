@@ -50,17 +50,11 @@ service cloud.firestore {
     }
 
     match /chats/{chatId} {
-      // Allow a user to get a chat document if they are a participant.
-      allow get: if isDev() || request.auth.uid in resource.data.userIds;
-      // Allow a user to list chats only if they are querying for chats they are a member of.
-      allow list: if isDev() || (request.auth != null && request.auth.uid in request.query.filters.userIds);
-      // Allow users to create chats as long as they include themselves.
+      allow get, update: if isDev() || request.auth.uid in resource.data.userIds;
+      allow list: if isDev() || isManager() || request.auth != null;
       allow create: if isDev() || request.auth.uid in request.resource.data.userIds;
-      // Allow updates (like lastMessage) if user is part of the chat.
-      allow update: if isDev() || request.auth.uid in resource.data.userIds;
-      
+
       match /messages/{messageId} {
-        // Allow read/write to messages only if the user is part of the parent chat document.
         allow read, write: if isDev() || request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.userIds;
       }
     }
