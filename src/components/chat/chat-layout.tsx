@@ -13,7 +13,11 @@ import { collection, query, where, addDoc, serverTimestamp, orderBy, doc, setDoc
 import React from 'react';
 import { Separator } from '../ui/separator';
 
-export function ChatLayout() {
+interface ChatLayoutProps {
+  chatType: 'direct' | 'forum';
+}
+
+export function ChatLayout({ chatType }: ChatLayoutProps) {
   const firestore = useFirestore();
   const { user: currentUser } = useUser();
   const [selectedChat, setSelectedChat] = useState<Chat | null>(null);
@@ -25,8 +29,12 @@ export function ChatLayout() {
 
   const chatsQuery = useMemoFirebase(() => {
     if (!firestore || !currentUser?.uid) return null;
-    return query(collection(firestore, 'chats'), where('userIds', 'array-contains', currentUser.uid));
-  }, [firestore, currentUser]);
+    return query(
+      collection(firestore, 'chats'), 
+      where('type', '==', chatType),
+      where('userIds', 'array-contains', currentUser.uid)
+    );
+  }, [firestore, currentUser, chatType]);
   const { data: userChats, isLoading: isLoadingChats } = useCollection<Chat>(chatsQuery);
 
   const messagesQuery = useMemoFirebase(() => {
@@ -46,7 +54,7 @@ export function ChatLayout() {
 
     const messagesCollection = collection(firestore, 'chats', selectedChat.id, 'messages');
     
-    const timestamp = serverTimestamp();
+    const timestamp = new Date();
 
     await addDoc(messagesCollection, {
       chatId: selectedChat.id,
@@ -56,7 +64,6 @@ export function ChatLayout() {
       read: false,
     });
     
-    // Update last message on the chat itself
     const chatRef = doc(firestore, 'chats', selectedChat.id);
     await updateDoc(chatRef, {
         lastMessage: {
@@ -121,7 +128,6 @@ export function ChatLayout() {
         };
     }
     
-    // Direct message
     const otherUserId = selectedChat.userIds.find(id => id !== currentUser.uid);
     if (!otherUserId || !selectedChat.users) return { avatar: null, name: 'Carregando...' };;
     const otherUser = selectedChat.users[otherUserId];
@@ -131,19 +137,6 @@ export function ChatLayout() {
     };
   }, [selectedChat, currentUser]);
 
-  const { forums, directMessages } = useMemo(() => {
-    const forums: Chat[] = [];
-    const directMessages: Chat[] = [];
-    userChats?.forEach(chat => {
-      if (chat.type === 'forum') {
-        forums.push(chat);
-      } else {
-        directMessages.push(chat);
-      }
-    });
-    return { forums, directMessages };
-  }, [userChats]);
-  
   const directMessageUsers = useMemo(() => allUsers?.filter(u => u.id !== currentUser?.uid) || [], [allUsers, currentUser]);
 
   return (
@@ -155,56 +148,50 @@ export function ChatLayout() {
         <ScrollArea className="h-[calc(100%-65px)]">
             {isLoadingChats ? (
               <div className="p-4 text-sm text-muted-foreground">Carregando...</div>
+            ) : chatType === 'forum' ? (
+                <div className="p-2">
+                    {userChats?.map(forum => (
+                      <button
+                          key={forum.id}
+                          className={cn(
+                              "flex w-full items-center gap-3 p-2 rounded-md text-left hover:bg-muted/50 transition-colors",
+                              selectedChat?.id === forum.id && "bg-muted"
+                          )}
+                          onClick={() => handleSelectChat(forum)}
+                      >
+                          <Avatar><AvatarFallback><Hash /></AvatarFallback></Avatar>
+                          <div className='min-w-0'>
+                              <p className="font-semibold truncate">{forum.name}</p>
+                              <p className="text-sm text-muted-foreground truncate">{forum.lastMessage?.text || 'Nenhuma mensagem recente'}</p>
+                          </div>
+                      </button>
+                  ))}
+                </div>
             ) : (
-                <>
-                    {forums.length > 0 && (
-                        <div className="p-2">
-                            <h3 className="px-2 text-xs font-semibold text-muted-foreground uppercase">Fóruns</h3>
-                             {forums.map(forum => (
-                                <button
-                                    key={forum.id}
-                                    className={cn(
-                                        "flex w-full items-center gap-3 p-2 rounded-md text-left hover:bg-muted/50 transition-colors",
-                                        selectedChat?.id === forum.id && "bg-muted"
-                                    )}
-                                    onClick={() => handleSelectChat(forum)}
-                                >
-                                    <Avatar><AvatarFallback><Hash /></AvatarFallback></Avatar>
-                                    <div className='min-w-0'>
-                                        <p className="font-semibold truncate">{forum.name}</p>
-                                        <p className="text-sm text-muted-foreground truncate">{forum.lastMessage?.text || 'Nenhuma mensagem recente'}</p>
-                                    </div>
-                                </button>
-                            ))}
-                        </div>
-                    )}
-                    <Separator className="my-2" />
-                    <div className="p-2">
-                        <h3 className="px-2 text-xs font-semibold text-muted-foreground uppercase">Mensagens Diretas</h3>
-                        {directMessageUsers.map(user => {
-                            const chatWithUser = directMessages.find(c => c.userIds.includes(user.id));
-                            return (
-                                <button
-                                    key={user.id}
-                                    className={cn(
-                                        "flex w-full items-center gap-3 p-2 rounded-md text-left hover:bg-muted/50 transition-colors",
-                                        selectedChat?.id === chatWithUser?.id && "bg-muted"
-                                    )}
-                                    onClick={() => handleSelectChat(user)}
-                                >
-                                    <Avatar>
-                                        <AvatarImage src={user.avatarUrl} />
-                                        <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
-                                    </Avatar>
-                                    <div className='min-w-0'>
-                                        <p className="font-semibold truncate">{user.name}</p>
-                                        <p className="text-sm text-muted-foreground truncate">{chatWithUser?.lastMessage?.text || user.email}</p>
-                                    </div>
-                                </button>
-                            )
-                        })}
-                    </div>
-                </>
+                <div className="p-2">
+                    {directMessageUsers.map(user => {
+                        const chatWithUser = userChats?.find(c => c.userIds.includes(user.id));
+                        return (
+                            <button
+                                key={user.id}
+                                className={cn(
+                                    "flex w-full items-center gap-3 p-2 rounded-md text-left hover:bg-muted/50 transition-colors",
+                                    selectedChat?.id === chatWithUser?.id && "bg-muted"
+                                )}
+                                onClick={() => handleSelectChat(user)}
+                            >
+                                <Avatar>
+                                    <AvatarImage src={user.avatarUrl} />
+                                    <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+                                </Avatar>
+                                <div className='min-w-0'>
+                                    <p className="font-semibold truncate">{user.name}</p>
+                                    <p className="text-sm text-muted-foreground truncate">{chatWithUser?.lastMessage?.text || user.email}</p>
+                                </div>
+                            </button>
+                        )
+                    })}
+                </div>
             )}
         </ScrollArea>
       </div>
@@ -262,7 +249,7 @@ export function ChatLayout() {
              <div className="flex flex-1 items-center justify-center">
                 <div className="text-center">
                     <p className="text-lg font-semibold">Selecione uma conversa</p>
-                    <p className="text-muted-foreground">Escolha um fórum ou um usuário para começar a conversar.</p>
+                    <p className="text-muted-foreground">Escolha um contato ou um fórum para começar a conversar.</p>
                 </div>
             </div>
         )}

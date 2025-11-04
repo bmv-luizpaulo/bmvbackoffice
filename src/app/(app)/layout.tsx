@@ -28,6 +28,7 @@ import {
   HandCoins,
   Wallet,
   ClipboardList,
+  MessagesSquare,
 } from 'lucide-react';
 import Image from 'next/image';
 import React, { useEffect } from 'react';
@@ -131,6 +132,7 @@ const navSections = [
         items: [
             { href: '/agenda/tarefas', icon: Calendar, label: 'Agenda' },
             { href: '/chat', icon: MessageSquare, label: 'Chat' },
+            { href: '/forum', icon: MessagesSquare, label: 'Fóruns' },
             { 
               href: '#', 
               icon: Group, 
