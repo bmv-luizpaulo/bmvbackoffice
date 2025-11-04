@@ -29,6 +29,7 @@ import {
   Wallet,
   ClipboardList,
   MessagesSquare,
+  FolderPlus,
 } from 'lucide-react';
 import Image from 'next/image';
 import React, { useEffect } from 'react';
@@ -99,8 +100,8 @@ const navSections = [
         name: 'Operacional',
         items: [
             { href: '/projects', icon: KanbanSquare, label: 'Funil Kanban' },
+            { href: '/projects?new=true', icon: FolderPlus, label: 'Novo Projeto' },
             { href: '/tasks/completed', icon: CheckCircle2, label: 'Tarefas Concluídas' },
-            { href: '/tasks/new', icon: ListPlus, label: 'Nova Tarefa' },
             { href: '/checklists', icon: ListChecks, label: 'Checklists' },
         ]
     },
@@ -166,8 +167,8 @@ function NavItem({ item, pathname }: { item: (typeof navSections)[0]['items'][0]
   const hasSubItems = item.subItems && item.subItems.length > 0;
   
   const isParentActive = hasSubItems
-    ? item.subItems.some(sub => pathname.startsWith(sub.href))
-    : pathname.startsWith(item.href);
+    ? item.subItems.some(sub => pathname.startsWith(sub.href.split('?')[0]))
+    : pathname.startsWith(item.href.split('?')[0]);
 
   const [isOpen, setIsOpen] = React.useState(isParentActive);
 
@@ -189,7 +190,7 @@ function NavItem({ item, pathname }: { item: (typeof navSections)[0]['items'][0]
     return (
       <SidebarMenuItem>
         <Link href={item.href}>
-          <SidebarMenuButton isActive={pathname.startsWith(item.href)} tooltip={item.label}>
+          <SidebarMenuButton isActive={pathname.startsWith(item.href.split('?')[0])} tooltip={item.label}>
             <item.icon />
             <span>{item.label}</span>
           </SidebarMenuButton>
@@ -219,7 +220,7 @@ function NavItem({ item, pathname }: { item: (typeof navSections)[0]['items'][0]
                      <SidebarMenuItem key={subItem.href}>
                         <SidebarMenuSubButton
                           href={subItem.href}
-                          isActive={pathname.startsWith(subItem.href)}
+                          isActive={pathname.startsWith(subItem.href.split('?')[0])}
                         >
                             <subItem.icon />
                             <span>{subItem.label}</span>

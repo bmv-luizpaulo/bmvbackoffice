@@ -1,6 +1,20 @@
-import { KanbanBoard } from "@/components/projects/kanban-board";
+import { Suspense } from "react";
+import dynamic from 'next/dynamic';
+import { KanbanBoardSkeleton } from "@/components/projects/kanban-board-skeleton";
 
-export default function ProjectsPage() {
+const KanbanBoard = dynamic(() => import('@/components/projects/kanban-board').then(m => m.KanbanBoard), {
+  ssr: false,
+  loading: () => <KanbanBoardSkeleton />,
+});
+
+export default function ProjectsPage({
+  searchParams,
+}: {
+  searchParams: { [key: string]: string | string[] | undefined }
+}) {
+
+  const newProject = searchParams?.new === 'true';
+
   return (
     <div className="flex h-[calc(100vh-theme(spacing.14)-2*theme(spacing.6))] flex-col gap-6">
       <header>
@@ -8,7 +22,9 @@ export default function ProjectsPage() {
         <p className="text-muted-foreground">Gerencie seus projetos e tarefas do início ao fim.</p>
       </header>
       <div className="flex-1 overflow-x-auto">
-        <KanbanBoard />
+        <Suspense fallback={<KanbanBoardSkeleton />}>
+          <KanbanBoard openNewProjectDialog={newProject} />
+        </Suspense>
       </div>
     </div>
   );

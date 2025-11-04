@@ -18,14 +18,13 @@ import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '../ui/command';
 import { useCollection, useDoc, useFirestore, useUser as useAuthUser, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
 import { collection, doc, writeBatch, query, where, serverTimestamp } from 'firebase/firestore';
-import { FirestorePermissionError } from '@/firebase/errors';
-import { errorEmitter } from '@/firebase/error-emitter';
 import { useNotifications } from '../notifications/notifications-provider';
 import React from 'react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 
 const AiFollowUpSuggestions = dynamic(() => import('./ai-follow-up-suggestions').then(m => m.AiFollowUpSuggestions), { ssr: false });
 
-export function KanbanBoard() {
+export function KanbanBoard({ openNewProjectDialog }: { openNewProjectDialog?: boolean }) {
   const firestore = useFirestore();
   const { user: authUser } = useAuthUser();
   const { createNotification } = useNotifications();
@@ -42,18 +41,17 @@ export function KanbanBoard() {
   const projectsQuery = React.useMemo(() => firestore ? collection(firestore, 'projects') : null, [firestore]);
   const { data: projectsData, isLoading: isLoadingProjects } = useCollection<Project>(projectsQuery);
 
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+  const [activeTab, setActiveTab] = useState<'execucao' | 'arquivado'>('execucao');
 
-  const areProjectsEqual = (a: Project[], b: Project[]) => {
-    if (a.length !== b.length) return false;
-    for (let i = 0; i < a.length; i++) {
-      if (a[i].id !== b[i].id) return false;
-      // compare key fields that might change ordering when updated
-      if (a[i].name !== b[i].name) return false;
-    }
-    return true;
-  };
+  const { projectsInExecution, projectsArchived } = useMemo(() => {
+    const inExecution = projectsData?.filter(p => p.status !== 'Arquivado').sort((a,b) => a.name.localeCompare(b.name)) || [];
+    const archived = projectsData?.filter(p => p.status === 'Arquivado').sort((a,b) => a.name.localeCompare(b.name)) || [];
+    return { projectsInExecution: inExecution, projectsArchived: archived };
+  }, [projectsData]);
+
+  const projects = activeTab === 'execucao' ? projectsInExecution : projectsArchived;
+
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
 
   const stagesQuery = React.useMemo(() => firestore && selectedProject ? collection(firestore, 'projects', selectedProject.id, 'stages') : null, [firestore, selectedProject?.id]);
   const { data: stagesData, isLoading: isLoadingStages } = useCollection<Stage>(stagesQuery);
@@ -83,98 +81,96 @@ export function KanbanBoard() {
   const [isTaskDialogOpen, setIsTaskDialogOpen] = useState(false);
   const [taskToEdit, setTaskToEdit] = useState<Task | null>(null);
   const [dependencyForNewTask, setDependencyForNewTask] = useState<string | null>(null);
-
+  
+  const [projectToEdit, setProjectToEdit] = useState<Project | null>(null);
   const [isAddProjectDialogOpen, setIsAddProjectDialogOpen] = useState(false);
   const [isProjectFilesDialogOpen, setIsProjectFilesDialogOpen] = useState(false);
   const [isProjectSelectorOpen, setIsProjectSelectorOpen] = useState(false);
 
   const { toast } = useToast();
 
-  // Preload dynamic components to avoid first-open delay
   useEffect(() => {
-    Promise.allSettled([
-      import('./add-task-dialog'),
-      import('./add-project-dialog'),
-      import('./project-files-dialog'),
-      import('./ai-follow-up-suggestions'),
-    ]);
-  }, []);
-
-  useEffect(() => {
-    if (!projectsData) return;
-
-    const nextSorted = [...projectsData].sort((a, b) => a.name.localeCompare(b.name));
-    // Only update if order/content actually changed
-    setProjects(prev => (areProjectsEqual(prev, nextSorted) ? prev : nextSorted));
-
-    // Initialize selection
-    if (!selectedProject) {
-      if (nextSorted.length > 0) setSelectedProject(nextSorted[0]);
-      return;
+    if (openNewProjectDialog) {
+      setProjectToEdit(null);
+      setIsAddProjectDialogOpen(true);
     }
+  }, [openNewProjectDialog]);
 
-    // Keep selectedProject in sync only when its data actually changed or was removed
-    const match = nextSorted.find(p => p.id === selectedProject.id);
-    if (!match) {
-      setSelectedProject(nextSorted[0] ?? null);
+  useEffect(() => {
+    const currentProjectList = activeTab === 'execucao' ? projectsInExecution : projectsArchived;
+    if (selectedProject) {
+        // If selected project is no longer in the current list, update selection
+        if (!currentProjectList.find(p => p.id === selectedProject.id)) {
+            setSelectedProject(currentProjectList[0] || null);
+        }
+    } else if (currentProjectList.length > 0) {
+        // If no project is selected, select the first one
+        setSelectedProject(currentProjectList[0]);
     } else {
-      if (match.name !== selectedProject.name) {
-        setSelectedProject(match);
-      }
+        setSelectedProject(null);
     }
-  }, [projectsData, selectedProject]);
+  }, [activeTab, projectsInExecution, projectsArchived, selectedProject]);
+
 
   const handleSelectProject = useCallback((project: Project) => {
     setSelectedProject(project);
     setIsProjectSelectorOpen(false);
   }, []);
 
-  const handleAddProject = async (newProject: Omit<Project, 'id'>) => {
+  const handleAddProject = async (newProjectData: Omit<Project, 'id'>) => {
     if (!firestore) return;
-    const projectCollection = collection(firestore, 'projects');
-    const newDocRef = await addDocumentNonBlocking(projectCollection, newProject);
-    
-    // Create default stages for the new project
-    const stagesBatch = writeBatch(firestore);
-    const stagesCollection = collection(firestore, 'projects', newDocRef.id, 'stages');
-    const defaultStages = [
-      { name: 'A Fazer', order: 1, description: 'Tarefas que ainda não foram iniciadas.' },
-      { name: 'Em Progresso', order: 2, description: 'Tarefas que estão sendo trabalhadas ativamente.' },
-      { name: 'Concluído', order: 3, description: 'Tarefas que foram finalizadas.' }
-    ];
 
-    const stageRefs = defaultStages.map(() => doc(stagesCollection));
-    stageRefs.forEach((ref, index) => {
-        stagesBatch.set(ref, { id: ref.id, ...defaultStages[index] });
-    });
-    await stagesBatch.commit();
+    if (projectToEdit) { // Editing existing project
+        const projectRef = doc(firestore, 'projects', projectToEdit.id);
+        await updateDocumentNonBlocking(projectRef, newProjectData);
+        toast({ title: "Projeto Atualizado", description: `O projeto "${newProjectData.name}" foi salvo.` });
+        if (newProjectData.status === 'Arquivado' && activeTab === 'execucao') {
+            setActiveTab('arquivado');
+        } else if (newProjectData.status !== 'Arquivado' && activeTab === 'arquivado') {
+            setActiveTab('execucao');
+        }
+    } else { // Creating new project
+        const projectCollection = collection(firestore, 'projects');
+        const newDocRef = await addDocumentNonBlocking(projectCollection, newProjectData);
+        
+        const stagesBatch = writeBatch(firestore);
+        const stagesCollection = collection(firestore, 'projects', newDocRef.id, 'stages');
+        const defaultStages = [
+            { name: 'A Fazer', order: 1, description: 'Tarefas que ainda não foram iniciadas.' },
+            { name: 'Em Progresso', order: 2, description: 'Tarefas que estão sendo trabalhadas ativamente.' },
+            { name: 'Concluído', order: 3, description: 'Tarefas que foram finalizadas.' }
+        ];
 
-    // Create template tasks with dependencies
-    const tasksBatch = writeBatch(firestore);
-    const tasksCollection = collection(firestore, 'projects', newDocRef.id, 'tasks');
-    const toDoStage = stageRefs.find((_, index) => defaultStages[index].name === 'A Fazer');
-    
-    if (toDoStage) {
-        const task1Ref = doc(tasksCollection);
-        tasksBatch.set(task1Ref, { name: "Levantamento de dados dos clientes", stageId: toDoStage.id, projectId: newDocRef.id, isCompleted: false, createdAt: serverTimestamp() });
+        const stageRefs = defaultStages.map(() => doc(stagesCollection));
+        stageRefs.forEach((ref, index) => {
+            stagesBatch.set(ref, { id: ref.id, ...defaultStages[index] });
+        });
+        await stagesBatch.commit();
+
+        const tasksBatch = writeBatch(firestore);
+        const tasksCollection = collection(firestore, 'projects', newDocRef.id, 'tasks');
+        const toDoStage = stageRefs.find((_, index) => defaultStages[index].name === 'A Fazer');
         
-        const task2Ref = doc(tasksCollection);
-        tasksBatch.set(task2Ref, { name: "Organização e higienização dos dados", stageId: toDoStage.id, projectId: newDocRef.id, isCompleted: false, dependentTaskIds: [task1Ref.id], createdAt: serverTimestamp() });
-        
-        const task3Ref = doc(tasksCollection);
-        tasksBatch.set(task3Ref, { name: "Upload dos dados atualizados no sistema", stageId: toDoStage.id, projectId: newDocRef.id, isCompleted: false, dependentTaskIds: [task2Ref.id], createdAt: serverTimestamp() });
-        
-        await tasksBatch.commit();
+        if (toDoStage) {
+            const task1Ref = doc(tasksCollection);
+            tasksBatch.set(task1Ref, { name: "Levantamento de dados dos clientes", stageId: toDoStage.id, projectId: newDocRef.id, isCompleted: false, createdAt: serverTimestamp(), description: "" });
+            
+            const task2Ref = doc(tasksCollection);
+            tasksBatch.set(task2Ref, { name: "Organização e higienização dos dados", stageId: toDoStage.id, projectId: newDocRef.id, isCompleted: false, dependentTaskIds: [task1Ref.id], createdAt: serverTimestamp(), description: "" });
+            
+            const task3Ref = doc(tasksCollection);
+            tasksBatch.set(task3Ref, { name: "Upload dos dados atualizados no sistema", stageId: toDoStage.id, projectId: newDocRef.id, isCompleted: false, dependentTaskIds: [task2Ref.id], createdAt: serverTimestamp(), description: "" });
+            
+            await tasksBatch.commit();
+        }
+
+        toast({
+            title: "Projeto Adicionado",
+            description: `O projeto "${newProjectData.name}" foi criado com sucesso e tarefas iniciais foram geradas.`
+        });
+        const newlyCreatedProject = { id: newDocRef.id, ...newProjectData };
+        handleSelectProject(newlyCreatedProject as Project);
     }
-
-
-    toast({
-        title: "Projeto Adicionado",
-        description: `O projeto "${newProject.name}" foi criado com sucesso e tarefas iniciais foram geradas.`
-    });
-    const newlyCreatedProject = { id: newDocRef.id, ...newProject };
-    // The new project will appear via the realtime listener, and we can select it.
-    handleSelectProject(newlyCreatedProject as Project)
   }
 
   const handleSaveTask = async (taskData: Omit<Task, 'id' | 'isCompleted'>, taskId?: string) => {
@@ -188,7 +184,6 @@ export function KanbanBoard() {
 
         // Notify on re-assignment
         if (taskData.assigneeId && taskData.assigneeId !== existingTask?.assigneeId) {
-            const assignee = usersMap.get(taskData.assigneeId);
             createNotification(taskData.assigneeId, {
                 title: 'Nova Tarefa Atribuída',
                 message: `Você foi atribuído à tarefa "${taskData.name}" no projeto "${selectedProject.name}".`,
@@ -273,6 +268,11 @@ export function KanbanBoard() {
     setDependencyForNewTask(null);
     setIsTaskDialogOpen(true);
   }, []);
+  
+  const handleEditProjectClick = useCallback(() => {
+    setProjectToEdit(selectedProject);
+    setIsAddProjectDialogOpen(true);
+  }, [selectedProject]);
 
   const handleAddDependentTask = useCallback((dependencyId: string) => {
     setTaskToEdit(null);
@@ -343,13 +343,13 @@ export function KanbanBoard() {
     return <div className="flex justify-center items-center h-full">Carregando...</div>;
   }
   
-  if (projects.length === 0) {
+  if (projectsData?.length === 0) {
       return (
           <>
             <div className="flex flex-col items-center justify-center h-full gap-4">
                 <h2 className="text-2xl font-semibold">Nenhum projeto encontrado</h2>
                 <p className="text-muted-foreground">Crie seu primeiro projeto para começar a gerenciar tarefas.</p>
-                <Button onClick={() => setIsAddProjectDialogOpen(true)}>
+                <Button onClick={() => { setProjectToEdit(null); setIsAddProjectDialogOpen(true); }}>
                     <FolderPlus className='mr-2' />
                     Criar Novo Projeto
                 </Button>
@@ -358,6 +358,7 @@ export function KanbanBoard() {
                 isOpen={isAddProjectDialogOpen}
                 onOpenChange={setIsAddProjectDialogOpen}
                 onAddProject={handleAddProject}
+                projectToEdit={projectToEdit}
             />
           </>
       )
@@ -367,42 +368,50 @@ export function KanbanBoard() {
     <>
         <DndContext onDragEnd={handleDragEnd} sensors={sensors}>
             <div className='mb-4 flex flex-wrap justify-between items-center gap-4'>
-                <Popover open={isProjectSelectorOpen} onOpenChange={setIsProjectSelectorOpen}>
-                    <PopoverTrigger asChild>
-                        <Button variant="outline" role="combobox" aria-expanded={isProjectSelectorOpen} className="w-full sm:w-[300px] justify-between text-lg font-semibold">
-                            {selectedProject?.name || "Selecione um Projeto"}
-                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                        </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                        <Command>
-                            <CommandInput placeholder="Procurar projeto..." />
-                            <CommandList>
-                                <CommandEmpty>Nenhum projeto encontrado.</CommandEmpty>
-                                <CommandGroup>
-                                    {projects.map((project) => (
-                                        <CommandItem key={project.id} onSelect={() => handleSelectProject(project)}>
-                                            {project.name}
-                                        </CommandItem>
-                                    ))}
-                                </CommandGroup>
-                            </CommandList>
-                        </Command>
-                    </PopoverContent>
-                </Popover>
+                <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="w-full sm:w-auto">
+                  <TabsList>
+                    <TabsTrigger value="execucao">Em Execução</TabsTrigger>
+                    <TabsTrigger value="arquivado">Arquivados</TabsTrigger>
+                  </TabsList>
+                </Tabs>
 
                 <div className='flex items-center gap-2'>
-                    <Button onClick={() => setIsAddProjectDialogOpen(true)} variant="outline">
-                        <FolderPlus className='mr-2' />
-                        Novo Projeto
+                  {projects.length > 0 && (
+                    <Popover open={isProjectSelectorOpen} onOpenChange={setIsProjectSelectorOpen}>
+                        <PopoverTrigger asChild>
+                            <Button variant="outline" role="combobox" aria-expanded={isProjectSelectorOpen} className="w-full sm:w-[250px] justify-between font-semibold">
+                                {selectedProject?.name || "Selecione um Projeto"}
+                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                            <Command>
+                                <CommandInput placeholder="Procurar projeto..." />
+                                <CommandList>
+                                    <CommandEmpty>Nenhum projeto encontrado.</CommandEmpty>
+                                    <CommandGroup>
+                                        {projects.map((project) => (
+                                            <CommandItem key={project.id} onSelect={() => handleSelectProject(project)}>
+                                                {project.name}
+                                            </CommandItem>
+                                        ))}
+                                    </CommandGroup>
+                                </CommandList>
+                            </Command>
+                        </PopoverContent>
+                    </Popover>
+                  )}
+                    <Button onClick={() => { setProjectToEdit(null); setIsAddProjectDialogOpen(true); }} variant="outline">
+                        <FolderPlus size={16} />
                     </Button>
                     <Button onClick={() => setIsProjectFilesDialogOpen(true)} variant="outline" disabled={!selectedProject}>
-                        <Files className='mr-2' />
-                        Arquivos
+                        <Files size={16} />
                     </Button>
                     <Button onClick={handleAddTaskClick} disabled={!selectedProject}>
-                        <Plus className='mr-2' />
-                        Adicionar Tarefa
+                        <Plus size={16} />
+                    </Button>
+                    <Button onClick={handleEditProjectClick} disabled={!selectedProject} variant="outline">
+                        Editar Projeto
                     </Button>
                 </div>
             </div>
@@ -440,6 +449,7 @@ export function KanbanBoard() {
             isOpen={isAddProjectDialogOpen}
             onOpenChange={setIsAddProjectDialogOpen}
             onAddProject={handleAddProject}
+            projectToEdit={projectToEdit}
         />
         <ProjectFilesDialog
             isOpen={isProjectFilesDialogOpen}
