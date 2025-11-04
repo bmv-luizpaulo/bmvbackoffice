@@ -4,20 +4,35 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import dynamic from 'next/dynamic';
 import * as React from 'react';
+import { Skeleton } from "@/components/ui/skeleton";
 
 const ContactDataTable = dynamic(() => import("@/components/agenda/contact-data-table").then(m => m.ContactDataTable), {
   ssr: false,
+  loading: () => <ContactDataTableSkeleton />,
 });
+
+function ContactDataTableSkeleton() {
+    return (
+        <div className="space-y-4">
+            <div className="flex justify-between">
+                <Skeleton className="h-10 w-64" />
+                <Skeleton className="h-10 w-32" />
+            </div>
+            <div className="border rounded-md">
+                <div className="space-y-2 p-4">
+                    <Skeleton className="h-8 w-full" />
+                    <Skeleton className="h-8 w-full" />
+                    <Skeleton className="h-8 w-full" />
+                    <Skeleton className="h-8 w-full" />
+                </div>
+            </div>
+        </div>
+    )
+}
 
 export default function ContatosPage() {
   const [tab, setTab] = React.useState<'clientes' | 'fornecedores' | 'parceiros'>('clientes');
   const [isPending, startTransition] = (React as any).useTransition ? (React as any).useTransition() : [false, (fn: any) => fn()];
-
-  const header = React.useMemo(() => {
-    if (tab === 'clientes') return { title: 'Clientes', desc: 'Adicione, edite e visualize os clientes da sua empresa.' };
-    if (tab === 'fornecedores') return { title: 'Fornecedores', desc: 'Gerencie as informações dos seus fornecedores.' };
-    return { title: 'Parceiros', desc: 'Gerencie as informações dos seus parceiros.' };
-  }, [tab]);
 
   return (
     <div className="space-y-6">

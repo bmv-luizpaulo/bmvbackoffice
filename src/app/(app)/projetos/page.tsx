@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSearchParams } from "next/navigation";
+import { or, query, where } from "firebase/firestore";
 
 const ProjectDataTable = dynamic(() => import("@/components/projects/project-data-table").then(m => m.ProjectDataTable), { 
     ssr: false,

@@ -55,13 +55,13 @@ export default function ChecklistsPage() {
 
 
   const checklistsQuery = useMemoFirebase(() => {
-    if (!firestore || !authUser) return null; // Condição para evitar consulta prematura
+    if (!firestore || !authUser || !userProfile) return null; // Condição para evitar consulta prematura
     let q = query(collection(firestore, 'checklists'), orderBy('name'));
     if (filterParam === 'me' && userProfile?.teamIds && userProfile.teamIds.length > 0) {
       q = query(q, where('teamId', 'in', userProfile.teamIds));
     }
     return q;
-  }, [firestore, authUser, filterParam, userProfile?.teamIds]);
+  }, [firestore, authUser, filterParam, userProfile]);
   const { data: checklists, isLoading: isLoadingChecklists } = useCollection<Checklist>(checklistsQuery);
   
   const teamsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'teams') : null, [firestore]);
