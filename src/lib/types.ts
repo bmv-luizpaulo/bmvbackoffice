@@ -1,4 +1,3 @@
-
 'use client';
 
 
@@ -84,6 +83,7 @@ export type Task = {
     createdAt: any;
     dependentTaskIds?: string[];
     assigneeId?: string;
+    teamId?: string; // ID da equipe responsável
     dueDate?: string;
     isRecurring?: boolean;
     recurrenceFrequency?: 'diaria' | 'semanal' | 'mensal';

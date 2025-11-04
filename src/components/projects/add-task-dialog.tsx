@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { format } from "date-fns";
 import { ptBR } from 'date-fns/locale';
-import { CalendarIcon, User, RefreshCcw } from "lucide-react";
+import { CalendarIcon, User, RefreshCcw, Users } from "lucide-react";
 import React from 'react';
 
 import {
@@ -27,8 +27,8 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from "../ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
-import type { Stage, Task, User as UserType } from "@/lib/types";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
+import type { Stage, Task, User as UserType, Team } from "@/lib/types";
 import { MultiSelect } from "../ui/multi-select";
 import { useCollection, useFirestore } from "@/firebase";
 import { collection, serverTimestamp } from "firebase/firestore";
@@ -54,7 +54,7 @@ const formSchema = z.object({
   description: z.string().optional(),
   stageId: z.string({ required_error: "A etapa é obrigatória." }),
   dependentTaskIds: z.array(z.string()).optional(),
-  assigneeId: z.string().optional(),
+  assignee: z.string().optional(),
   dueDate: z.date().optional(),
   isRecurring: z.boolean().default(false),
   recurrenceFrequency: z.enum(['diaria', 'semanal', 'mensal']).optional(),
@@ -74,6 +74,8 @@ export function AddTaskDialog({ isOpen, onOpenChange, onSaveTask, stages, tasks,
   const firestore = useFirestore();
   const usersQuery = React.useMemo(() => firestore ? collection(firestore, 'users') : null, [firestore]);
   const { data: usersData } = useCollection<UserType>(usersQuery);
+  const teamsQuery = React.useMemo(() => firestore ? collection(firestore, 'teams') : null, [firestore]);
+  const { data: teamsData } = useCollection<Team>(teamsQuery);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -81,7 +83,7 @@ export function AddTaskDialog({ isOpen, onOpenChange, onSaveTask, stages, tasks,
       name: "",
       description: "",
       dependentTaskIds: [],
-      assigneeId: undefined,
+      assignee: undefined,
       dueDate: undefined,
       isRecurring: false,
     },
@@ -92,13 +94,20 @@ export function AddTaskDialog({ isOpen, onOpenChange, onSaveTask, stages, tasks,
   // Reset form when dialog opens or taskToEdit changes
   React.useEffect(() => {
     if (isOpen) {
+        let assigneeValue: string | undefined = undefined;
+        if (taskToEdit?.assigneeId) {
+            assigneeValue = `user-${taskToEdit.assigneeId}`;
+        } else if (taskToEdit?.teamId) {
+            assigneeValue = `team-${taskToEdit.teamId}`;
+        }
+
       if (taskToEdit) {
         form.reset({
           name: taskToEdit.name,
           description: taskToEdit.description,
           stageId: taskToEdit.stageId,
           dependentTaskIds: taskToEdit.dependentTaskIds || [],
-          assigneeId: taskToEdit.assigneeId,
+          assignee: assigneeValue,
           dueDate: taskToEdit.dueDate ? new Date(taskToEdit.dueDate) : undefined,
           isRecurring: taskToEdit.isRecurring || false,
           recurrenceFrequency: taskToEdit.recurrenceFrequency,
@@ -110,7 +119,7 @@ export function AddTaskDialog({ isOpen, onOpenChange, onSaveTask, stages, tasks,
           name: '',
           description: '',
           dependentTaskIds: dependencyId ? [dependencyId] : [],
-          assigneeId: undefined,
+          assignee: undefined,
           dueDate: undefined,
           isRecurring: false,
           recurrenceFrequency: undefined,
@@ -122,8 +131,22 @@ export function AddTaskDialog({ isOpen, onOpenChange, onSaveTask, stages, tasks,
 
 
   function onSubmit(values: z.infer<typeof formSchema>) {
+    const { assignee, ...restOfValues } = values;
+    let assigneeId: string | undefined = undefined;
+    let teamId: string | undefined = undefined;
+
+    if (assignee && assignee !== 'unassigned') {
+        if (assignee.startsWith('user-')) {
+            assigneeId = assignee.replace('user-', '');
+        } else if (assignee.startsWith('team-')) {
+            teamId = assignee.replace('team-', '');
+        }
+    }
+
     const taskData: Omit<Task, 'id' | 'isCompleted'> = {
-        ...values,
+        ...restOfValues,
+        assigneeId,
+        teamId,
         projectId,
         createdAt: taskToEdit?.createdAt || serverTimestamp(),
         description: values.description || '',
@@ -146,7 +169,8 @@ export function AddTaskDialog({ isOpen, onOpenChange, onSaveTask, stages, tasks,
     .filter(task => !taskToEdit || task.id !== taskToEdit.id)
     .map(task => ({ value: task.id, label: task.name }));
 
-  const userOptions = usersData?.map(user => ({ value: user.id, label: user.name })) || [];
+  const userOptions = usersData?.map(user => ({ value: `user-${user.id}`, label: user.name })) || [];
+  const teamOptions = teamsData?.map(team => ({ value: `team-${team.id}`, label: team.name })) || [];
 
 
   return (
@@ -210,7 +234,7 @@ export function AddTaskDialog({ isOpen, onOpenChange, onSaveTask, stages, tasks,
                     />
                     <FormField
                         control={form.control}
-                        name="assigneeId"
+                        name="assignee"
                         render={({ field }) => (
                             <FormItem>
                             <FormLabel className="flex items-center gap-2"><User className="h-4 w-4" />Responsável</FormLabel>
@@ -221,10 +245,19 @@ export function AddTaskDialog({ isOpen, onOpenChange, onSaveTask, stages, tasks,
                                 </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
-                                <SelectItem value="unassigned">Não atribuído</SelectItem>
-                                {userOptions.map(user => (
-                                    <SelectItem key={user.value} value={user.value}>{user.label}</SelectItem>
-                                ))}
+                                    <SelectItem value="unassigned">Não atribuído</SelectItem>
+                                    <SelectGroup>
+                                        <FormLabel className="px-2 py-1.5 text-xs font-semibold flex items-center gap-2"><Users className="h-4 w-4" />Equipes</FormLabel>
+                                        {teamOptions.map(option => (
+                                            <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                                        ))}
+                                    </SelectGroup>
+                                    <SelectGroup>
+                                        <FormLabel className="px-2 py-1.5 text-xs font-semibold flex items-center gap-2"><User className="h-4 w-4" />Usuários</FormLabel>
+                                        {userOptions.map(option => (
+                                            <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                                        ))}
+                                    </SelectGroup>
                                 </SelectContent>
                             </Select>
                             <FormMessage />

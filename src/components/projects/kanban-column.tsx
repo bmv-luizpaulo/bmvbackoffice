@@ -2,7 +2,7 @@
 
 import React, { memo, useRef } from 'react';
 import { useDroppable } from '@dnd-kit/core';
-import type { Stage, Task, User } from '@/lib/types';
+import type { Stage, Task, User, Team } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { KanbanCard } from './kanban-card';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
@@ -11,7 +11,7 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 
 type KanbanColumnProps = {
   stage: Stage;
-  tasks: (Task & { isLocked?: boolean; assignee?: User })[];
+  tasks: (Task & { isLocked?: boolean; assignee?: User, team?: Team })[];
   onUpdateTask: (taskId: string, updates: Partial<Omit<Task, 'id'>>) => void;
   onDeleteTask: (taskId: string) => void;
   onEditTask: (task: Task) => void;
@@ -106,9 +106,8 @@ const areEqual = (prev: KanbanColumnProps, next: KanbanColumnProps) => {
     const b = next.tasks[i];
     if (a.id !== b.id) return false;
     if ((a.isLocked ? 1 : 0) !== (b.isLocked ? 1 : 0)) return false;
-    const aAssignee = (a as any).assignee?.id || (a as any).assigneeId || '';
-    const bAssignee = (b as any).assignee?.id || (b as any).assigneeId || '';
-    if (aAssignee !== bAssignee) return false;
+    if (a.assignee?.id !== b.assignee?.id) return false;
+    if (a.team?.id !== b.team?.id) return false;
   }
   return true;
 };

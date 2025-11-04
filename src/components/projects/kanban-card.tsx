@@ -3,10 +3,10 @@
 import { useDraggable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
-import type { Task, User } from '@/lib/types';
+import type { Task, User, Team } from '@/lib/types';
 import { Checkbox } from '../ui/checkbox';
 import { Button } from '../ui/button';
-import { Trash2, Lock, Calendar as CalendarIcon, Edit, PlusCircle } from 'lucide-react';
+import { Trash2, Lock, Calendar as CalendarIcon, Edit, PlusCircle, Users } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,7 +25,7 @@ import { format, isPast, isToday, differenceInDays } from 'date-fns';
 import { memo } from 'react';
 
 type KanbanCardProps = {
-  task: Task & { isLocked?: boolean; assignee?: User };
+  task: Task & { isLocked?: boolean; assignee?: User; team?: Team };
   onUpdateTask: (taskId: string, updates: Partial<Omit<Task, 'id'>>) => void;
   onDeleteTask: (taskId: string) => void;
   onEditTask: (task: Task) => void;
@@ -158,7 +158,7 @@ function KanbanCardComponent({ task, onUpdateTask, onDeleteTask, onEditTask, onA
                 </Tooltip>
             </TooltipProvider>
         </div>
-        {task.assignee && (
+        {task.assignee ? (
              <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger>
@@ -172,7 +172,20 @@ function KanbanCardComponent({ task, onUpdateTask, onDeleteTask, onEditTask, onA
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
-        )}
+        ) : task.team ? (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger>
+                    <Avatar className="h-6 w-6">
+                        <AvatarFallback><Users className="h-4 w-4 text-muted-foreground"/></AvatarFallback>
+                    </Avatar>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Equipe: {task.team.name}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+        ) : null}
       </CardFooter>
     </Card>
   );
@@ -187,9 +200,10 @@ const areEqual = (prev: KanbanCardProps, next: KanbanCardProps) => {
   if ((a.isCompleted ? 1 : 0) !== (b.isCompleted ? 1 : 0)) return false;
   if ((a.isLocked ? 1 : 0) !== (b.isLocked ? 1 : 0)) return false;
   if ((a.dueDate || '') !== (b.dueDate || '')) return false;
-  const aAssignee = (a as any).assignee?.id || (a as any).assigneeId || '';
-  const bAssignee = (b as any).assignee?.id || (b as any).assigneeId || '';
-  if (aAssignee !== bAssignee) return false;
+  if ((a.assigneeId || '') !== (b.assigneeId || '')) return false;
+  if ((a.teamId || '') !== (b.teamId || '')) return false;
+  if (a.assignee?.id !== b.assignee?.id) return false;
+  if (a.team?.id !== b.team?.id) return false;
   return true;
 };
 

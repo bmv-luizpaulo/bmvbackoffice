@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { DndContext, type DragEndEvent, useSensor, useSensors, PointerSensor } from '@dnd-kit/core';
 import { useToast } from '@/hooks/use-toast';
 import { KanbanColumn } from './kanban-column';
-import type { Task, Stage, Project, User, Role } from '@/lib/types';
+import type { Task, Stage, Project, User, Role, Team } from '@/lib/types';
 import { Button } from '../ui/button';
 import { Plus, FolderPlus, ChevronsUpDown, Files } from 'lucide-react';
 import dynamic from 'next/dynamic';
@@ -76,6 +76,10 @@ export function KanbanBoard() {
   const { data: usersData } = useCollection<User>(usersQuery);
   const usersMap = useMemo(() => new Map(usersData?.map(user => [user.id, user])), [usersData]);
   
+  const teamsQuery = React.useMemo(() => firestore ? collection(firestore, 'teams') : null, [firestore]);
+  const { data: teamsData } = useCollection<Team>(teamsQuery);
+  const teamsMap = useMemo(() => new Map(teamsData?.map(team => [team.id, team])), [teamsData]);
+
   const [isTaskDialogOpen, setIsTaskDialogOpen] = useState(false);
   const [taskToEdit, setTaskToEdit] = useState<Task | null>(null);
   const [dependencyForNewTask, setDependencyForNewTask] = useState<string | null>(null);
@@ -292,9 +296,10 @@ export function KanbanBoard() {
             return dependentTask && !dependentTask.isCompleted;
         });
         const assignee = task.assigneeId ? usersMap.get(task.assigneeId) : undefined;
-        return { ...task, isLocked, assignee };
+        const team = task.teamId ? teamsMap.get(task.teamId) : undefined;
+        return { ...task, isLocked, assignee, team };
     });
-  }, [tasksData, usersMap]);
+  }, [tasksData, usersMap, teamsMap]);
 
   const stageTasksMap = useMemo(() => {
     const map = new Map<string, typeof tasksWithDetails>();
