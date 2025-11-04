@@ -28,6 +28,11 @@
           "type": "string",
           "description": "The user's phone number (WhatsApp)."
         },
+        "linkedinUrl": {
+          "type": "string",
+          "format": "uri",
+          "description": "URL of the user's LinkedIn profile."
+        },
         "address": {
           "type": "object",
           "description": "The user's full address.",
@@ -74,6 +79,10 @@
         "description": {
           "type": "string",
           "description": "Description of the project."
+        },
+        "budget": {
+            "type": "number",
+            "description": "The allocated budget for the project."
         },
         "startDate": {
           "type": "string",
@@ -349,6 +358,11 @@
           "description": "The type of contact.",
           "enum": ["cliente", "fornecedor", "parceiro"]
         },
+        "linkedinUrl": {
+          "type": "string",
+          "format": "uri",
+          "description": "URL of the contact's LinkedIn profile."
+        },
         "address": {
           "type": "object",
           "description": "The contact's full address.",
@@ -412,23 +426,41 @@
             "approverId": { "type": "string", "description": "The ID of the user who approved or rejected the request." },
             "receiptUrl": { "type": "string", "format": "uri", "description": "URL of the uploaded receipt image or document." },
             "notes": { "type": "string", "description": "Additional notes from the requester or approver." },
-            "costCenterId": { "type": "string", "description": "The ID of the cost center this reimbursement is associated with." }
+            "costCenterId": { "type": "string", "description": "The ID of the cost center this reimbursement is associated with." },
+            "projectId": { "type": "string", "description": "Optional: The ID of the project this reimbursement is associated with." }
         },
         "required": ["requesterId", "description", "amount", "status", "requestDate"]
     },
-     "Chat": {
-      "title": "Chat",
+    "Conversation": {
+      "title": "Conversation",
       "type": "object",
-      "description": "Represents a chat conversation between two or more users.",
+      "description": "Represents a conversation, which can be a direct message or a group channel.",
       "properties": {
+        "type": {
+          "type": "string",
+          "description": "The type of conversation.",
+          "enum": ["direct", "group"]
+        },
+        "name": {
+          "type": "string",
+          "description": "The name of the conversation channel (for group types)."
+        },
+        "isGlobal": {
+            "type": "boolean",
+            "description": "If true, this group conversation is visible to all users."
+        },
+        "teamId": {
+            "type": "string",
+            "description": "If it's a conversation for a specific team, this is the team ID."
+        },
         "userIds": {
           "type": "array",
-          "description": "An array of user IDs participating in the chat.",
+          "description": "An array of user IDs participating in the conversation.",
           "items": { "type": "string" }
         },
         "lastMessage": {
           "type": "object",
-          "description": "The last message sent in the chat for preview purposes.",
+          "description": "The last message sent for preview purposes.",
           "properties": {
             "text": { "type": "string" },
             "timestamp": { "type": "string", "format": "date-time" },
@@ -448,20 +480,20 @@
           }
         }
       },
-      "required": ["userIds"]
+      "required": ["type", "userIds"]
     },
     "Message": {
       "title": "Message",
       "type": "object",
-      "description": "Represents a single message within a chat.",
+      "description": "Represents a single message within a conversation.",
       "properties": {
-        "chatId": { "type": "string", "description": "The ID of the chat this message belongs to." },
+        "conversationId": { "type": "string", "description": "The ID of the conversation this message belongs to." },
         "senderId": { "type": "string", "description": "The ID of the user who sent the message." },
         "text": { "type": "string", "description": "The content of the message." },
         "timestamp": { "type": "string", "format": "date-time", "description": "The time the message was sent." },
         "read": { "type": "boolean", "description": "Whether the message has been read by the recipient(s)." }
       },
-      "required": ["chatId", "senderId", "text", "timestamp"]
+      "required": ["conversationId", "senderId", "text", "timestamp"]
     },
     "Notification": {
       "title": "Notification",
@@ -719,13 +751,13 @@
         "schema": { "$ref": "#/entities/Reimbursement" },
         "description": "Stores all reimbursement requests."
     },
-    "/chats/{chatId}": {
-      "schema": { "$ref": "#/entities/Chat" },
-      "description": "Represents a chat conversation metadata."
+    "/conversations/{conversationId}": {
+      "schema": { "$ref": "#/entities/Conversation" },
+      "description": "Represents a conversation metadata, which can be a direct message or a group chat."
     },
-    "/chats/{chatId}/messages/{messageId}": {
+    "/conversations/{conversationId}/messages/{messageId}": {
       "schema": { "$ref": "#/entities/Message" },
-      "description": "Contains all messages for a given chat."
+      "description": "Contains all messages for a given conversation."
     },
     "/products/{productId}": {
         "schema": { "$ref": "#/entities/Product" },

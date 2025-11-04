@@ -47,6 +47,7 @@ type AddProjectDialogProps = {
 const formSchema = z.object({
   name: z.string().min(1, "O nome do projeto é obrigatório."),
   description: z.string().optional(),
+  budget: z.coerce.number().optional(),
   ownerId: z.string({ required_error: "O responsável é obrigatório." }),
   teamMembers: z.array(z.string()).optional(),
   contactPhone: z.string().optional(),
@@ -71,6 +72,7 @@ export function AddProjectDialog({ isOpen, onOpenChange, onAddProject }: AddProj
     defaultValues: {
       name: "",
       description: "",
+      budget: 0,
       teamMembers: [],
       contactPhone: "",
       technicalDetails: "",
@@ -82,6 +84,7 @@ export function AddProjectDialog({ isOpen, onOpenChange, onAddProject }: AddProj
     const projectData = {
         name: values.name,
         description: values.description || '',
+        budget: values.budget || 0,
         startDate: values.dateRange.from.toISOString(),
         endDate: values.dateRange.to?.toISOString(),
         ownerId: values.ownerId,
@@ -183,6 +186,19 @@ export function AddProjectDialog({ isOpen, onOpenChange, onAddProject }: AddProj
                         />
                     </div>
                     <div className="space-y-6">
+                        <FormField
+                            control={form.control}
+                            name="budget"
+                            render={({ field }) => (
+                                <FormItem>
+                                <FormLabel>Orçamento do Projeto (R$)</FormLabel>
+                                <FormControl>
+                                    <Input type="number" placeholder="Ex: 50000" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                        />
                          <FormField
                             control={form.control}
                             name="ownerId"
