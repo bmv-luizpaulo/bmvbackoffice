@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import { KanbanBoardSkeleton } from "@/components/projects/kanban-board-skeleton";
 import ClientKanbanBoard from "@/components/projects/client-kanban-board";
 
-export default function ProjectsPage({
+export default function KanbanPage({
   searchParams,
 }: {
   searchParams: { [key: string]: string | string[] | undefined }
@@ -13,8 +13,8 @@ export default function ProjectsPage({
   return (
     <div className="flex h-[calc(100vh-theme(spacing.14)-2*theme(spacing.6))] flex-col gap-4">
       <header>
-        <h1 className="font-headline text-3xl font-bold tracking-tight">Funil de Tarefas</h1>
-        <p className="text-muted-foreground">Gerencie seus projetos e tarefas do início ao fim.</p>
+        <h1 className="font-headline text-3xl font-bold tracking-tight">Quadro Kanban</h1>
+        <p className="text-muted-foreground">Gerencie seus projetos e tarefas do início ao fim com a visualização em colunas.</p>
       </header>
       <div className="flex-1 overflow-hidden">
         <Suspense fallback={<KanbanBoardSkeleton />}>

@@ -6,16 +6,22 @@ import { useToast } from '@/hooks/use-toast';
 import { KanbanColumn } from './kanban-column';
 import type { Task, Stage, Project, User, Role, Team } from '@/lib/types';
 import { Button } from '../ui/button';
-import { Plus, FolderPlus, ChevronsUpDown, Files, FolderKanban } from 'lucide-react';
+import { Plus, FolderPlus, Files } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { useCollection, useDoc, useFirestore, useUser as useAuthUser, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
 import { collection, doc, writeBatch, query, where, serverTimestamp } from 'firebase/firestore';
 import { useNotifications } from '../notifications/notifications-provider';
 import React from 'react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
-import { cn } from '@/lib/utils';
 import { Skeleton } from '../ui/skeleton';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { useSearchParams } from 'next/navigation';
+
 
 const LoadingFallback = () => (
   <div className="p-4 text-sm text-muted-foreground">Carregando...</div>
@@ -29,6 +35,7 @@ export function KanbanBoard({ openNewProjectDialog }: { openNewProjectDialog?: b
   const firestore = useFirestore();
   const { user: authUser } = useAuthUser();
   const { createNotification } = useNotifications();
+  const searchParams = useSearchParams();
 
   const userProfileQuery = React.useMemo(() => firestore && authUser?.uid ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser?.uid]);
   const { data: userProfile, isLoading: isLoadingUserProfile } = useDoc<User>(userProfileQuery);
@@ -39,20 +46,15 @@ export function KanbanBoard({ openNewProjectDialog }: { openNewProjectDialog?: b
   const isPrivilegedUser = role?.isDev || role?.isManager;
 
 
-  const projectsQuery = React.useMemo(() => firestore ? collection(firestore, 'projects') : null, [firestore]);
+  const projectsQuery = React.useMemo(() => firestore ? query(collection(firestore, 'projects'), where('status', '!=', 'Arquivado')) : null, [firestore]);
   const { data: projectsData, isLoading: isLoadingProjects } = useCollection<Project>(projectsQuery);
+  
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
 
-  const [activeTab, setActiveTab] = useState<'execucao' | 'arquivado'>('execucao');
+  const selectedProject = useMemo(() => {
+    return projectsData?.find(p => p.id === selectedProjectId) || null;
+  }, [projectsData, selectedProjectId]);
 
-  const { projectsInExecution, projectsArchived } = useMemo(() => {
-    const inExecution = projectsData?.filter(p => p.status !== 'Arquivado').sort((a,b) => a.name.localeCompare(b.name)) || [];
-    const archived = projectsData?.filter(p => p.status === 'Arquivado').sort((a,b) => a.name.localeCompare(b.name)) || [];
-    return { projectsInExecution: inExecution, projectsArchived: archived };
-  }, [projectsData]);
-
-  const currentProjectList = activeTab === 'execucao' ? projectsInExecution : projectsArchived;
-
-  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
 
   const stagesQuery = React.useMemo(() => firestore && selectedProject ? collection(firestore, 'projects', selectedProject.id, 'stages') : null, [firestore, selectedProject?.id]);
   const { data: stagesData, isLoading: isLoadingStages } = useCollection<Stage>(stagesQuery);
@@ -97,18 +99,13 @@ export function KanbanBoard({ openNewProjectDialog }: { openNewProjectDialog?: b
   }, [openNewProjectDialog]);
 
   useEffect(() => {
-    if (selectedProject) {
-        // If selected project is no longer in the current list, update selection
-        if (!currentProjectList.find(p => p.id === selectedProject.id)) {
-            setSelectedProject(currentProjectList[0] || null);
-        }
-    } else if (currentProjectList.length > 0) {
-        // If no project is selected, select the first one
-        setSelectedProject(currentProjectList[0]);
-    } else {
-        setSelectedProject(null);
+    const projectIdFromUrl = searchParams.get('projectId');
+    if (projectIdFromUrl && projectsData?.some(p => p.id === projectIdFromUrl)) {
+      setSelectedProjectId(projectIdFromUrl);
+    } else if (projectsData && projectsData.length > 0 && !selectedProjectId) {
+      setSelectedProjectId(projectsData[0].id);
     }
-  }, [currentProjectList, selectedProject]);
+  }, [projectsData, selectedProjectId, searchParams]);
 
 
   const handleAddProject = async (newProjectData: Omit<Project, 'id'>) => {
@@ -118,11 +115,6 @@ export function KanbanBoard({ openNewProjectDialog }: { openNewProjectDialog?: b
         const projectRef = doc(firestore, 'projects', projectToEdit.id);
         await updateDocumentNonBlocking(projectRef, newProjectData);
         toast({ title: "Projeto Atualizado", description: `O projeto "${newProjectData.name}" foi salvo.` });
-        if (newProjectData.status === 'Arquivado' && activeTab === 'execucao') {
-            setActiveTab('arquivado');
-        } else if (newProjectData.status !== 'Arquivado' && activeTab === 'arquivado') {
-            setActiveTab('execucao');
-        }
     } else { // Creating new project
         const projectCollection = collection(firestore, 'projects');
         const newDocRef = await addDocumentNonBlocking(projectCollection, newProjectData);
@@ -162,8 +154,8 @@ export function KanbanBoard({ openNewProjectDialog }: { openNewProjectDialog?: b
             title: "Projeto Adicionado",
             description: `O projeto "${newProjectData.name}" foi criado com sucesso e tarefas iniciais foram geradas.`
         });
-        const newlyCreatedProject = { id: newDocRef.id, ...newProjectData };
-        setSelectedProject(newlyCreatedProject as Project);
+        
+        setSelectedProjectId(newDocRef.id);
     }
   }
 
@@ -334,7 +326,7 @@ export function KanbanBoard({ openNewProjectDialog }: { openNewProjectDialog?: b
   }, [stagesData]);
 
   if (isLoadingProjects || isLoadingUserProfile || isLoadingRole) {
-    return <div className="flex justify-center items-center h-full">Carregando...</div>;
+    return <Skeleton className="w-full h-full" />;
   }
   
   if (projectsData?.length === 0) {
@@ -359,91 +351,59 @@ export function KanbanBoard({ openNewProjectDialog }: { openNewProjectDialog?: b
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-4 gap-6 h-full">
-      <Card className="md:col-span-1 flex flex-col">
-        <CardHeader>
-          <CardTitle>Projetos</CardTitle>
-           <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="w-full">
-              <TabsList className='grid w-full grid-cols-2'>
-                <TabsTrigger value="execucao">Em Execução</TabsTrigger>
-                <TabsTrigger value="arquivado">Arquivados</TabsTrigger>
-              </TabsList>
-            </Tabs>
-        </CardHeader>
-        <CardContent className="p-2 flex-1 overflow-y-auto">
-          <div className="space-y-1">
-            {isLoadingProjects ? (
-              Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-10 w-full" />)
-            ) : currentProjectList.length > 0 ? (
-              currentProjectList.map(project => (
-                <button
-                  key={project.id}
-                  onClick={() => setSelectedProject(project)}
-                  className={cn(
-                    "w-full text-left p-2 rounded-md hover:bg-muted/50 transition-colors flex items-center gap-2",
-                    selectedProject?.id === project.id && "bg-secondary"
-                  )}
-                >
-                  <FolderKanban className='h-4 w-4 shrink-0'/>
-                  <span className='font-medium truncate'>{project.name}</span>
-                </button>
-              ))
-            ) : (
-              <p className="text-sm text-muted-foreground text-center p-4">
-                Nenhum projeto {activeTab === 'arquivado' ? 'arquivado' : 'encontrado'}.
-              </p>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-      
-      <div className="md:col-span-3 flex flex-col h-full">
-        {selectedProject ? (
-          <DndContext onDragEnd={handleDragEnd} sensors={sensors}>
-            <div className='mb-4 flex flex-wrap justify-between items-center gap-4'>
-              <h2 className='text-xl font-bold'>{selectedProject.name}</h2>
-              <div className='flex items-center gap-2'>
-                <Button onClick={() => setIsProjectFilesDialogOpen(true)} variant="outline" size="sm">
-                  <Files size={16} className='mr-2' /> Arquivos
-                </Button>
-                <Button onClick={handleEditProjectClick} variant="outline" size="sm">
-                  Editar Projeto
-                </Button>
-                 <Button onClick={handleAddTaskClick} size="sm">
-                  <Plus size={16} className='mr-2' /> Nova Tarefa
-                </Button>
+    <DndContext onDragEnd={handleDragEnd} sensors={sensors}>
+      <div className='mb-4 flex flex-wrap justify-between items-center gap-4'>
+         <Select value={selectedProjectId || ''} onValueChange={setSelectedProjectId}>
+          <SelectTrigger className="w-full max-w-xs text-lg font-semibold">
+            <SelectValue placeholder="Selecione um projeto..." />
+          </SelectTrigger>
+          <SelectContent>
+            {projectsData?.map(p => (
+              <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <div className='flex items-center gap-2'>
+          <Button onClick={() => setIsProjectFilesDialogOpen(true)} variant="outline" size="sm" disabled={!selectedProject}>
+            <Files size={16} className='mr-2' /> Arquivos
+          </Button>
+          <Button onClick={handleEditProjectClick} variant="outline" size="sm" disabled={!selectedProject}>
+            Editar Projeto
+          </Button>
+            <Button onClick={handleAddTaskClick} size="sm" disabled={!selectedProject}>
+            <Plus size={16} className='mr-2' /> Nova Tarefa
+          </Button>
+        </div>
+      </div>
+      {selectedProject && <AiFollowUpSuggestions project={selectedProject} />}
+
+      <div className="flex flex-1 min-w-max gap-4 pb-4 overflow-x-auto">
+        {isLoadingStages || isLoadingTasks ? (
+          Array.from({length: 3}).map((_, i) => (
+            <div key={i} className="w-80 shrink-0">
+              <Skeleton className="h-8 w-1/2 mb-4" />
+              <div className="space-y-3">
+                <Skeleton className="h-24 w-full" />
+                <Skeleton className="h-20 w-full" />
               </div>
             </div>
-            {selectedProject && <AiFollowUpSuggestions project={selectedProject} />}
-
-            <div className="flex flex-1 min-w-max gap-4 pb-4 overflow-x-auto">
-              {isLoadingStages || isLoadingTasks ? (
-                <div className="flex justify-center items-center w-full">Carregando tarefas...</div>
-              ) : (
-                sortedStages.map(stage => (
-                  <KanbanColumn
-                    key={stage.id}
-                    stage={stage}
-                    tasks={stageTasksMap.get(stage.id) || []}
-                    onUpdateTask={handleUpdateTaskStatus}
-                    onDeleteTask={handleDeleteTask}
-                    onEditTask={handleEditTask}
-                    onAddDependentTask={handleAddDependentTask}
-                  />
-                ))
-              )}
-            </div>
-          </DndContext>
+          ))
+        ) : selectedProject ? (
+          sortedStages.map(stage => (
+            <KanbanColumn
+              key={stage.id}
+              stage={stage}
+              tasks={stageTasksMap.get(stage.id) || []}
+              onUpdateTask={handleUpdateTaskStatus}
+              onDeleteTask={handleDeleteTask}
+              onEditTask={handleEditTask}
+              onAddDependentTask={handleAddDependentTask}
+            />
+          ))
         ) : (
-          <div className='flex flex-1 items-center justify-center bg-muted/30 rounded-lg border-2 border-dashed'>
-            <div className='text-center'>
-              <p className='text-lg font-semibold'>Selecione um projeto</p>
-              <p className='text-muted-foreground'>Escolha um projeto na lista ao lado para ver as tarefas.</p>
-              <Button onClick={() => { setProjectToEdit(null); setIsAddProjectDialogOpen(true); }} className="mt-4">
-                <FolderPlus className='mr-2' /> Criar Novo Projeto
-              </Button>
-            </div>
-          </div>
+             <div className='flex flex-1 items-center justify-center bg-muted/30 rounded-lg border-2 border-dashed'>
+                <p className='text-muted-foreground'>Selecione um projeto para começar</p>
+             </div>
         )}
       </div>
 
@@ -463,11 +423,11 @@ export function KanbanBoard({ openNewProjectDialog }: { openNewProjectDialog?: b
           onAddProject={handleAddProject}
           projectToEdit={projectToEdit}
       />
-      <ProjectFilesDialog
+       {selectedProject && <ProjectFilesDialog
           isOpen={isProjectFilesDialogOpen}
           onOpenChange={setIsProjectFilesDialogOpen}
           project={selectedProject}
-      />
-    </div>
+      />}
+    </DndContext>
   );
 }

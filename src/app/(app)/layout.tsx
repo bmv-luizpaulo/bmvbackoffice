@@ -31,6 +31,7 @@ import {
   MessagesSquare,
   FolderPlus,
   History,
+  FolderKanban,
 } from 'lucide-react';
 import Image from 'next/image';
 import React, { useEffect } from 'react';
@@ -100,8 +101,8 @@ const navSections = [
     {
         name: 'Operacional',
         items: [
-            { href: '/projects', icon: KanbanSquare, label: 'Funil Kanban' },
-            { href: '/projects?new=true', icon: FolderPlus, label: 'Novo Projeto' },
+            { href: '/projetos', icon: FolderKanban, label: 'Projetos' },
+            { href: '/projects', icon: KanbanSquare, label: 'Quadro Kanban' },
             { href: '/tasks/completed', icon: CheckCircle2, label: 'Tarefas Concluídas' },
             { 
               href: '#', 
