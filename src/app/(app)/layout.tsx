@@ -98,16 +98,9 @@ const navSections = [
     {
         name: 'Operacional',
         items: [
-            { 
-              href: '#', 
-              icon: ListTodo, 
-              label: 'Tarefas',
-              subItems: [
-                { href: '/projects', icon: KanbanSquare, label: 'Funil Kanban' },
-                { href: '/tasks/completed', icon: CheckCircle2, label: 'Concluídas' },
-                { href: '/tasks/new', icon: ListPlus, label: 'Nova Tarefa' },
-              ]
-            },
+            { href: '/projects', icon: KanbanSquare, label: 'Funil Kanban' },
+            { href: '/tasks/completed', icon: CheckCircle2, label: 'Tarefas Concluídas' },
+            { href: '/tasks/new', icon: ListPlus, label: 'Nova Tarefa' },
             { href: '/checklists', icon: ListChecks, label: 'Checklists' },
         ]
     },
@@ -131,7 +124,7 @@ const navSections = [
         name: 'Equipe',
         items: [
             { href: '/agenda/tarefas', icon: Calendar, label: 'Agenda' },
-            { href: '/forum', icon: MessagesSquare, label: 'Fóruns' },
+            { href: '/chat', icon: MessageSquare, label: 'Chat Direto' },
             { 
               href: '#', 
               icon: Group, 
