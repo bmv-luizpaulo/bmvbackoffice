@@ -6,7 +6,7 @@ import { useFirestore, useDoc, useCollection, useMemoFirebase, useUser } from '@
 import { doc, collection, query, orderBy } from 'firebase/firestore';
 import type { Checklist, ChecklistItem, Team, User as UserType } from '@/lib/types';
 import { Button } from '@/components/ui/button';
-import { Loader2, Printer, Check, X, MessageSquare, CheckSquare, Heading2, ShieldAlert } from 'lucide-react';
+import { Loader2, Printer, Check, X, MessageSquare, CheckSquare, ShieldAlert } from 'lucide-react';
 import Image from 'next/image';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
@@ -98,16 +98,15 @@ export default function ChecklistReportPage() {
                 <h3 className="text-lg font-semibold text-gray-800 mb-4">Itens do Checklist</h3>
                 <div className='border rounded-lg'>
                   <div className='flex items-center bg-gray-50 p-3 text-xs font-semibold uppercase text-gray-500 border-b'>
-                    <div className='w-16 text-center'>Status</div>
                     <div className='flex-1 px-2'>Descrição</div>
-                    <div className='w-1/3 px-2'>Resultado / Comentário</div>
+                    <div className='w-1/4 px-2'>Resultado / Comentário</div>
+                    <div className='w-24 text-center'>Status</div>
                   </div>
                   <div className='divide-y'>
                     {items.map(item => {
                         if (item.type === 'header') {
                             return (
                                 <div key={item.id} className="bg-gray-100 p-3 font-bold text-sm text-gray-600 flex items-center gap-2">
-                                    <Heading2 className='h-4 w-4'/>
                                     {item.description}
                                 </div>
                             )
@@ -115,14 +114,14 @@ export default function ChecklistReportPage() {
                         if (item.type === 'item') {
                             return (
                                 <div key={item.id} className="flex items-start text-sm p-3">
-                                  <div className='w-16 flex justify-center pt-0.5'>
-                                    <CheckSquare className={cn("h-5 w-5", item.isCompleted ? 'text-green-600' : 'text-gray-300')} />
-                                  </div>
                                   <div className={cn('flex-1 px-2', item.isCompleted && 'line-through text-gray-500')}>
                                     {item.description}
                                   </div>
-                                  <div className='w-1/3 px-2 text-gray-500 italic'>
-                                    {item.isCompleted ? 'Concluído' : 'Pendente'}
+                                  <div className='w-1/4 px-2 text-gray-500 italic'>
+                                    -
+                                  </div>
+                                  <div className='w-24 flex justify-center pt-0.5'>
+                                    <CheckSquare className={cn("h-5 w-5", item.isCompleted ? 'text-green-600' : 'text-gray-300')} />
                                   </div>
                                 </div>
                             )
@@ -130,26 +129,21 @@ export default function ChecklistReportPage() {
                         if (item.type === 'yes_no') {
                             return (
                                 <div key={item.id} className="flex items-start text-sm p-3">
-                                  <div className='w-16 flex justify-center pt-0.5'>
-                                     {item.answer === 'yes' && <Check className='h-5 w-5 text-green-600'/>}
-                                     {item.answer === 'no' && <X className='h-5 w-5 text-red-600'/>}
-                                     {item.answer === 'unanswered' && <div className="h-4 w-4 mt-0.5 border-2 rounded-sm border-gray-300" />}
-                                  </div>
                                    <div className='flex-1 px-2'>
                                     {item.description}
                                   </div>
-                                   <div className='w-1/3 px-2 space-y-1'>
-                                      {item.answer !== 'unanswered' && (
-                                        <Badge variant={item.answer === 'no' ? 'destructive' : 'default'} className={cn(item.answer === 'yes' && 'bg-green-600')}>
-                                          {item.answer === 'yes' ? 'Sim' : 'Não'}
-                                        </Badge>
-                                      )}
+                                   <div className='w-1/4 px-2 space-y-1'>
                                       {item.comment && (
-                                          <div className='flex items-start gap-2 text-gray-600 pt-1'>
+                                          <div className='flex items-start gap-2 text-gray-600'>
                                               <MessageSquare className="h-4 w-4 mt-0.5 shrink-0" />
                                               <p className='italic text-xs'>"{item.comment}"</p>
                                           </div>
                                       )}
+                                  </div>
+                                   <div className='w-24 flex justify-center pt-0.5'>
+                                     {item.answer === 'yes' && <Check className='h-5 w-5 text-green-600'/>}
+                                     {item.answer === 'no' && <X className='h-5 w-5 text-red-600'/>}
+                                     {item.answer === 'unanswered' && <div className="h-4 w-4 mt-0.5 border-2 rounded-sm border-gray-300" />}
                                   </div>
                                 </div>
                             )
