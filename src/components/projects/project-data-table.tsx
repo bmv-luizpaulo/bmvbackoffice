@@ -34,19 +34,9 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import type { Project, User, Role } from "@/lib/types";
 import { useFirestore, useCollection, useDoc, useMemoFirebase, useUser as useAuthUser } from "@/firebase";
-import { collection, doc, query, where, writeBatch } from "firebase/firestore";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
+import { collection, doc, query, where, writeBatch, or } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
-import { addDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase";
+import { addDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase";
 import { format } from "date-fns";
 import { AddProjectDialog } from "./add-project-dialog";
 import Link from "next/link";
@@ -54,9 +44,10 @@ import Link from "next/link";
 
 interface ProjectDataTableProps {
   statusFilter: 'Em execução' | 'Arquivado';
+  userFilter?: string | null;
 }
 
-export function ProjectDataTable({ statusFilter }: ProjectDataTableProps) {
+export function ProjectDataTable({ statusFilter, userFilter }: ProjectDataTableProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
   const { user: authUser } = useAuthUser();
@@ -68,9 +59,18 @@ export function ProjectDataTable({ statusFilter }: ProjectDataTableProps) {
   const isManager = role?.isManager || role?.isDev;
 
   const projectsQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return query(collection(firestore, 'projects'), where('status', '==', statusFilter));
-  }, [firestore, statusFilter]);
+    if (!firestore || !authUser) return null;
+    let q = query(collection(firestore, 'projects'), where('status', '==', statusFilter));
+
+    if (userFilter === 'me') {
+      q = query(q, or(
+        where('ownerId', '==', authUser.uid),
+        where('teamMembers', 'array-contains', authUser.uid)
+      ));
+    }
+    
+    return q;
+  }, [firestore, statusFilter, userFilter, authUser]);
 
   const { data: projectsData, isLoading: isLoadingProjects } = useCollection<Project>(projectsQuery);
 
@@ -185,7 +185,7 @@ export function ProjectDataTable({ statusFilter }: ProjectDataTableProps) {
         )
       },
     },
-  ], [usersMap, isManager, handleToggleArchive]);
+  ], [usersMap, isManager, handleToggleArchive, handleEditClick]);
 
   const table = useReactTable({
     data,

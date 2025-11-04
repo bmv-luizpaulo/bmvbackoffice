@@ -5,26 +5,33 @@ import { Building2 } from "lucide-react";
 import NextDynamic from "next/dynamic";
 import { Suspense } from 'react';
 import { Skeleton } from "@/components/ui/skeleton";
+import { useSearchParams } from "next/navigation";
 
 export const dynamic = 'force-dynamic';
 
 const AssetDataTable = NextDynamic(() => import("@/components/assets/asset-data-table").then(m => m.AssetDataTable));
 
 export default function AssetsPage() {
+  const searchParams = useSearchParams();
+  const ownerFilter = searchParams.get('owner');
+
   return (
     <div className="space-y-6">
       <header>
         <h1 className="font-headline text-3xl font-bold tracking-tight flex items-center gap-2">
           <Building2 className="h-8 w-8 text-primary" />
-          Inventário de Ativos
+          {ownerFilter === 'me' ? 'Meus Ativos' : 'Inventário de Ativos'}
         </h1>
         <p className="text-muted-foreground">
-          Gerencie os ativos físicos e digitais da sua organização.
+          {ownerFilter === 'me'
+            ? 'Gerencie os ativos que estão sob sua responsabilidade.'
+            : 'Gerencie os ativos físicos e digitais da sua organização.'
+          }
         </p>
       </header>
       <Card>
         <CardHeader>
-          <CardTitle>Inventário de Ativos</CardTitle>
+          <CardTitle>{ownerFilter === 'me' ? 'Meus Ativos' : 'Inventário de Ativos'}</CardTitle>
           <CardDescription>
             Adicione, edite e visualize todos os ativos da empresa.
           </CardDescription>
@@ -41,7 +48,7 @@ export default function AssetsPage() {
                   </div>
                 </div>
               }>
-                <AssetDataTable />
+                <AssetDataTable ownerFilter={ownerFilter} />
             </Suspense>
         </CardContent>
       </Card>

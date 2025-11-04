@@ -34,6 +34,7 @@ import {
   FolderKanban,
   LifeBuoy,
   Hammer,
+  UserSquare,
 } from 'lucide-react';
 import Image from 'next/image';
 import React, { useEffect } from 'react';
@@ -86,6 +87,15 @@ const navSections = [
         name: 'Geral',
         items: [
             { href: '/dashboard', icon: BarChart2, label: 'Painel' },
+            { href: '/agenda/tarefas', icon: Calendar, label: 'Agenda' },
+        ]
+    },
+    {
+        name: 'Minha Área',
+        items: [
+            { href: '/agenda/tarefas?filter=me', icon: ListTodo, label: 'Minhas Tarefas' },
+            { href: '/projetos?filter=me', icon: FolderKanban, label: 'Meus Projetos' },
+            { href: '/assets?owner=me', icon: UserSquare, label: 'Meus Ativos' },
         ]
     },
     {
@@ -146,7 +156,6 @@ const navSections = [
     {
         name: 'Equipe',
         items: [
-            { href: '/agenda/tarefas', icon: Calendar, label: 'Agenda' },
             { href: '/chat', icon: MessageSquare, label: 'Chat Direto' },
             { href: '/forum', icon: MessagesSquare, label: 'Fóruns de Equipe' },
             { 
@@ -340,7 +349,7 @@ function InnerLayout({ children }: { children: React.ReactNode }) {
              <SidebarMenu>
                  {navSections.map((section) => (
                     <SidebarGroup key={section.name}>
-                        {section.name !== 'Geral' && <SidebarSeparator />}
+                        <SidebarSeparator />
                         <SidebarGroupLabel>{section.name}</SidebarGroupLabel>
                         {section.items.map((item) => (
                            <NavItem key={item.label} item={item as any} pathname={pathname} isDev={isDev} />

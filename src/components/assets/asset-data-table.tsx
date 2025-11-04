@@ -36,7 +36,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import type { Asset, User } from "@/lib/types";
 import { useFirestore, useCollection, useMemoFirebase, useUser as useAuthUser } from "@/firebase";
-import { collection, doc, serverTimestamp } from "firebase/firestore";
+import { collection, doc, serverTimestamp, query, where } from "firebase/firestore";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -57,12 +57,24 @@ import Link from "next/link";
 const AssetFormDialog = dynamic(() => import('./asset-form-dialog').then(m => m.AssetFormDialog), { ssr: false });
 const AssetHistoryDialog = dynamic(() => import('./asset-history-dialog').then(m => m.AssetHistoryDialog), { ssr: false });
 
-export function AssetDataTable() {
+interface AssetDataTableProps {
+  ownerFilter?: string | null;
+}
+
+export function AssetDataTable({ ownerFilter }: AssetDataTableProps) {
   const firestore = useFirestore();
   const { user: authUser } = useAuthUser();
   const { toast } = useToast();
 
-  const assetsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'assets') : null, [firestore]);
+  const assetsQuery = useMemoFirebase(() => {
+    if (!firestore || !authUser) return null;
+    let q = collection(firestore, 'assets');
+    if (ownerFilter === 'me') {
+      return query(q, where('assigneeId', '==', authUser.uid));
+    }
+    return q;
+  }, [firestore, authUser, ownerFilter]);
+
   const { data: assetsData, isLoading: isLoadingAssets } = useCollection<Asset>(assetsQuery);
   
   const usersQuery = useMemoFirebase(() => firestore ? collection(firestore, 'users') : null, [firestore]);

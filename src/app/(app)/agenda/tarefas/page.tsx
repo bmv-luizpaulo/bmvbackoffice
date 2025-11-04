@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useUser, useCollection, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, collectionGroup, doc, query, where } from 'firebase/firestore';
 import type { Task, User, Project } from '@/lib/types';
@@ -11,6 +11,7 @@ import { TaskAgendaItem } from '@/components/agenda/task-agenda-item';
 import { isSameDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import React from 'react';
+import { useSearchParams } from 'next/navigation';
 
 // Opt out of static prerendering; this page relies on client-only Firebase hooks
 export const dynamic = 'force-dynamic';
@@ -18,6 +19,7 @@ export const dynamic = 'force-dynamic';
 export default function TaskAgendaPage() {
   const firestore = useFirestore();
   const { user: authUser } = useUser();
+  const searchParams = useSearchParams();
   
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [selectedUserId, setSelectedUserId] = useState<string | 'all'>('all');
@@ -30,6 +32,16 @@ export default function TaskAgendaPage() {
 
   const allUsersQuery = useMemoFirebase(() => firestore ? collection(firestore, 'users') : null, [firestore]);
   const { data: allUsers } = useCollection<User>(allUsersQuery);
+
+  const filterParam = searchParams.get('filter');
+  
+  useEffect(() => {
+    if (filterParam === 'me' && authUser?.uid) {
+      setSelectedUserId(authUser.uid);
+    } else {
+      setSelectedUserId('all');
+    }
+  }, [filterParam, authUser?.uid]);
 
   const tasksQuery = useMemoFirebase(() => {
     if (!firestore || !role || !authUser?.uid) return null;
