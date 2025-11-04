@@ -84,7 +84,7 @@ export type Task = {
     createdAt: any;
     dependentTaskIds?: string[];
     assigneeId?: string;
-    teamId?: string; // ID da equipe responsável
+    teamId?: string;
     dueDate?: string;
     isRecurring?: boolean;
     recurrenceFrequency?: 'diaria' | 'semanal' | 'mensal';

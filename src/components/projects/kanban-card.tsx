@@ -106,7 +106,7 @@ function KanbanCardComponent({ task, onUpdateTask, onDeleteTask, onEditTask, onA
               </TooltipProvider>
             )}
             <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center">
-               <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onEditTask(task)}>
+               <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onEditTask(task as Task)}>
                   <Edit className="h-4 w-4" />
               </Button>
               <AlertDialog>
