@@ -32,6 +32,7 @@ export function ChatLayout({ chatType }: ChatLayoutProps) {
 
   const conversationsQuery = useMemoFirebase(() => {
     if (!firestore || !currentUser?.uid) return null;
+    // This is the correct query that matches the security rule.
     return query(
       collection(firestore, collectionName),
       where('userIds', 'array-contains', currentUser.uid)
@@ -208,7 +209,7 @@ export function ChatLayout({ chatType }: ChatLayoutProps) {
                 <ScrollArea className="flex-1 p-4">
                     <div className="space-y-4">
                         {isLoadingMessages ? <p className='text-center text-muted-foreground'>Carregando mensagens...</p> : messages?.map(msg => {
-                            const sender = selectedConversation.users[msg.senderId];
+                            const sender = selectedConversation.users?.[msg.senderId];
                             const isCurrentUserSender = msg.senderId === currentUser?.uid;
                             return (
                              <div key={msg.id} className={cn("flex items-end gap-2", isCurrentUserSender ? "justify-end" : "justify-start")}>
