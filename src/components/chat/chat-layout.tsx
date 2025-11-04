@@ -18,6 +18,36 @@ interface ChatLayoutProps {
   chatType: 'direct' | 'forum';
 }
 
+function ForumMembers({ userIds }: { userIds: string[] }) {
+    const firestore = useFirestore();
+    const usersQuery = useMemoFirebase(() => {
+        if (!firestore || userIds.length === 0) return null;
+        return query(collection(firestore, 'users'), where('__name__', 'in', userIds.slice(0, 10)));
+    }, [firestore, userIds]);
+    const { data: users, isLoading } = useCollection<User>(usersQuery);
+
+    if (isLoading) return <div className="h-6 w-16 rounded-full bg-muted" />;
+    if (!users) return null;
+
+    const remainingCount = userIds.length - users.length;
+
+    return (
+        <div className="flex items-center -space-x-2 overflow-hidden">
+            {users.map(user => (
+                <Avatar key={user.id} className="h-6 w-6 border-2 border-card">
+                    <AvatarImage src={user.avatarUrl} alt={user.name} />
+                    <AvatarFallback>{user.name[0]}</AvatarFallback>
+                </Avatar>
+            ))}
+            {remainingCount > 0 && (
+                <div className="flex h-6 w-6 items-center justify-center rounded-full border-2 border-card bg-muted text-xs font-medium text-muted-foreground">
+                    +{remainingCount}
+                </div>
+            )}
+        </div>
+    )
+}
+
 export function ChatLayout({ chatType }: ChatLayoutProps) {
   const firestore = useFirestore();
   const { user: currentUser } = useUser();
@@ -164,10 +194,11 @@ export function ChatLayout({ chatType }: ChatLayoutProps) {
                           onClick={() => handleSelectConversation(conv)}
                       >
                           <Avatar><AvatarFallback><Hash /></AvatarFallback></Avatar>
-                          <div className='min-w-0'>
+                          <div className='min-w-0 flex-1'>
                               <p className="font-semibold truncate">{(conv as Forum).name}</p>
                               <p className="text-sm text-muted-foreground truncate">{conv.lastMessage?.text || 'Nenhuma mensagem recente'}</p>
                           </div>
+                          <ForumMembers userIds={conv.userIds} />
                       </button>
                     ))}
                     {chatType === 'direct' && directMessageUsers.map(user => {
