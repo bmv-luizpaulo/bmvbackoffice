@@ -106,8 +106,15 @@ const navSections = [
     {
         name: 'Operacional',
         items: [
-            { href: '/projetos', icon: FolderKanban, label: 'Projetos' },
-            { href: '/projects', icon: KanbanSquare, label: 'Quadro Kanban' },
+            { 
+              href: '#', 
+              icon: FolderKanban, 
+              label: 'Projetos',
+              subItems: [
+                 { href: '/projetos', icon: FolderKanban, label: 'Lista de Projetos' },
+                 { href: '/projects', icon: KanbanSquare, label: 'Quadro Kanban' },
+              ]
+            },
             { href: '/tasks/completed', icon: CheckCircle2, label: 'Tarefas Concluídas' },
             { 
               href: '#', 
