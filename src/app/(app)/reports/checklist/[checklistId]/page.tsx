@@ -10,6 +10,7 @@ import { Loader2, Printer, Check, X, MessageSquare, CheckSquare, Heading2, Shiel
 import Image from 'next/image';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
 
 export default function ChecklistReportPage() {
   const params = useParams();
@@ -94,46 +95,74 @@ export default function ChecklistReportPage() {
             <Separator className="my-6" />
 
             <section className="space-y-4">
-                <h3 className="text-lg font-semibold text-gray-800">Itens do Checklist</h3>
-                {items.map(item => {
-                    if (item.type === 'header') {
-                        return (
-                            <div key={item.id} className="pt-4 pb-2 border-b">
-                                <h4 className="font-bold text-base text-gray-700 flex items-center gap-2">
+                <h3 className="text-lg font-semibold text-gray-800 mb-4">Itens do Checklist</h3>
+                <div className='border rounded-lg'>
+                  <div className='flex items-center bg-gray-50 p-3 text-xs font-semibold uppercase text-gray-500 border-b'>
+                    <div className='w-16 text-center'>Status</div>
+                    <div className='flex-1 px-2'>Descrição</div>
+                    <div className='w-1/3 px-2'>Resultado / Comentário</div>
+                  </div>
+                  <div className='divide-y'>
+                    {items.map(item => {
+                        if (item.type === 'header') {
+                            return (
+                                <div key={item.id} className="bg-gray-100 p-3 font-bold text-sm text-gray-600 flex items-center gap-2">
                                     <Heading2 className='h-4 w-4'/>
                                     {item.description}
-                                </h4>
-                            </div>
-                        )
-                    }
-                    if (item.type === 'item') {
-                        return (
-                             <div key={item.id} className="flex items-center gap-3 text-sm">
-                                <CheckSquare className={cn("h-5 w-5", item.isCompleted ? 'text-green-600' : 'text-gray-400')} />
-                                <p className={cn(item.isCompleted && 'line-through text-gray-500')}>{item.description}</p>
-                            </div>
-                        )
-                    }
-                    if (item.type === 'yes_no') {
-                        return (
-                            <div key={item.id} className="space-y-1 text-sm">
-                                <div className='flex items-center gap-3'>
-                                   {item.answer === 'yes' && <Check className='h-5 w-5 text-green-600'/>}
-                                   {item.answer === 'no' && <X className='h-5 w-5 text-red-600'/>}
-                                   {item.answer === 'unanswered' && <div className="h-5 w-5 border-2 rounded-sm border-gray-400" />}
-                                   <p>{item.description}</p>
                                 </div>
-                                {item.comment && (
-                                     <div className='pl-8 flex items-start gap-2 text-gray-600'>
-                                        <MessageSquare className="h-4 w-4 mt-0.5 shrink-0" />
-                                        <p className='italic'>"{item.comment}"</p>
-                                     </div>
-                                )}
-                            </div>
-                        )
-                    }
-                    return null;
-                })}
+                            )
+                        }
+                        if (item.type === 'item') {
+                            return (
+                                <div key={item.id} className="flex items-start text-sm p-3">
+                                  <div className='w-16 flex justify-center pt-0.5'>
+                                    <CheckSquare className={cn("h-5 w-5", item.isCompleted ? 'text-green-600' : 'text-gray-300')} />
+                                  </div>
+                                  <div className={cn('flex-1 px-2', item.isCompleted && 'line-through text-gray-500')}>
+                                    {item.description}
+                                  </div>
+                                  <div className='w-1/3 px-2 text-gray-500 italic'>
+                                    {item.isCompleted ? 'Concluído' : 'Pendente'}
+                                  </div>
+                                </div>
+                            )
+                        }
+                        if (item.type === 'yes_no') {
+                            return (
+                                <div key={item.id} className="flex items-start text-sm p-3">
+                                  <div className='w-16 flex justify-center pt-0.5'>
+                                     {item.answer === 'yes' && <Check className='h-5 w-5 text-green-600'/>}
+                                     {item.answer === 'no' && <X className='h-5 w-5 text-red-600'/>}
+                                     {item.answer === 'unanswered' && <div className="h-4 w-4 mt-0.5 border-2 rounded-sm border-gray-300" />}
+                                  </div>
+                                   <div className='flex-1 px-2'>
+                                    {item.description}
+                                  </div>
+                                   <div className='w-1/3 px-2 space-y-1'>
+                                      {item.answer !== 'unanswered' && (
+                                        <Badge variant={item.answer === 'no' ? 'destructive' : 'default'} className={cn(item.answer === 'yes' && 'bg-green-600')}>
+                                          {item.answer === 'yes' ? 'Sim' : 'Não'}
+                                        </Badge>
+                                      )}
+                                      {item.comment && (
+                                          <div className='flex items-start gap-2 text-gray-600 pt-1'>
+                                              <MessageSquare className="h-4 w-4 mt-0.5 shrink-0" />
+                                              <p className='italic text-xs'>"{item.comment}"</p>
+                                          </div>
+                                      )}
+                                  </div>
+                                </div>
+                            )
+                        }
+                        return null;
+                    })}
+                  </div>
+                   {items.length === 0 && (
+                      <div className="p-8 text-center text-gray-500">
+                        Nenhum item neste checklist.
+                      </div>
+                    )}
+                </div>
             </section>
         </main>
 
