@@ -23,6 +23,10 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { format, isPast, isToday, differenceInDays } from 'date-fns';
 import { memo } from 'react';
+import { useUser as useAuthUser, useDoc, useFirestore } from '@/firebase';
+import type { Role } from '@/lib/types';
+import React from 'react';
+
 
 type KanbanCardProps = {
   task: Task & { isLocked?: boolean; assignee?: User; team?: Team };
@@ -37,6 +41,15 @@ function KanbanCardComponent({ task, onUpdateTask, onDeleteTask, onEditTask, onA
     id: task.id,
     disabled: task.isLocked,
   });
+  
+  const firestore = useFirestore();
+  const { user: authUser } = useAuthUser();
+  const userProfileQuery = React.useMemo(() => firestore && authUser?.uid ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser?.uid]);
+  const { data: userProfile } = useDoc<User>(userProfileQuery);
+  const roleQuery = React.useMemo(() => firestore && userProfile?.roleId ? doc(firestore, 'roles', userProfile.roleId) : null, [firestore, userProfile?.roleId]);
+  const { data: role } = useDoc<Role>(roleQuery);
+  const isPrivilegedUser = role?.isManager || role?.isDev;
+
 
   const style = {
     transform: CSS.Translate.toString(transform),
@@ -109,25 +122,27 @@ function KanbanCardComponent({ task, onUpdateTask, onDeleteTask, onEditTask, onA
                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onEditTask(task as Task)}>
                   <Edit className="h-4 w-4" />
               </Button>
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0">
-                    <Trash2 className="h-4 w-4 text-destructive/70 hover:text-destructive" />
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Esta ação não pode ser desfeita. Isso excluirá permanentemente a tarefa "{task.name}".
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                    <AlertDialogAction onClick={() => onDeleteTask(task.id)} className="bg-destructive hover:bg-destructive/90">Excluir</AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
+              {isPrivilegedUser && (
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0">
+                      <Trash2 className="h-4 w-4 text-destructive/70 hover:text-destructive" />
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Esta ação não pode ser desfeita. Isso excluirá permanentemente a tarefa "{task.name}".
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                      <AlertDialogAction onClick={() => onDeleteTask(task.id)} className="bg-destructive hover:bg-destructive/90">Excluir</AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              )}
             </div>
           </div>
         </CardHeader>

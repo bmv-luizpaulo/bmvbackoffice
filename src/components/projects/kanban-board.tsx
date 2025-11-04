@@ -8,8 +8,8 @@ import type { Task, Stage, Project, User, Role, Team } from '@/lib/types';
 import { Button } from '../ui/button';
 import { Plus, FolderPlus, Files } from 'lucide-react';
 import dynamic from 'next/dynamic';
-import { useCollection, useDoc, useFirestore, useUser as useAuthUser, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
-import { collection, doc, writeBatch, query, where, serverTimestamp } from 'firebase/firestore';
+import { useCollection, useDoc, useFirestore, useUser as useAuthUser, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking, useMemoFirebase } from '@/firebase';
+import { collection, doc, writeBatch, query, where, serverTimestamp, or } from 'firebase/firestore';
 import { useNotifications } from '../notifications/notifications-provider';
 import React from 'react';
 import { Skeleton } from '../ui/skeleton';
@@ -43,10 +43,24 @@ export function KanbanBoard({ openNewProjectDialog }: { openNewProjectDialog?: b
 
   const roleQuery = React.useMemo(() => firestore && userRoleId ? doc(firestore, 'roles', userRoleId) : null, [firestore, userRoleId]);
   const { data: role, isLoading: isLoadingRole } = useDoc<Role>(roleQuery);
-  const isPrivilegedUser = role?.isDev || role?.isManager;
+  const isPrivilegedUser = role?.isManager || role?.isDev;
 
-
-  const projectsQuery = React.useMemo(() => firestore ? query(collection(firestore, 'projects'), where('status', '!=', 'Arquivado')) : null, [firestore]);
+  const projectsQuery = useMemoFirebase(() => {
+    if (!firestore || !authUser || !role) return null;
+    const projectsCollection = collection(firestore, 'projects');
+    if (isPrivilegedUser) {
+        return query(projectsCollection, where('status', '!=', 'Arquivado'));
+    }
+    return query(
+        projectsCollection,
+        where('status', '!=', 'Arquivado'),
+        or(
+            where('ownerId', '==', authUser.uid),
+            where('teamMembers', 'array-contains', authUser.uid)
+        )
+    );
+  }, [firestore, authUser, role, isPrivilegedUser]);
+  
   const { data: projectsData, isLoading: isLoadingProjects } = useCollection<Project>(projectsQuery);
   
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
@@ -67,9 +81,12 @@ export function KanbanBoard({ openNewProjectDialog }: { openNewProjectDialog?: b
     if (isPrivilegedUser) {
       return tasksCollection;
     } else {
-      return query(tasksCollection, where('assigneeId', '==', authUser?.uid));
+      return query(tasksCollection, or(
+          where('assigneeId', '==', authUser?.uid),
+          where('teamId', 'in', userProfile?.teamIds || ['dummy-id-to-avoid-empty-in'])
+      ));
     }
-  }, [firestore, selectedProject?.id, role, authUser?.uid, isPrivilegedUser]);
+  }, [firestore, selectedProject?.id, role, authUser?.uid, isPrivilegedUser, userProfile?.teamIds]);
 
   const { data: tasksData, isLoading: isLoadingTasks } = useCollection<Task>(tasksQuery);
   
@@ -233,7 +250,7 @@ export function KanbanBoard({ openNewProjectDialog }: { openNewProjectDialog?: b
   }, [firestore, selectedProject, tasksData, authUser, createNotification, toast]);
 
   const handleDeleteTask = useCallback((taskId: string) => {
-      if (!firestore || !selectedProject) return;
+      if (!firestore || !selectedProject || !isPrivilegedUser) return;
       const taskRef = doc(firestore, 'projects', selectedProject.id, 'tasks', taskId);
       deleteDocumentNonBlocking(taskRef);
 
@@ -241,7 +258,7 @@ export function KanbanBoard({ openNewProjectDialog }: { openNewProjectDialog?: b
           title: "Tarefa Excluída",
           description: "A tarefa foi excluída com sucesso."
       });
-  }, [firestore, selectedProject, toast]);
+  }, [firestore, selectedProject, toast, isPrivilegedUser]);
   
   const handleEditTask = useCallback((task: Task) => {
     setTaskToEdit(task);
@@ -256,9 +273,10 @@ export function KanbanBoard({ openNewProjectDialog }: { openNewProjectDialog?: b
   }, []);
   
   const handleEditProjectClick = useCallback(() => {
+    if (!isPrivilegedUser) return;
     setProjectToEdit(selectedProject);
     setIsAddProjectDialogOpen(true);
-  }, [selectedProject]);
+  }, [selectedProject, isPrivilegedUser]);
 
   const handleAddDependentTask = useCallback((dependencyId: string) => {
     setTaskToEdit(null);
@@ -329,7 +347,7 @@ export function KanbanBoard({ openNewProjectDialog }: { openNewProjectDialog?: b
     return <Skeleton className="w-full h-full" />;
   }
   
-  if (projectsData?.length === 0) {
+  if (projectsData?.length === 0 && isPrivilegedUser) {
       return (
           <>
             <div className="flex flex-col items-center justify-center h-full gap-4">
@@ -349,6 +367,16 @@ export function KanbanBoard({ openNewProjectDialog }: { openNewProjectDialog?: b
           </>
       )
   }
+  
+  if (projectsData?.length === 0 && !isPrivilegedUser) {
+    return (
+        <div className="flex flex-col items-center justify-center h-full gap-4">
+            <h2 className="text-2xl font-semibold">Nenhum projeto atribuído</h2>
+            <p className="text-muted-foreground">Você ainda não foi adicionado a nenhum projeto.</p>
+        </div>
+    )
+  }
+
 
   return (
     <DndContext onDragEnd={handleDragEnd} sensors={sensors}>
@@ -367,15 +395,17 @@ export function KanbanBoard({ openNewProjectDialog }: { openNewProjectDialog?: b
           <Button onClick={() => setIsProjectFilesDialogOpen(true)} variant="outline" size="sm" disabled={!selectedProject}>
             <Files size={16} className='mr-2' /> Arquivos
           </Button>
-          <Button onClick={handleEditProjectClick} variant="outline" size="sm" disabled={!selectedProject}>
-            Editar Projeto
-          </Button>
+          {isPrivilegedUser && (
+            <Button onClick={handleEditProjectClick} variant="outline" size="sm" disabled={!selectedProject}>
+              Editar Projeto
+            </Button>
+          )}
             <Button onClick={handleAddTaskClick} size="sm" disabled={!selectedProject}>
             <Plus size={16} className='mr-2' /> Nova Tarefa
           </Button>
         </div>
       </div>
-      {selectedProject && <AiFollowUpSuggestions project={selectedProject} />}
+      {selectedProject && isPrivilegedUser && <AiFollowUpSuggestions project={selectedProject} />}
 
       <div className="flex flex-1 min-w-max gap-4 pb-4 overflow-x-auto">
         {isLoadingStages || isLoadingTasks ? (
@@ -395,7 +425,7 @@ export function KanbanBoard({ openNewProjectDialog }: { openNewProjectDialog?: b
               stage={stage}
               tasks={stageTasksMap.get(stage.id) || []}
               onUpdateTask={handleUpdateTaskStatus}
-              onDeleteTask={handleDeleteTask}
+              onDeleteTask={isPrivilegedUser ? handleDeleteTask : () => {}}
               onEditTask={handleEditTask}
               onAddDependentTask={handleAddDependentTask}
             />
