@@ -67,7 +67,7 @@ const formSchema = z.object({
   isManager: z.boolean().default(false),
   isDev: z.boolean().default(false),
 }).refine(data => {
-  if (data.hierarchyLevel === 'CEO' || data.hierarchyLevel === 'Diretoria') {
+  if (data.hierarchyLevel === 'CEO') {
     return true;
   }
   return !!data.supervisorRoleId && data.supervisorRoleId !== 'unassigned';
