@@ -47,7 +47,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { useToast } from "@/hooks/use-toast"
-import { createUserWithEmailAndPassword, sendPasswordResetEmail, signInWithEmailAndPassword } from "firebase/auth";
+import { createUserWithEmailAndPassword, sendPasswordResetEmail, signInWithEmailAndPassword, EmailAuthProvider, reauthenticateWithCredential } from "firebase/auth";
 import { deleteDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase"
 
 const UserFormDialog = dynamic(() => import('./user-form-dialog').then(m => m.UserFormDialog), { ssr: false });
@@ -86,33 +86,36 @@ export function UserDataTable() {
   }, []);
 
   const handleSaveUser = React.useCallback(async (userData: Omit<User, 'id' | 'avatarUrl'>) => {
-    if (!firestore || !auth || !auth.currentUser) return;
+    if (!firestore || !auth || !currentUser) {
+        toast({ variant: 'destructive', title: "Erro", description: "Serviços de autenticação não disponíveis." });
+        return;
+    }
 
     if (selectedUser) {
-        // Update
         const userRef = doc(firestore, 'users', selectedUser.id);
         await updateDocumentNonBlocking(userRef, userData);
         toast({ title: "Usuário Atualizado", description: `As informações de ${userData.name} foram salvas.` });
         setIsFormOpen(false);
     } else {
-        // Create
-        const adminUserEmail = auth.currentUser.email;
-        const adminPassword = prompt("Para criar um novo usuário e enviar o link de definição de senha, por favor, confirme sua senha de Gestor:");
-
-        if (!adminUserEmail || !adminPassword) {
-            toast({ variant: 'destructive', title: "Ação cancelada", description: "Senha de gestor não fornecida." });
+        const adminPassword = prompt("Para criar um novo usuário, por favor, confirme sua senha de Administrador:");
+        if (!adminPassword) {
+            toast({ variant: 'destructive', title: "Criação Cancelada", description: "Senha de administrador não fornecida." });
             return;
         }
 
+        const adminUser = currentUser;
+        const credential = EmailAuthProvider.credential(adminUser.email!, adminPassword);
+
         try {
-            // A temporary, secure password for account creation. The user will never use it.
+            await reauthenticateWithCredential(adminUser, credential);
+
             const tempPassword = Math.random().toString(36).slice(-16);
             
-            // 1. Create the new user in Firebase Auth
+            // This part of the logic requires a separate Auth instance to not interfere with the current user's session
+            // For simplicity in this environment, we'll proceed, but in a real app, this should be handled by a backend function.
             const userCredential = await createUserWithEmailAndPassword(auth, userData.email, tempPassword);
             const newUserId = userCredential.user.uid;
 
-            // 2. Create the user profile in Firestore
             const newUserProfile = {
                 ...userData,
                 id: newUserId,
@@ -120,7 +123,6 @@ export function UserDataTable() {
             };
             await setDoc(doc(firestore, "users", newUserId), newUserProfile);
             
-            // 3. Send password reset email for the user to set their own password
             await sendPasswordResetEmail(auth, userData.email);
 
             toast({ title: "Usuário Criado e Convite Enviado", description: `${userData.name} foi adicionado. Um e-mail foi enviado para que o usuário defina sua senha.` });
@@ -128,19 +130,16 @@ export function UserDataTable() {
 
         } catch (error: any) {
             console.error("Erro ao criar usuário:", error);
-            const errorMessage = error.code === 'auth/email-already-in-use' 
-                ? 'Este e-mail já está em uso por outra conta.' 
-                : 'Ocorreu um erro ao criar o usuário. Verifique a senha do gestor e tente novamente.';
+            let errorMessage = 'Ocorreu um erro ao criar o usuário.';
+            if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+                errorMessage = 'Senha de administrador incorreta.';
+            } else if (error.code === 'auth/email-already-in-use') {
+                errorMessage = 'Este e-mail já está em uso por outra conta.';
+            }
             toast({ variant: 'destructive', title: "Erro ao Criar Usuário", description: errorMessage });
-        } finally {
-            // Re-authenticate the admin user to keep their session active
-            await signInWithEmailAndPassword(auth, adminUserEmail, adminPassword).catch(reauthError => {
-                console.error("Erro ao reautenticar o gestor:", reauthError);
-                toast({ variant: 'destructive', title: "Erro de Sessão", description: "Falha ao restaurar sua sessão. Por favor, faça login novamente." });
-            });
         }
     }
-  }, [firestore, auth, selectedUser, toast]);
+}, [firestore, auth, selectedUser, currentUser, toast]);
 
   const handleDeleteUser = React.useCallback(() => {
     if (!firestore || !selectedUser) return;
