@@ -33,7 +33,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { useToast } from '@/hooks/use-toast';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { AiFollowUpSuggestions } from './ai-follow-up-suggestions';
-import { ProjectFilesDialog } from './project-file-uploader-dialog'; // Corrected import
+import { ProjectFilesDialog } from './project-files-dialog';
 import { FolderOpen } from 'lucide-react';
 
 export function KanbanBoard({ openNewProjectDialog }: { openNewProjectDialog?: boolean }) {
