@@ -50,6 +50,7 @@ import { useToast } from "@/hooks/use-toast"
 import { Badge } from "../ui/badge";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
+import { useNotifications } from "../notifications/notifications-provider"
 
 const TicketFormDialog = dynamic(() => import('./ticket-form-dialog').then(m => m.TicketFormDialog), { ssr: false });
 
@@ -57,6 +58,7 @@ export function TicketDataTable() {
   const firestore = useFirestore();
   const { toast } = useToast();
   const { user: authUser } = useAuthUser();
+  const { createNotification } = useNotifications();
   
   const userProfileQuery = useMemoFirebase(() => firestore && authUser ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser]);
   const { data: userProfile } = useDoc<User>(userProfileQuery);
@@ -100,11 +102,30 @@ export function TicketDataTable() {
           toast({ title: "Ticket Atualizado", description: "Seu chamado foi atualizado." });
       } else {
           const finalData = { ...ticketData, requesterId: authUser.uid, createdAt: serverTimestamp() };
-          await addDocumentNonBlocking(collection(firestore, 'tickets'), finalData);
+          const docRef = await addDocumentNonBlocking(collection(firestore, 'tickets'), finalData);
           toast({ title: "Chamado Aberto", description: "Sua solicitação foi enviada para a equipe de suporte." });
+
+          // Notify managers if priority is high
+          if (ticketData.priority === 'Alta') {
+            const managerUsers = usersData?.filter(u => rolesMap.get(u.roleId || '')?.isManager);
+            if (managerUsers) {
+              managerUsers.forEach(manager => {
+                if (manager.id !== authUser.uid) { // Don't notify the user who created the ticket
+                  createNotification(manager.id, {
+                    title: 'Chamado Urgente Aberto',
+                    message: `Um novo chamado de alta prioridade foi aberto por ${userProfile?.name}: "${ticketData.title}"`,
+                    link: `/suporte?ticketId=${docRef.id}`
+                  });
+                }
+              });
+            }
+          }
       }
       setIsFormOpen(false);
   };
+
+    const rolesMap = React.useMemo(() => new Map(usersData?.map(u => [u.id, u.roleId])), [usersData]);
+
 
   const handleStatusChange = async (ticket: Ticket, newStatus: 'Aberto' | 'Em Andamento' | 'Fechado') => {
       if (!firestore || !authUser) return;
