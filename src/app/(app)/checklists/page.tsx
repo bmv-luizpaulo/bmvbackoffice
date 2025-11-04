@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, ListChecks, Trash2, Edit, Eye, CheckSquare, Heading2, Check, X, ThumbsUp } from "lucide-react";
+import { Plus, ListChecks, Trash2, Edit, Eye, CheckSquare, Heading2, Check, X, ThumbsUp, FileText } from "lucide-react";
 import { useCollection, useFirestore, useMemoFirebase, useUser, useDoc } from '@/firebase';
 import { collection, doc, orderBy, query } from 'firebase/firestore';
 import type { Checklist, ChecklistItem, Team, User as UserType, Role } from '@/lib/types';
@@ -20,6 +20,7 @@ import { Progress } from '@/components/ui/progress';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import Link from 'next/link';
 
 export const dynamic = 'force-dynamic';
 
@@ -355,7 +356,7 @@ export default function ChecklistsPage() {
                             }}
                             className="flex flex-col gap-4 pt-4 border-t"
                         >
-                            <RadioGroup defaultValue="item" value={newItemType} onValueChange={(value: 'item' | 'header' | 'yes_no') => setNewItemType(value)} className="flex items-center gap-4">
+                            <RadioGroup defaultValue="header" value={newItemType} onValueChange={(value: 'item' | 'header' | 'yes_no') => setNewItemType(value)} className="flex items-center gap-4">
                                 <div className="flex items-center space-x-2">
                                     <RadioGroupItem value="header" id="r-header" />
                                     <Label htmlFor="r-header" className='flex items-center gap-1'><Heading2 className='h-4 w-4'/>Título de Seção</Label>
@@ -384,6 +385,14 @@ export default function ChecklistsPage() {
                         </form>
                    )}
                 </div>
+                 <div className="border-t pt-4 mt-4">
+                    <Button asChild className='w-full'>
+                      <Link href={`/reports/checklist/${selectedChecklist.id}`} target="_blank">
+                        <FileText className="mr-2 h-4 w-4" />
+                        Gerar Relatório
+                      </Link>
+                    </Button>
+                  </div>
               </CardContent>
             </>
           ) : (
