@@ -133,7 +133,8 @@ export default function ChecklistReportPage() {
         <div ref={reportRef} className="mx-auto max-w-4xl bg-white p-12 shadow-lg print:shadow-none">
             <header className="flex items-start justify-between border-b pb-4">
                 <div className="flex items-center gap-4">
-                    <Image src="/image/BMV.png" alt="BMV Logo" width={150} height={50} />
+                    {/* Use uma tag img padrão para melhor compatibilidade com html2canvas */}
+                    <img src="/image/BMV.png" alt="BMV Logo" style={{ width: '150px', height: 'auto' }} />
                 </div>
                 <div className="text-right">
                     <h1 className="text-2xl font-bold text-gray-800">Relatório de Checklist</h1>
