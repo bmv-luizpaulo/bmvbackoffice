@@ -64,6 +64,7 @@ export type Project = {
     teamMembers?: string[];
     contactPhone?: string;
     technicalDetails?: string;
+    status: 'Em execução' | 'Arquivado';
 };
 
 export type Stage = {

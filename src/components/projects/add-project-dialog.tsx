@@ -42,6 +42,7 @@ type AddProjectDialogProps = {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
   onAddProject: (project: Omit<Project, 'id'>) => void;
+  projectToEdit?: Project | null;
 };
 
 const formSchema = z.object({
@@ -52,6 +53,7 @@ const formSchema = z.object({
   teamMembers: z.array(z.string()).optional(),
   contactPhone: z.string().optional(),
   technicalDetails: z.string().optional(),
+  status: z.enum(['Em execução', 'Arquivado']).default('Em execução'),
   dateRange: z.object({
       from: z.date({ required_error: "A data de início é obrigatória."}),
       to: z.date().optional(),
@@ -62,7 +64,7 @@ const formSchema = z.object({
 });
 
 
-export function AddProjectDialog({ isOpen, onOpenChange, onAddProject }: AddProjectDialogProps) {
+export function AddProjectDialog({ isOpen, onOpenChange, onAddProject, projectToEdit }: AddProjectDialogProps) {
   const firestore = useFirestore();
   const usersQuery = React.useMemo(() => firestore ? collection(firestore, 'users') : null, [firestore]);
   const { data: usersData } = useCollection<UserType>(usersQuery);
@@ -76,9 +78,43 @@ export function AddProjectDialog({ isOpen, onOpenChange, onAddProject }: AddProj
       teamMembers: [],
       contactPhone: "",
       technicalDetails: "",
+      status: 'Em execução',
       ownerId: undefined,
     },
   });
+
+  React.useEffect(() => {
+    if (isOpen) {
+        if (projectToEdit) {
+            form.reset({
+                name: projectToEdit.name,
+                description: projectToEdit.description,
+                budget: projectToEdit.budget,
+                ownerId: projectToEdit.ownerId,
+                teamMembers: projectToEdit.teamMembers,
+                contactPhone: projectToEdit.contactPhone,
+                technicalDetails: projectToEdit.technicalDetails,
+                status: projectToEdit.status,
+                dateRange: {
+                    from: new Date(projectToEdit.startDate),
+                    to: projectToEdit.endDate ? new Date(projectToEdit.endDate) : undefined
+                }
+            });
+        } else {
+            form.reset({
+                name: "",
+                description: "",
+                budget: 0,
+                teamMembers: [],
+                contactPhone: "",
+                technicalDetails: "",
+                status: 'Em execução',
+                ownerId: undefined,
+                dateRange: { from: undefined, to: undefined }
+            });
+        }
+    }
+  }, [isOpen, projectToEdit, form]);
 
   function onSubmit(values: z.infer<typeof formSchema>) {
     const projectData = {
@@ -91,6 +127,7 @@ export function AddProjectDialog({ isOpen, onOpenChange, onAddProject }: AddProj
         teamMembers: values.teamMembers || [],
         contactPhone: values.contactPhone || '',
         technicalDetails: values.technicalDetails || '',
+        status: values.status,
     };
     onAddProject(projectData);
     onOpenChange(false);
@@ -103,7 +140,7 @@ export function AddProjectDialog({ isOpen, onOpenChange, onAddProject }: AddProj
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl">
         <DialogHeader>
-          <DialogTitle>Criar Novo Projeto</DialogTitle>
+          <DialogTitle>{projectToEdit ? 'Editar Projeto' : 'Criar Novo Projeto'}</DialogTitle>
         </DialogHeader>
         <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
@@ -267,6 +304,29 @@ export function AddProjectDialog({ isOpen, onOpenChange, onAddProject }: AddProj
                                 </FormItem>
                             )}
                         />
+                        {projectToEdit && (
+                            <FormField
+                                control={form.control}
+                                name="status"
+                                render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Status do Projeto</FormLabel>
+                                    <Select onValueChange={field.onChange} value={field.value}>
+                                    <FormControl>
+                                        <SelectTrigger>
+                                        <SelectValue placeholder="Selecione o status" />
+                                        </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                        <SelectItem value="Em execução">Em execução</SelectItem>
+                                        <SelectItem value="Arquivado">Arquivado</SelectItem>
+                                    </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                </FormItem>
+                                )}
+                            />
+                        )}
                     </div>
                 </div>
 
@@ -274,7 +334,7 @@ export function AddProjectDialog({ isOpen, onOpenChange, onAddProject }: AddProj
                     <DialogClose asChild>
                         <Button type="button" variant="outline">Cancelar</Button>
                     </DialogClose>
-                    <Button type="submit">Criar Projeto</Button>
+                    <Button type="submit">{projectToEdit ? 'Salvar Alterações' : 'Criar Projeto'}</Button>
                 </DialogFooter>
             </form>
         </Form>
