@@ -46,8 +46,8 @@ export default function ForumPage() {
   const { data: allUsers } = useCollection<UserType>(usersQuery);
 
   useEffect(() => {
-    if (user) { // Ensure user is loaded before trying to create forum
-      ensureGlobalForumExists(firestore, allUsers || []);
+    if (user && allUsers && allUsers.length > 0) {
+      ensureGlobalForumExists(firestore, allUsers);
     }
   }, [firestore, allUsers, user]);
 
