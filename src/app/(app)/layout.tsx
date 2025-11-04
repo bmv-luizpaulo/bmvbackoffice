@@ -131,6 +131,7 @@ const navSections = [
         name: 'Equipe',
         items: [
             { href: '/agenda/tarefas', icon: Calendar, label: 'Agenda' },
+            { href: '/chat', icon: MessageSquare, label: 'Chat Direto' },
             { 
               href: '#', 
               icon: Group, 
