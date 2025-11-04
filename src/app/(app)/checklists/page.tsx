@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, ListChecks, Trash2, Edit, Eye, CheckSquare, Heading2, Check, X } from "lucide-react";
+import { Plus, ListChecks, Trash2, Edit, Eye, CheckSquare, Heading2, Check, X, ThumbsUp } from "lucide-react";
 import { useCollection, useFirestore, useMemoFirebase, useUser, useDoc } from '@/firebase';
 import { collection, doc, orderBy, query } from 'firebase/firestore';
 import type { Checklist, ChecklistItem, Team, User as UserType, Role } from '@/lib/types';
@@ -20,7 +20,6 @@ import { Progress } from '@/components/ui/progress';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { ThumbsUp } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
@@ -358,12 +357,12 @@ export default function ChecklistsPage() {
                         >
                             <RadioGroup defaultValue="item" value={newItemType} onValueChange={(value: 'item' | 'header' | 'yes_no') => setNewItemType(value)} className="flex items-center gap-4">
                                 <div className="flex items-center space-x-2">
-                                    <RadioGroupItem value="item" id="r-item" />
-                                    <Label htmlFor="r-item" className='flex items-center gap-1'><CheckSquare className='h-4 w-4'/>Passo (Item)</Label>
-                                </div>
-                                <div className="flex items-center space-x-2">
                                     <RadioGroupItem value="header" id="r-header" />
                                     <Label htmlFor="r-header" className='flex items-center gap-1'><Heading2 className='h-4 w-4'/>Título de Seção</Label>
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                    <RadioGroupItem value="item" id="r-item" />
+                                    <Label htmlFor="r-item" className='flex items-center gap-1'><CheckSquare className='h-4 w-4'/>Passo (Item)</Label>
                                 </div>
                                  <div className="flex items-center space-x-2">
                                     <RadioGroupItem value="yes_no" id="r-yes-no" />
