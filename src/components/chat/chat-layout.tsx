@@ -1,7 +1,8 @@
+
 'use client';
 
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import type { User, Message, Chat, Forum } from '@/lib/types';
+import type { User, Message, Conversation } from '@/lib/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -12,13 +13,11 @@ import { useUser, useCollection, useFirestore, useMemoFirebase } from '@/firebas
 import { collection, query, where, addDoc, serverTimestamp, orderBy, doc, setDoc, updateDoc } from 'firebase/firestore';
 import React from 'react';
 
-type Conversation = Chat | Forum;
-
 interface ChatLayoutProps {
-  chatType: 'direct' | 'forum';
+  conversationType: 'direct' | 'group';
 }
 
-function ForumMembers({ userIds }: { userIds: string[] }) {
+function GroupMembers({ userIds }: { userIds: string[] }) {
     const firestore = useFirestore();
     const usersQuery = useMemoFirebase(() => {
         if (!firestore || userIds.length === 0) return null;
@@ -48,14 +47,12 @@ function ForumMembers({ userIds }: { userIds: string[] }) {
     )
 }
 
-export function ChatLayout({ chatType }: ChatLayoutProps) {
+export function ChatLayout({ conversationType }: ChatLayoutProps) {
   const firestore = useFirestore();
   const { user: currentUser } = useUser();
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [newMessage, setNewMessage] = useState('');
   const messageEndRef = useRef<HTMLDivElement>(null);
-
-  const collectionName = chatType === 'direct' ? 'chats' : 'forums';
 
   const usersQuery = useMemoFirebase(() => firestore ? collection(firestore, 'users') : null, [firestore]);
   const { data: allUsers } = useCollection<User>(usersQuery);
@@ -63,20 +60,21 @@ export function ChatLayout({ chatType }: ChatLayoutProps) {
   const conversationsQuery = useMemoFirebase(() => {
     if (!firestore || !currentUser?.uid) return null;
     return query(
-      collection(firestore, collectionName),
-      where('userIds', 'array-contains', currentUser.uid)
+      collection(firestore, 'conversations'),
+      where('userIds', 'array-contains', currentUser.uid),
+      where('type', '==', conversationType)
     );
-  }, [firestore, currentUser, collectionName]);
+  }, [firestore, currentUser, conversationType]);
 
   const { data: conversations, isLoading: isLoadingConversations } = useCollection<Conversation>(conversationsQuery);
 
   const messagesQuery = useMemoFirebase(() => {
     if (!firestore || !selectedConversation) return null;
     return query(
-        collection(firestore, collectionName, selectedConversation.id, 'messages'), 
+        collection(firestore, 'conversations', selectedConversation.id, 'messages'), 
         orderBy('timestamp', 'asc')
     );
-  }, [firestore, selectedConversation, collectionName]);
+  }, [firestore, selectedConversation]);
 
   const { data: messages, isLoading: isLoadingMessages } = useCollection<Message>(messagesQuery);
   
@@ -89,19 +87,19 @@ export function ChatLayout({ chatType }: ChatLayoutProps) {
     e.preventDefault();
     if (!newMessage.trim() || !selectedConversation || !currentUser || !firestore) return;
 
-    const messagesCollection = collection(firestore, collectionName, selectedConversation.id, 'messages');
+    const messagesCollection = collection(firestore, 'conversations', selectedConversation.id, 'messages');
     
     const timestamp = new Date();
 
     await addDoc(messagesCollection, {
-      chatId: selectedConversation.id,
+      conversationId: selectedConversation.id,
       senderId: currentUser.uid,
       text: newMessage,
       timestamp: timestamp,
       read: false,
     });
     
-    const chatRef = doc(firestore, collectionName, selectedConversation.id);
+    const chatRef = doc(firestore, 'conversations', selectedConversation.id);
     await updateDoc(chatRef, {
         lastMessage: {
             text: newMessage,
@@ -111,7 +109,7 @@ export function ChatLayout({ chatType }: ChatLayoutProps) {
     });
 
     setNewMessage('');
-  }, [newMessage, selectedConversation, currentUser, firestore, collectionName]);
+  }, [newMessage, selectedConversation, currentUser, firestore]);
 
   const handleSelectConversation = useCallback(async (convOrUser: Conversation | User) => {
       if (!currentUser?.uid || !firestore || !allUsers) return;
@@ -123,7 +121,7 @@ export function ChatLayout({ chatType }: ChatLayoutProps) {
       
       // It's a User object, find or create direct chat
       const user = convOrUser;
-      const existingChat = conversations?.find(c => c.userIds.length === 2 && c.userIds.includes(user.id));
+      const existingChat = conversations?.find(c => c.type === 'direct' && c.userIds.length === 2 && c.userIds.includes(user.id));
       if (existingChat) {
           setSelectedConversation(existingChat);
           return;
@@ -132,7 +130,8 @@ export function ChatLayout({ chatType }: ChatLayoutProps) {
       const currentUserData = allUsers.find(u => u.id === currentUser.uid);
       if (!currentUserData) return;
       
-      const newChatData: Omit<Chat, 'id'> = {
+      const newChatData: Omit<Conversation, 'id'> = {
+          type: 'direct',
           userIds: [currentUser.uid, user.id],
           lastMessage: null,
           users: {
@@ -149,86 +148,95 @@ export function ChatLayout({ chatType }: ChatLayoutProps) {
           }
       };
       
-      const newChatRef = doc(collection(firestore, 'chats'));
+      const newChatRef = doc(collection(firestore, 'conversations'));
       await setDoc(newChatRef, newChatData);
-      setSelectedConversation({ id: newChatRef.id, ...newChatData } as Chat);
+      setSelectedConversation({ id: newChatRef.id, ...newChatData } as Conversation);
   }, [currentUser, firestore, conversations, allUsers]);
   
   const conversationDisplayInfo = useMemo(() => {
     if (!selectedConversation || !currentUser) return { avatar: null, name: 'Selecione uma conversa' };
     
-    if (collectionName === 'forums') {
-        const forum = selectedConversation as Forum;
+    if (selectedConversation.type === 'group') {
         return { 
             avatar: <Avatar><AvatarFallback><Hash /></AvatarFallback></Avatar>,
-            name: forum.name || 'Fórum' 
+            name: selectedConversation.name || 'Grupo' 
         };
     }
     
-    const chat = selectedConversation as Chat;
-    const otherUserId = chat.userIds.find(id => id !== currentUser.uid);
-    if (!otherUserId || !chat.users) return { avatar: null, name: 'Carregando...' };;
-    const otherUser = chat.users[otherUserId];
+    // Direct message
+    const otherUserId = selectedConversation.userIds.find(id => id !== currentUser.uid);
+    if (!otherUserId || !selectedConversation.users) return { avatar: null, name: 'Carregando...' };;
+    const otherUser = selectedConversation.users[otherUserId];
     return {
         avatar: <Avatar><AvatarImage src={otherUser.avatarUrl} /><AvatarFallback>{otherUser.name.charAt(0)}</AvatarFallback></Avatar>,
         name: otherUser.name
     };
-  }, [selectedConversation, currentUser, collectionName]);
+  }, [selectedConversation, currentUser]);
 
   const directMessageUsers = useMemo(() => allUsers?.filter(u => u.id !== currentUser?.uid) || [], [allUsers, currentUser]);
+
+  const renderList = () => {
+    if (isLoadingConversations) {
+        return <div className="p-4 text-sm text-muted-foreground">Carregando...</div>;
+    }
+
+    if (conversationType === 'group') {
+        return conversations?.map(conv => (
+            <button
+                key={conv.id}
+                className={cn(
+                    "flex w-full items-center gap-3 p-2 rounded-md text-left hover:bg-muted/50 transition-colors",
+                    selectedConversation?.id === conv.id && "bg-muted"
+                )}
+                onClick={() => handleSelectConversation(conv)}
+            >
+                <Avatar><AvatarFallback><Hash /></AvatarFallback></Avatar>
+                <div className='min-w-0 flex-1'>
+                    <p className="font-semibold truncate">{conv.name}</p>
+                    <p className="text-sm text-muted-foreground truncate">{conv.lastMessage?.text || 'Nenhuma mensagem recente'}</p>
+                </div>
+                <GroupMembers userIds={conv.userIds} />
+            </button>
+        ));
+    }
+
+    if (conversationType === 'direct') {
+        return directMessageUsers.map(user => {
+            const chatWithUser = conversations?.find(c => c.userIds.includes(user.id));
+            return (
+                <button
+                    key={user.id}
+                    className={cn(
+                        "flex w-full items-center gap-3 p-2 rounded-md text-left hover:bg-muted/50 transition-colors",
+                        selectedConversation?.id === chatWithUser?.id && "bg-muted"
+                    )}
+                    onClick={() => handleSelectConversation(user)}
+                >
+                    <Avatar>
+                        <AvatarImage src={user.avatarUrl} />
+                        <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+                    </Avatar>
+                    <div className='min-w-0'>
+                        <p className="font-semibold truncate">{user.name}</p>
+                        <p className="text-sm text-muted-foreground truncate">{chatWithUser?.lastMessage?.text || user.email}</p>
+                    </div>
+                </button>
+            );
+        });
+    }
+    return null;
+  };
 
   return (
     <div className="flex h-full">
       <div className="w-1/3 border-r">
         <div className="p-4 border-b">
-            <h2 className="text-xl font-semibold">{chatType === 'direct' ? 'Conversas' : 'Fóruns'}</h2>
+            <h2 className="text-xl font-semibold">{conversationType === 'direct' ? 'Conversas' : 'Fóruns'}</h2>
         </div>
         <ScrollArea className="h-[calc(100%-65px)]">
-            {isLoadingConversations ? (
-              <div className="p-4 text-sm text-muted-foreground">Carregando...</div>
-            ) : (
-                <div className="p-2">
-                    {chatType === 'forum' && conversations?.map(conv => (
-                      <button
-                          key={conv.id}
-                          className={cn(
-                              "flex w-full items-center gap-3 p-2 rounded-md text-left hover:bg-muted/50 transition-colors",
-                              selectedConversation?.id === conv.id && "bg-muted"
-                          )}
-                          onClick={() => handleSelectConversation(conv)}
-                      >
-                          <Avatar><AvatarFallback><Hash /></AvatarFallback></Avatar>
-                          <div className='min-w-0 flex-1'>
-                              <p className="font-semibold truncate">{(conv as Forum).name}</p>
-                              <p className="text-sm text-muted-foreground truncate">{conv.lastMessage?.text || 'Nenhuma mensagem recente'}</p>
-                          </div>
-                          <ForumMembers userIds={conv.userIds} />
-                      </button>
-                    ))}
-                    {chatType === 'direct' && directMessageUsers.map(user => {
-                        const chatWithUser = conversations?.find(c => c.userIds.includes(user.id));
-                        return (
-                            <button
-                                key={user.id}
-                                className={cn(
-                                    "flex w-full items-center gap-3 p-2 rounded-md text-left hover:bg-muted/50 transition-colors",
-                                    selectedConversation?.id === chatWithUser?.id && "bg-muted"
-                                )}
-                                onClick={() => handleSelectConversation(user)}
-                            >
-                                <Avatar>
-                                    <AvatarImage src={user.avatarUrl} />
-                                    <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
-                                </Avatar>
-                                <div className='min-w-0'>
-                                    <p className="font-semibold truncate">{user.name}</p>
-                                    <p className="text-sm text-muted-foreground truncate">{chatWithUser?.lastMessage?.text || user.email}</p>
-                                </div>
-                            </button>
-                        )
-                    })}
-                </div>
-            )}
+          <div className="p-2">
+            {renderList()}
+          </div>
         </ScrollArea>
       </div>
       <div className="w-2/3 flex flex-col">
@@ -249,7 +257,7 @@ export function ChatLayout({ chatType }: ChatLayoutProps) {
                              <div key={msg.id} className={cn("flex items-end gap-2", isCurrentUserSender ? "justify-end" : "justify-start")}>
                                  {!isCurrentUserSender && <Avatar className="h-8 w-8"><AvatarImage src={sender?.avatarUrl} /><AvatarFallback>{sender?.name?.charAt(0)}</AvatarFallback></Avatar>}
                                  <div className={cn("max-w-xs lg:max-w-md rounded-lg p-3 text-sm", isCurrentUserSender ? "bg-primary text-primary-foreground" : "bg-muted")}>
-                                    {!isCurrentUserSender && collectionName === 'forums' && <p className='text-xs font-bold mb-1 text-primary'>{sender?.name || 'Usuário'}</p>}
+                                    {!isCurrentUserSender && selectedConversation.type === 'group' && <p className='text-xs font-bold mb-1 text-primary'>{sender?.name || 'Usuário'}</p>}
                                     <p className='whitespace-pre-wrap'>{msg.text}</p>
                                     <p className={cn("text-xs mt-1 text-right", isCurrentUserSender ? "text-primary-foreground/70" : "text-muted-foreground/70")}>
                                         {msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'enviando...'}

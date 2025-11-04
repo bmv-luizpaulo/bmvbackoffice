@@ -1,3 +1,4 @@
+
 'use client';
 
 
@@ -52,8 +53,12 @@ export type Opportunity = {
   history: { stage: string; date: string }[];
 };
 
-export type Chat = {
+export type Conversation = {
   id: string;
+  type: 'direct' | 'group';
+  name?: string; // For group conversations
+  isGlobal?: boolean; // For global group conversations
+  teamId?: string; // For team-specific group conversations
   userIds: string[];
   lastMessage: {
     text: string;
@@ -62,25 +67,10 @@ export type Chat = {
   } | null;
   users: { [key: string]: Pick<User, 'name' | 'avatarUrl' | 'email'> };
 }
-
-export type Forum = {
-  id: string;
-  name: string;
-  isGlobal?: boolean;
-  teamId?: string;
-  userIds: string[];
-  lastMessage: {
-    text: string;
-    timestamp: string;
-    senderId: string;
-  } | null;
-  users: { [key: string]: Pick<User, 'name' | 'avatarUrl' | 'email'> };
-}
-
 
 export type Message = {
   id: string;
-  chatId: string;
+  conversationId: string;
   senderId: string;
   text: string;
   timestamp: string;

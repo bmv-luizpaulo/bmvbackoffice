@@ -1,3 +1,4 @@
+
 'use client';
 import { ChatLayout } from "@/components/chat/chat-layout";
 
@@ -10,7 +11,7 @@ export default function ChatPage() {
         <p className="text-muted-foreground">Colabore com sua equipe em conversas um-a-um.</p>
       </header>
       <div className="flex-1 overflow-hidden rounded-lg border bg-card">
-        <ChatLayout chatType="direct" />
+        <ChatLayout conversationType="direct" />
       </div>
     </div>
   );

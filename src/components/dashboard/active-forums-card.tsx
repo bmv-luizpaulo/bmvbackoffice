@@ -1,7 +1,8 @@
+
 'use client';
 import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { collection, query, where, orderBy, limit } from "firebase/firestore";
-import type { Chat } from "@/lib/types";
+import type { Conversation } from "@/lib/types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Hash, MessageSquare } from "lucide-react";
 import { Skeleton } from "../ui/skeleton";
@@ -13,15 +14,15 @@ function ActiveForumsCard() {
     const forumsQuery = useMemoFirebase(() => 
         firestore 
         ? query(
-            collection(firestore, 'chats'), 
-            where('type', '==', 'forum'),
+            collection(firestore, 'conversations'), 
+            where('type', '==', 'group'),
             orderBy('lastMessage.timestamp', 'desc'),
             limit(5)
           ) 
         : null, 
     [firestore]);
 
-    const { data: forums, isLoading } = useCollection<Chat>(forumsQuery);
+    const { data: forums, isLoading } = useCollection<Conversation>(forumsQuery);
 
     return (
         <Card className="h-full">
@@ -47,7 +48,7 @@ function ActiveForumsCard() {
                         <p className="text-sm text-muted-foreground text-center py-4">Nenhum fórum ativo encontrado.</p>
                     )}
                     {forums?.map(forum => (
-                        <Link href="/chat" key={forum.id}>
+                        <Link href="/forum" key={forum.id}>
                             <div className="flex items-center gap-3 p-2 rounded-md hover:bg-muted/50 transition-colors cursor-pointer">
                                 <div className="p-2 bg-muted rounded-md">
                                     <Hash className="h-5 w-5 text-muted-foreground" />
@@ -61,7 +62,7 @@ function ActiveForumsCard() {
                     ))}
                     {!isLoading && forums && forums.length > 0 && (
                          <Button variant="outline" className="w-full" asChild>
-                            <Link href="/chat">Ver todos os fóruns</Link>
+                            <Link href="/forum">Ver todos os fóruns</Link>
                         </Button>
                     )}
                 </div>
