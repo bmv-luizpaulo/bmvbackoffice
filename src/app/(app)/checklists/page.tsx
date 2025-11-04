@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, ListChecks, Trash2, Edit } from "lucide-react";
+import { Plus, ListChecks, Trash2, Edit, Eye } from "lucide-react";
 import { useCollection, useFirestore, useMemoFirebase, useUser, useDoc } from '@/firebase';
 import { collection, doc, orderBy, query } from 'firebase/firestore';
 import type { Checklist, ChecklistItem, Team, User as UserType, Role } from '@/lib/types';
@@ -15,6 +15,7 @@ import { Input } from '@/components/ui/input';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 export const dynamic = 'force-dynamic';
 
@@ -35,6 +36,7 @@ export default function ChecklistsPage() {
   const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [checklistToEdit, setChecklistToEdit] = React.useState<Checklist | null>(null);
   const [newItemText, setNewItemText] = React.useState('');
+  const [isEditMode, setIsEditMode] = React.useState(true);
 
   const checklistsQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'checklists'), orderBy('name')) : null, [firestore]);
   const { data: checklists, isLoading: isLoadingChecklists } = useCollection<Checklist>(checklistsQuery);
@@ -107,6 +109,14 @@ export default function ChecklistsPage() {
   };
 
   const isManager = role?.isManager || role?.isDev;
+  const canEdit = isManager && isEditMode;
+
+  React.useEffect(() => {
+    if (!isManager) {
+        setIsEditMode(false);
+    }
+  }, [isManager]);
+
 
   return (
     <div className="space-y-6">
@@ -120,11 +130,27 @@ export default function ChecklistsPage() {
             {isManager ? 'Crie e gerencie checklists padronizados.' : 'Execute os checklists para seus processos.'}
           </p>
         </div>
-        {isManager && (
-            <Button onClick={() => { setChecklistToEdit(null); setIsFormOpen(true); }}>
-                <Plus className="mr-2 h-4 w-4" /> Criar Checklist
-            </Button>
-        )}
+        <div className="flex items-center gap-2">
+            {isManager && (
+                <TooltipProvider>
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                             <Button variant="outline" size="icon" onClick={() => setIsEditMode(!isEditMode)}>
+                                <Eye className="h-4 w-4" />
+                            </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                            <p>Alternar para modo de {isEditMode ? 'visualização' : 'edição'}</p>
+                        </TooltipContent>
+                    </Tooltip>
+                </TooltipProvider>
+            )}
+            {canEdit && (
+                <Button onClick={() => { setChecklistToEdit(null); setIsFormOpen(true); }}>
+                    <Plus className="mr-2 h-4 w-4" /> Criar Checklist
+                </Button>
+            )}
+        </div>
       </header>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -166,7 +192,7 @@ export default function ChecklistsPage() {
                             {selectedChecklist.description || `Checklist para a equipe ${teamsMap.get(selectedChecklist.teamId) || 'desconhecida'}`}
                         </CardDescription>
                     </div>
-                    {isManager && (
+                    {canEdit && (
                         <div className='flex items-center'>
                             <Button variant="ghost" size="icon" onClick={() => { setChecklistToEdit(selectedChecklist); setIsFormOpen(true); }}>
                                 <Edit className="h-4 w-4" />
@@ -211,7 +237,7 @@ export default function ChecklistsPage() {
                           <div key={item.id} className="flex items-center gap-3 bg-muted/50 p-3 rounded-md">
                             <Checkbox id={`item-${item.id}`} checked={item.isCompleted} onCheckedChange={() => handleToggleItem(item)} />
                             <label htmlFor={`item-${item.id}`} className={cn("flex-1 text-sm cursor-pointer", item.isCompleted && "line-through text-muted-foreground")}>{item.description}</label>
-                            {isManager && (
+                            {canEdit && (
                                 <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive/70 hover:text-destructive/100" onClick={() => handleDeleteItem(item.id)}>
                                 <Trash2 className="h-4 w-4" />
                                 </Button>
@@ -223,7 +249,7 @@ export default function ChecklistsPage() {
                       )}
                     </div>
                   </div>
-                   {isManager && (
+                   {canEdit && (
                         <form
                             onSubmit={(e) => {
                                 e.preventDefault();
