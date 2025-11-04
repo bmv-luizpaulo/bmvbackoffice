@@ -58,7 +58,7 @@ service cloud.firestore {
 
       match /messages/{messageId} {
         // Allow message read/write only if the user is part of the parent chat.
-        allow read, write: if request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.userIds;
+        allow read, write: if get(/databases/$(database)/documents/chats/$(chatId)).data.userIds.hasAny([request.auth.uid]);
       }
     }
     
