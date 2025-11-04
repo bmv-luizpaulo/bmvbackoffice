@@ -50,13 +50,13 @@ service cloud.firestore {
     }
 
     match /chats/{chatId} {
-      // Allow read/get if user is a dev or part of the chat.
+      // Allow a user to get a chat document if they are a participant.
       allow get: if isDev() || request.auth.uid in resource.data.userIds;
-      // Allow authenticated users to query the list. Client-side query constraints will secure the data.
+      // Allow any authenticated user to list chats. Security is enforced by client-side queries.
       allow list: if isDev() || request.auth != null;
-      // Allow creation if the user is a dev or is creating a chat for themselves.
+      // Allow users to create chats as long as they include themselves.
       allow create: if isDev() || request.auth.uid in request.resource.data.userIds;
-      // Allow updates (like lastMessage) if user is a dev or part of the chat.
+      // Allow updates (like lastMessage) if user is part of the chat.
       allow update: if isDev() || request.auth.uid in resource.data.userIds;
       
       match /messages/{messageId} {
