@@ -6,22 +6,23 @@ import { useToast } from '@/hooks/use-toast';
 import { KanbanColumn } from './kanban-column';
 import type { Task, Stage, Project, User, Role, Team } from '@/lib/types';
 import { Button } from '../ui/button';
-import { Plus, FolderPlus, ChevronsUpDown, Files } from 'lucide-react';
+import { Plus, FolderPlus, ChevronsUpDown, Files, FolderKanban } from 'lucide-react';
 import dynamic from 'next/dynamic';
+import { useCollection, useDoc, useFirestore, useUser as useAuthUser, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
+import { collection, doc, writeBatch, query, where, serverTimestamp } from 'firebase/firestore';
+import { useNotifications } from '../notifications/notifications-provider';
+import React from 'react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
+import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
+import { cn } from '@/lib/utils';
+import { Skeleton } from '../ui/skeleton';
+
 const LoadingFallback = () => (
   <div className="p-4 text-sm text-muted-foreground">Carregando...</div>
 );
 const AddTaskDialog = dynamic(() => import('./add-task-dialog').then(m => m.AddTaskDialog), { ssr: false, loading: () => <LoadingFallback /> });
 const AddProjectDialog = dynamic(() => import('./add-project-dialog').then(m => m.AddProjectDialog), { ssr: false, loading: () => <LoadingFallback /> });
 const ProjectFilesDialog = dynamic(() => import('./project-files-dialog').then(m => m.ProjectFilesDialog), { ssr: false, loading: () => <LoadingFallback /> });
-import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '../ui/command';
-import { useCollection, useDoc, useFirestore, useUser as useAuthUser, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
-import { collection, doc, writeBatch, query, where, serverTimestamp } from 'firebase/firestore';
-import { useNotifications } from '../notifications/notifications-provider';
-import React from 'react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
-
 const AiFollowUpSuggestions = dynamic(() => import('./ai-follow-up-suggestions').then(m => m.AiFollowUpSuggestions), { ssr: false });
 
 export function KanbanBoard({ openNewProjectDialog }: { openNewProjectDialog?: boolean }) {
@@ -49,7 +50,7 @@ export function KanbanBoard({ openNewProjectDialog }: { openNewProjectDialog?: b
     return { projectsInExecution: inExecution, projectsArchived: archived };
   }, [projectsData]);
 
-  const projects = activeTab === 'execucao' ? projectsInExecution : projectsArchived;
+  const currentProjectList = activeTab === 'execucao' ? projectsInExecution : projectsArchived;
 
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
 
@@ -85,8 +86,7 @@ export function KanbanBoard({ openNewProjectDialog }: { openNewProjectDialog?: b
   const [projectToEdit, setProjectToEdit] = useState<Project | null>(null);
   const [isAddProjectDialogOpen, setIsAddProjectDialogOpen] = useState(false);
   const [isProjectFilesDialogOpen, setIsProjectFilesDialogOpen] = useState(false);
-  const [isProjectSelectorOpen, setIsProjectSelectorOpen] = useState(false);
-
+  
   const { toast } = useToast();
 
   useEffect(() => {
@@ -97,7 +97,6 @@ export function KanbanBoard({ openNewProjectDialog }: { openNewProjectDialog?: b
   }, [openNewProjectDialog]);
 
   useEffect(() => {
-    const currentProjectList = activeTab === 'execucao' ? projectsInExecution : projectsArchived;
     if (selectedProject) {
         // If selected project is no longer in the current list, update selection
         if (!currentProjectList.find(p => p.id === selectedProject.id)) {
@@ -109,13 +108,8 @@ export function KanbanBoard({ openNewProjectDialog }: { openNewProjectDialog?: b
     } else {
         setSelectedProject(null);
     }
-  }, [activeTab, projectsInExecution, projectsArchived, selectedProject]);
+  }, [currentProjectList, selectedProject]);
 
-
-  const handleSelectProject = useCallback((project: Project) => {
-    setSelectedProject(project);
-    setIsProjectSelectorOpen(false);
-  }, []);
 
   const handleAddProject = async (newProjectData: Omit<Project, 'id'>) => {
     if (!firestore) return;
@@ -169,7 +163,7 @@ export function KanbanBoard({ openNewProjectDialog }: { openNewProjectDialog?: b
             description: `O projeto "${newProjectData.name}" foi criado com sucesso e tarefas iniciais foram geradas.`
         });
         const newlyCreatedProject = { id: newDocRef.id, ...newProjectData };
-        handleSelectProject(newlyCreatedProject as Project);
+        setSelectedProject(newlyCreatedProject as Project);
     }
   }
 
@@ -365,97 +359,115 @@ export function KanbanBoard({ openNewProjectDialog }: { openNewProjectDialog?: b
   }
 
   return (
-    <>
-        <DndContext onDragEnd={handleDragEnd} sensors={sensors}>
-            <div className='mb-4 flex flex-wrap justify-between items-center gap-4'>
-                <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="w-full sm:w-auto">
-                  <TabsList>
-                    <TabsTrigger value="execucao">Em Execução</TabsTrigger>
-                    <TabsTrigger value="arquivado">Arquivados</TabsTrigger>
-                  </TabsList>
-                </Tabs>
-
-                <div className='flex items-center gap-2'>
-                  {projects.length > 0 && (
-                    <Popover open={isProjectSelectorOpen} onOpenChange={setIsProjectSelectorOpen}>
-                        <PopoverTrigger asChild>
-                            <Button variant="outline" role="combobox" aria-expanded={isProjectSelectorOpen} className="w-full sm:w-[250px] justify-between font-semibold">
-                                {selectedProject?.name || "Selecione um Projeto"}
-                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                            </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                            <Command>
-                                <CommandInput placeholder="Procurar projeto..." />
-                                <CommandList>
-                                    <CommandEmpty>Nenhum projeto encontrado.</CommandEmpty>
-                                    <CommandGroup>
-                                        {projects.map((project) => (
-                                            <CommandItem key={project.id} onSelect={() => handleSelectProject(project)}>
-                                                {project.name}
-                                            </CommandItem>
-                                        ))}
-                                    </CommandGroup>
-                                </CommandList>
-                            </Command>
-                        </PopoverContent>
-                    </Popover>
+    <div className="grid grid-cols-1 md:grid-cols-4 gap-6 h-full">
+      <Card className="md:col-span-1 flex flex-col">
+        <CardHeader>
+          <CardTitle>Projetos</CardTitle>
+           <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="w-full">
+              <TabsList className='grid w-full grid-cols-2'>
+                <TabsTrigger value="execucao">Em Execução</TabsTrigger>
+                <TabsTrigger value="arquivado">Arquivados</TabsTrigger>
+              </TabsList>
+            </Tabs>
+        </CardHeader>
+        <CardContent className="p-2 flex-1 overflow-y-auto">
+          <div className="space-y-1">
+            {isLoadingProjects ? (
+              Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-10 w-full" />)
+            ) : currentProjectList.length > 0 ? (
+              currentProjectList.map(project => (
+                <button
+                  key={project.id}
+                  onClick={() => setSelectedProject(project)}
+                  className={cn(
+                    "w-full text-left p-2 rounded-md hover:bg-muted/50 transition-colors flex items-center gap-2",
+                    selectedProject?.id === project.id && "bg-secondary"
                   )}
-                    <Button onClick={() => { setProjectToEdit(null); setIsAddProjectDialogOpen(true); }} variant="outline">
-                        <FolderPlus size={16} />
-                    </Button>
-                    <Button onClick={() => setIsProjectFilesDialogOpen(true)} variant="outline" disabled={!selectedProject}>
-                        <Files size={16} />
-                    </Button>
-                    <Button onClick={handleAddTaskClick} disabled={!selectedProject}>
-                        <Plus size={16} />
-                    </Button>
-                    <Button onClick={handleEditProjectClick} disabled={!selectedProject} variant="outline">
-                        Editar Projeto
-                    </Button>
-                </div>
+                >
+                  <FolderKanban className='h-4 w-4 shrink-0'/>
+                  <span className='font-medium truncate'>{project.name}</span>
+                </button>
+              ))
+            ) : (
+              <p className="text-sm text-muted-foreground text-center p-4">
+                Nenhum projeto {activeTab === 'arquivado' ? 'arquivado' : 'encontrado'}.
+              </p>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+      
+      <div className="md:col-span-3 flex flex-col h-full">
+        {selectedProject ? (
+          <DndContext onDragEnd={handleDragEnd} sensors={sensors}>
+            <div className='mb-4 flex flex-wrap justify-between items-center gap-4'>
+              <h2 className='text-xl font-bold'>{selectedProject.name}</h2>
+              <div className='flex items-center gap-2'>
+                <Button onClick={() => setIsProjectFilesDialogOpen(true)} variant="outline" size="sm">
+                  <Files size={16} className='mr-2' /> Arquivos
+                </Button>
+                <Button onClick={handleEditProjectClick} variant="outline" size="sm">
+                  Editar Projeto
+                </Button>
+                 <Button onClick={handleAddTaskClick} size="sm">
+                  <Plus size={16} className='mr-2' /> Nova Tarefa
+                </Button>
+              </div>
             </div>
             {selectedProject && <AiFollowUpSuggestions project={selectedProject} />}
 
-            <div className="flex h-full min-w-max gap-4 pb-4 overflow-x-auto">
-                {isLoadingStages || isLoadingTasks ? (
-                  <div className="flex justify-center items-center w-full">Carregando tarefas...</div>
-                ) : (
-                  sortedStages.map(stage => (
-                    <KanbanColumn
-                        key={stage.id}
-                        stage={stage}
-                        tasks={stageTasksMap.get(stage.id) || []}
-                        onUpdateTask={handleUpdateTaskStatus}
-                        onDeleteTask={handleDeleteTask}
-                        onEditTask={handleEditTask}
-                        onAddDependentTask={handleAddDependentTask}
-                    />
-                  ))
-                )}
+            <div className="flex flex-1 min-w-max gap-4 pb-4 overflow-x-auto">
+              {isLoadingStages || isLoadingTasks ? (
+                <div className="flex justify-center items-center w-full">Carregando tarefas...</div>
+              ) : (
+                sortedStages.map(stage => (
+                  <KanbanColumn
+                    key={stage.id}
+                    stage={stage}
+                    tasks={stageTasksMap.get(stage.id) || []}
+                    onUpdateTask={handleUpdateTaskStatus}
+                    onDeleteTask={handleDeleteTask}
+                    onEditTask={handleEditTask}
+                    onAddDependentTask={handleAddDependentTask}
+                  />
+                ))
+              )}
             </div>
-        </DndContext>
-        <AddTaskDialog 
-            isOpen={isTaskDialogOpen}
-            onOpenChange={setIsTaskDialogOpen}
-            stages={sortedStages}
-            tasks={tasksData || []}
-            onSaveTask={handleSaveTask}
-            projectId={selectedProject?.id || ''}
-            taskToEdit={taskToEdit}
-            dependencyId={dependencyForNewTask}
-        />
-        <AddProjectDialog
-            isOpen={isAddProjectDialogOpen}
-            onOpenChange={setIsAddProjectDialogOpen}
-            onAddProject={handleAddProject}
-            projectToEdit={projectToEdit}
-        />
-        <ProjectFilesDialog
-            isOpen={isProjectFilesDialogOpen}
-            onOpenChange={setIsProjectFilesDialogOpen}
-            project={selectedProject}
-        />
-    </>
+          </DndContext>
+        ) : (
+          <div className='flex flex-1 items-center justify-center bg-muted/30 rounded-lg border-2 border-dashed'>
+            <div className='text-center'>
+              <p className='text-lg font-semibold'>Selecione um projeto</p>
+              <p className='text-muted-foreground'>Escolha um projeto na lista ao lado para ver as tarefas.</p>
+              <Button onClick={() => { setProjectToEdit(null); setIsAddProjectDialogOpen(true); }} className="mt-4">
+                <FolderPlus className='mr-2' /> Criar Novo Projeto
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <AddTaskDialog 
+          isOpen={isTaskDialogOpen}
+          onOpenChange={setIsTaskDialogOpen}
+          stages={sortedStages}
+          tasks={tasksData || []}
+          onSaveTask={handleSaveTask}
+          projectId={selectedProject?.id || ''}
+          taskToEdit={taskToEdit}
+          dependencyId={dependencyForNewTask}
+      />
+      <AddProjectDialog
+          isOpen={isAddProjectDialogOpen}
+          onOpenChange={setIsAddProjectDialogOpen}
+          onAddProject={handleAddProject}
+          projectToEdit={projectToEdit}
+      />
+      <ProjectFilesDialog
+          isOpen={isProjectFilesDialogOpen}
+          onOpenChange={setIsProjectFilesDialogOpen}
+          project={selectedProject}
+      />
+    </div>
   );
 }
