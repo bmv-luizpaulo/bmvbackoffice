@@ -6,7 +6,7 @@ import { useFirestore, useDoc, useCollection, useMemoFirebase, useUser } from '@
 import { doc, collection, query, orderBy } from 'firebase/firestore';
 import type { Checklist, ChecklistItem, Team, User as UserType } from '@/lib/types';
 import { Button } from '@/components/ui/button';
-import { Loader2, Printer, Check, X, MessageSquare, CheckSquare, Heading2 } from 'lucide-react';
+import { Loader2, Printer, Check, X, MessageSquare, CheckSquare, Heading2, ShieldAlert } from 'lucide-react';
 import Image from 'next/image';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
@@ -140,6 +140,10 @@ export default function ChecklistReportPage() {
         <footer className="mt-24 border-t pt-6 text-center">
             <p className="text-sm">Relatório gerado por: <strong>{userProfile?.name || authUser?.email || 'Usuário desconhecido'}</strong></p>
             <p className="text-xs text-gray-500">Em: {generationDate.toLocaleString('pt-BR', { dateStyle: 'long', timeStyle: 'short' })}</p>
+            <div className='mt-8 flex items-center justify-center gap-2 text-xs text-gray-400'>
+              <ShieldAlert className='h-3 w-3' />
+              <p>Este é um documento de uso interno e confidencial da BMV Global.</p>
+            </div>
         </footer>
 
       </div>
