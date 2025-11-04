@@ -16,7 +16,7 @@ service cloud.firestore {
              exists(/databases/$(database)/documents/roles/$(get(/databases/$(database)/documents/users/$(request.auth.uid)).data.roleId)) &&
              get(/databases/$(database)/documents/roles/$(get(/databases/$(database)/documents/users/$(request.auth.uid)).data.roleId)).data.isManager == true;
     }
-
+    
     function isProjectMember(projectId) {
       let project = get(/databases/$(database)/documents/projects/$(projectId)).data;
       return request.auth.uid == project.ownerId || request.auth.uid in project.teamMembers;
@@ -64,7 +64,7 @@ service cloud.firestore {
     }
 
     match /contacts/{contactId} {
-      allow read, write: if isDev() || request.auth != null;
+      allow list, get, create, update, delete: if isDev() || request.auth != null;
     }
     
     match /contracts/{contractId} {
