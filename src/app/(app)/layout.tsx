@@ -32,6 +32,8 @@ import {
   FolderPlus,
   History,
   FolderKanban,
+  LifeBuoy,
+  Hammer,
 } from 'lucide-react';
 import Image from 'next/image';
 import React, { useEffect } from 'react';
@@ -66,7 +68,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { useUser, useAuth, FirebaseClientProvider } from '@/firebase';
+import { useUser, useAuth, FirebaseClientProvider, useDoc, useMemoFirebase } from '@/firebase';
 import { signOut } from 'firebase/auth';
 import {
   NotificationsProvider,
@@ -75,6 +77,9 @@ import { NotificationBell } from '@/components/notifications/notification-bell';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { cn } from '@/lib/utils';
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener';
+import { doc } from 'firebase/firestore';
+import type { User as UserType, Role } from '@/lib/types';
+import { useFirestore } from '@/firebase';
 
 const navSections = [
     {
@@ -149,6 +154,13 @@ const navSections = [
               ]
             },
         ]
+    },
+    {
+      name: 'Suporte & Ferramentas',
+      items: [
+        { href: '/suporte', icon: LifeBuoy, label: 'Suporte' },
+        { href: '/dev-tools', icon: Hammer, label: 'Ferramentas de Dev', devOnly: true },
+      ]
     }
 ]
 
@@ -173,9 +185,13 @@ function UserAvatar() {
     );
 }
 
-function NavItem({ item, pathname }: { item: (typeof navSections)[0]['items'][0] & { subItems?: any[] }, pathname: string }) {
+function NavItem({ item, pathname, isDev }: { item: (typeof navSections)[0]['items'][0] & { subItems?: any[], devOnly?: boolean }, pathname: string, isDev: boolean }) {
   const { state } = useSidebar();
   const hasSubItems = item.subItems && item.subItems.length > 0;
+  
+  if (item.devOnly && !isDev) {
+    return null;
+  }
   
   const isParentActive = hasSubItems
     ? item.subItems.some(sub => pathname.startsWith(sub.href.split('?')[0]))
@@ -247,8 +263,14 @@ function NavItem({ item, pathname }: { item: (typeof navSections)[0]['items'][0]
 function InnerLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const auth = useAuth();
+  const firestore = useFirestore();
   const { user, isUserLoading } = useUser();
   const router = useRouter();
+
+  const userProfileQuery = useMemoFirebase(() => firestore && user?.uid ? doc(firestore, 'users', user.uid) : null, [firestore, user?.uid]);
+  const { data: userProfile } = useDoc<UserType>(userProfileQuery);
+  const roleQuery = useMemoFirebase(() => firestore && userProfile?.roleId ? doc(firestore, 'roles', userProfile.roleId) : null, [firestore, userProfile?.roleId]);
+  const { data: role } = useDoc<Role>(roleQuery);
 
   useEffect(() => {
     if (!isUserLoading && !user) {
@@ -294,6 +316,8 @@ function InnerLayout({ children }: { children: React.ReactNode }) {
         </div>
         );
   }
+  
+  const isDev = role?.isDev || false;
 
   return (
       <SidebarProvider>
@@ -310,7 +334,7 @@ function InnerLayout({ children }: { children: React.ReactNode }) {
                         {section.name !== 'Geral' && <SidebarSeparator />}
                         <SidebarGroupLabel>{section.name}</SidebarGroupLabel>
                         {section.items.map((item) => (
-                           <NavItem key={item.label} item={item as any} pathname={pathname} />
+                           <NavItem key={item.label} item={item as any} pathname={pathname} isDev={isDev} />
                         ))}
                     </SidebarGroup>
                 ))}
