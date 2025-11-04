@@ -51,7 +51,7 @@ service cloud.firestore {
 
     match /chats/{chatId} {
       // Allow read (get, list) if the user's ID is in the userIds array.
-      // This rule correctly validates 'array-contains' queries.
+      // This is the standard and correct way to secure collection queries with 'array-contains'.
       allow read: if request.auth.uid in resource.data.userIds;
       
       // Allow creation if the user is including themselves in the chat.
