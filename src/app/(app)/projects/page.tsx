@@ -1,11 +1,6 @@
 import { Suspense } from "react";
-import dynamic from 'next/dynamic';
 import { KanbanBoardSkeleton } from "@/components/projects/kanban-board-skeleton";
-
-const KanbanBoard = dynamic(() => import('@/components/projects/kanban-board').then(m => m.KanbanBoard), {
-  ssr: false,
-  loading: () => <KanbanBoardSkeleton />,
-});
+import ClientKanbanBoard from "@/components/projects/client-kanban-board";
 
 export default function ProjectsPage({
   searchParams,
@@ -23,7 +18,7 @@ export default function ProjectsPage({
       </header>
       <div className="flex-1 overflow-x-auto">
         <Suspense fallback={<KanbanBoardSkeleton />}>
-          <KanbanBoard openNewProjectDialog={newProject} />
+          <ClientKanbanBoard openNewProjectDialog={newProject} />
         </Suspense>
       </div>
     </div>
