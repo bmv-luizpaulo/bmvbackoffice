@@ -121,15 +121,23 @@ export function AddTaskDialog({ isOpen, onOpenChange, onSaveTask, stages, tasks,
 
 
   function onSubmit(values: z.infer<typeof formSchema>) {
-    onSaveTask({ 
+    const taskData: Omit<Task, 'id' | 'isCompleted'> = {
         ...values,
         projectId,
         createdAt: taskToEdit?.createdAt || serverTimestamp(),
         description: values.description || '',
         dependentTaskIds: values.dependentTaskIds || [],
         dueDate: values.dueDate?.toISOString(),
-        recurrenceEndDate: values.recurrenceEndDate?.toISOString(),
-    }, taskToEdit?.id);
+        recurrenceFrequency: values.isRecurring ? values.recurrenceFrequency : undefined,
+        recurrenceEndDate: values.isRecurring ? values.recurrenceEndDate?.toISOString() : undefined,
+    };
+
+    if (!taskData.isRecurring) {
+      delete taskData.recurrenceFrequency;
+      delete taskData.recurrenceEndDate;
+    }
+    
+    onSaveTask(taskData, taskToEdit?.id);
     onOpenChange(false);
   }
   
