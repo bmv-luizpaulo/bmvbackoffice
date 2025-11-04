@@ -133,5 +133,10 @@ service cloud.firestore {
     match /developerTools/{toolId} {
       allow read, write: if isDev();
     }
+
+    match /errorLogs/{errorId} {
+        allow create: if request.auth != null;
+        allow read, write: if isDev() || isManager();
+    }
   }
 }

@@ -81,6 +81,7 @@ import { FirebaseErrorListener } from '@/components/FirebaseErrorListener';
 import { doc } from 'firebase/firestore';
 import type { User as UserType, Role } from '@/lib/types';
 import { useFirestore } from '@/firebase';
+import GlobalErrorBoundary from '@/components/global-error-boundary';
 
 const navSections = [
     {
@@ -399,7 +400,9 @@ function InnerLayout({ children }: { children: React.ReactNode }) {
           </header>
           <main className="flex-1 p-4 md:p-6">
             <FirebaseErrorListener />
-            {children}
+            <GlobalErrorBoundary>
+              {children}
+            </GlobalErrorBoundary>
           </main>
         </SidebarInset>
       </SidebarProvider>

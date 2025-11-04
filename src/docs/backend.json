@@ -782,6 +782,23 @@
         "requiresDevRole": { "type": "boolean" }
       },
       "required": ["name", "componentName"]
+    },
+    "ErrorLog": {
+        "title": "ErrorLog",
+        "type": "object",
+        "description": "Represents a client-side error log.",
+        "properties": {
+            "userId": { "type": "string", "description": "The ID of the user who experienced the error." },
+            "errorCode": { "type": "string", "description": "A user-friendly code to reference this error." },
+            "errorMessage": { "type": "string", "description": "The error message." },
+            "errorStack": { "type": "string", "description": "The full error stack trace." },
+            "componentStack": { "type": "string", "description": "The React component stack trace." },
+            "pageUrl": { "type": "string", "description": "The URL of the page where the error occurred." },
+            "userAgent": { "type": "string", "description": "The user's browser/OS information." },
+            "timestamp": { "type": "string", "format": "date-time", "description": "When the error occurred." },
+            "isResolved": { "type": "boolean", "description": "Flag for support to mark the error as resolved." }
+        },
+        "required": ["userId", "errorCode", "errorMessage", "timestamp"]
     }
   },
   "auth": {
@@ -890,6 +907,10 @@
     "/developerTools/{toolId}": {
       "schema": { "$ref": "#/entities/DeveloperTool" },
       "description": "Stores metadata for developer tools."
+    },
+    "/errorLogs/{errorId}": {
+        "schema": { "$ref": "#/entities/ErrorLog" },
+        "description": "Stores logs of client-side errors."
     }
   }
 }
