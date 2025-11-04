@@ -27,24 +27,42 @@ export default function ContatosPage() {
           Gerencie seus clientes, fornecedores e parceiros em um só lugar.
         </p>
       </header>
-      <Tabs value={tab} onValueChange={(v) => startTransition(() => setTab(v as any))}>
+      <Tabs defaultValue="clientes" onValueChange={(v) => startTransition(() => setTab(v as any))}>
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="clientes">Clientes</TabsTrigger>
           <TabsTrigger value="fornecedores">Fornecedores</TabsTrigger>
           <TabsTrigger value="parceiros">Parceiros</TabsTrigger>
         </TabsList>
-        <TabsContent value={tab}>
+        <TabsContent value="clientes">
           <Card>
             <CardHeader>
-              <CardTitle>{header.title}</CardTitle>
-              <CardDescription>{header.desc}</CardDescription>
+              <CardTitle>Clientes</CardTitle>
+              <CardDescription>Adicione, edite e visualize os clientes da sua empresa.</CardDescription>
             </CardHeader>
             <CardContent>
-              {isPending ? (
-                <div className="py-10 text-center text-muted-foreground">Carregando...</div>
-              ) : (
-                <ContactDataTable key={tab} type={tab === 'clientes' ? 'cliente' : tab === 'fornecedores' ? 'fornecedor' : 'parceiro'} />
-              )}
+                <ContactDataTable key="clientes" type="cliente" />
+            </CardContent>
+          </Card>
+        </TabsContent>
+        <TabsContent value="fornecedores">
+          <Card>
+            <CardHeader>
+              <CardTitle>Fornecedores</CardTitle>
+              <CardDescription>Gerencie as informações dos seus fornecedores.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ContactDataTable key="fornecedores" type="fornecedor" />
+            </CardContent>
+          </Card>
+        </TabsContent>
+        <TabsContent value="parceiros">
+          <Card>
+            <CardHeader>
+              <CardTitle>Parceiros</CardTitle>
+              <CardDescription>Gerencie as informações dos seus parceiros.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ContactDataTable key="parceiros" type="parceiro" />
             </CardContent>
           </Card>
         </TabsContent>

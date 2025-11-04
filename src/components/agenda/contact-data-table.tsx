@@ -34,8 +34,8 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import type { Contact } from "@/lib/types";
-import { useFirestore, useCollection } from "@/firebase";
-import { collection, doc, query, where, orderBy, limit as fbLimit } from "firebase/firestore";
+import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
+import { collection, doc, query, where } from "firebase/firestore";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -56,19 +56,15 @@ interface ContactDataTableProps {
 
 export function ContactDataTable({ type }: ContactDataTableProps) {
   const firestore = useFirestore();
-  const [pageSize, setPageSize] = React.useState<number>(50);
-  const contactsQuery = React.useMemo(
+  const contactsQuery = useMemoFirebase(
     () =>
       firestore
         ? query(
             collection(firestore, 'contacts'),
-            where('type', '==', type),
-            orderBy('tradeName'),
-            orderBy('fullName'),
-            fbLimit(pageSize)
+            where('type', '==', type)
           )
         : null,
-    [firestore, type, pageSize]
+    [firestore, type]
   );
   const { data: contactsData, isLoading } = useCollection<Contact>(contactsQuery);
   const data = React.useMemo(() => contactsData ?? [], [contactsData]);
@@ -267,19 +263,7 @@ export function ContactDataTable({ type }: ContactDataTableProps) {
           </TableBody>
         </Table>
       </div>
-      <div className="flex flex-wrap items-center justify-between gap-2 py-4">
-        <div className="text-sm text-muted-foreground">
-          {contactsData ? `${Math.min(contactsData.length, pageSize)} de ${pageSize}${contactsData.length < pageSize ? '' : '+'}` : ''}
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setPageSize((s) => Math.min(s + 50, 1000))}
-            disabled={isLoading}
-          >
-            Carregar mais
-          </Button>
+      <div className="flex items-center justify-end space-x-2 py-4">
         <Button
           variant="outline"
           size="sm"
@@ -296,7 +280,6 @@ export function ContactDataTable({ type }: ContactDataTableProps) {
         >
           Próximo
         </Button>
-        </div>
       </div>
 
       {isFormOpen && (
