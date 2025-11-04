@@ -2,9 +2,9 @@
 
 import * as React from 'react';
 import { useParams } from 'next/navigation';
-import { useFirestore, useDoc, useCollection, useMemoFirebase } from '@/firebase';
+import { useFirestore, useDoc, useCollection, useMemoFirebase, useUser } from '@/firebase';
 import { doc, collection, query, orderBy } from 'firebase/firestore';
-import type { Checklist, ChecklistItem, Team, User } from '@/lib/types';
+import type { Checklist, ChecklistItem, Team, User as UserType } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Loader2, Printer, Check, X, MessageSquare, CheckSquare, Heading2 } from 'lucide-react';
 import Image from 'next/image';
@@ -14,6 +14,7 @@ import { cn } from '@/lib/utils';
 export default function ChecklistReportPage() {
   const params = useParams();
   const firestore = useFirestore();
+  const { user: authUser } = useUser();
   const checklistId = params.checklistId as string;
 
   const checklistRef = useMemoFirebase(() => (firestore && checklistId ? doc(firestore, 'checklists', checklistId) : null), [firestore, checklistId]);
@@ -25,8 +26,14 @@ export default function ChecklistReportPage() {
   const teamId = checklist?.teamId;
   const teamRef = useMemoFirebase(() => (firestore && teamId ? doc(firestore, 'teams', teamId) : null), [firestore, teamId]);
   const { data: team, isLoading: isLoadingTeam } = useDoc<Team>(teamRef);
+  
+  const userProfileRef = useMemoFirebase(() => firestore && authUser?.uid ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser?.uid]);
+  const { data: userProfile, isLoading: isLoadingUserProfile } = useDoc<UserType>(userProfileRef);
 
-  const isLoading = isLoadingChecklist || isLoadingItems || isLoadingTeam;
+  const isLoading = isLoadingChecklist || isLoadingItems || isLoadingTeam || isLoadingUserProfile;
+
+  const [generationDate] = React.useState(new Date());
+
 
   if (isLoading) {
     return (
@@ -47,12 +54,6 @@ export default function ChecklistReportPage() {
       </div>
     );
   }
-
-  const today = new Date().toLocaleDateString('pt-BR', {
-    day: '2-digit',
-    month: 'long',
-    year: 'numeric',
-  });
   
   const completableItems = items.filter(item => item.type === 'item' || item.type === 'yes_no');
   const completedItems = completableItems.filter(item => (item.type === 'item' && item.isCompleted) || (item.type === 'yes_no' && item.answer !== 'unanswered')).length;
@@ -74,7 +75,7 @@ export default function ChecklistReportPage() {
             </div>
             <div className="text-right">
                 <h1 className="text-2xl font-bold text-gray-800">Relatório de Checklist</h1>
-                <p className="text-sm text-gray-500">Data de Emissão: {today}</p>
+                <p className="text-sm text-gray-500">Data de Emissão: {generationDate.toLocaleDateString('pt-BR')}</p>
             </div>
         </header>
 
@@ -136,13 +137,9 @@ export default function ChecklistReportPage() {
             </section>
         </main>
 
-        <footer className="mt-24">
-            <div className="flex justify-between items-center text-center">
-                <div className="flex-1">
-                    <div className="mx-auto h-px w-4/5 bg-gray-400"></div>
-                    <p className="mt-2 text-sm">Assinatura do Responsável</p>
-                </div>
-            </div>
+        <footer className="mt-24 border-t pt-6 text-center">
+            <p className="text-sm">Relatório gerado por: <strong>{userProfile?.name || authUser?.email || 'Usuário desconhecido'}</strong></p>
+            <p className="text-xs text-gray-500">Em: {generationDate.toLocaleString('pt-BR', { dateStyle: 'long', timeStyle: 'short' })}</p>
         </footer>
 
       </div>
