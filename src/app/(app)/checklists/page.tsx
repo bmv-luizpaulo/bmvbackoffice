@@ -4,9 +4,9 @@ import * as React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, ListChecks, Trash2, Edit } from "lucide-react";
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { useCollection, useFirestore, useMemoFirebase, useUser, useDoc } from '@/firebase';
 import { collection, doc, orderBy, query } from 'firebase/firestore';
-import type { Checklist, ChecklistItem, Team } from '@/lib/types';
+import type { Checklist, ChecklistItem, Team, User as UserType, Role } from '@/lib/types';
 import { addDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import NextDynamic from 'next/dynamic';
@@ -23,7 +23,14 @@ const ChecklistFormDialog = NextDynamic(() => import('@/components/checklists/ch
 export default function ChecklistsPage() {
   const firestore = useFirestore();
   const { toast } = useToast();
+  const { user: authUser } = useUser();
   
+  const userProfileQuery = useMemoFirebase(() => firestore && authUser?.uid ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser?.uid]);
+  const { data: userProfile } = useDoc<UserType>(userProfileQuery);
+  
+  const roleQuery = useMemoFirebase(() => firestore && userProfile?.roleId ? doc(firestore, 'roles', userProfile.roleId) : null, [firestore, userProfile?.roleId]);
+  const { data: role } = useDoc<Role>(roleQuery);
+
   const [selectedChecklist, setSelectedChecklist] = React.useState<Checklist | null>(null);
   const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [checklistToEdit, setChecklistToEdit] = React.useState<Checklist | null>(null);
@@ -99,6 +106,7 @@ export default function ChecklistsPage() {
     updateDocumentNonBlocking(itemRef, { isCompleted: !item.isCompleted });
   };
 
+  const isManager = role?.isManager || role?.isDev;
 
   return (
     <div className="space-y-6">
@@ -109,12 +117,14 @@ export default function ChecklistsPage() {
             Checklists
           </h1>
           <p className="text-muted-foreground">
-            Crie e gerencie checklists padronizados para seus processos.
+            {isManager ? 'Crie e gerencie checklists padronizados.' : 'Execute os checklists para seus processos.'}
           </p>
         </div>
-        <Button onClick={() => { setChecklistToEdit(null); setIsFormOpen(true); }}>
-            <Plus className="mr-2 h-4 w-4" /> Criar Checklist
-        </Button>
+        {isManager && (
+            <Button onClick={() => { setChecklistToEdit(null); setIsFormOpen(true); }}>
+                <Plus className="mr-2 h-4 w-4" /> Criar Checklist
+            </Button>
+        )}
       </header>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -156,35 +166,37 @@ export default function ChecklistsPage() {
                             {selectedChecklist.description || `Checklist para a equipe ${teamsMap.get(selectedChecklist.teamId) || 'desconhecida'}`}
                         </CardDescription>
                     </div>
-                    <div className='flex items-center'>
-                        <Button variant="ghost" size="icon" onClick={() => { setChecklistToEdit(selectedChecklist); setIsFormOpen(true); }}>
-                            <Edit className="h-4 w-4" />
-                        </Button>
-                        <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                                <Button variant="ghost" size="icon" className='text-destructive hover:text-destructive'>
-                                    <Trash2 className="h-4 w-4" />
-                                </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                                <AlertDialogHeader>
-                                <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                    Esta ação não pode ser desfeita e excluirá o checklist "{selectedChecklist.name}" e todos os seus itens.
-                                </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                <AlertDialogAction
-                                    className='bg-destructive hover:bg-destructive/90'
-                                    onClick={() => handleDeleteChecklist(selectedChecklist.id)}
-                                >
-                                    Excluir
-                                </AlertDialogAction>
-                                </AlertDialogFooter>
-                            </AlertDialogContent>
-                        </AlertDialog>
-                    </div>
+                    {isManager && (
+                        <div className='flex items-center'>
+                            <Button variant="ghost" size="icon" onClick={() => { setChecklistToEdit(selectedChecklist); setIsFormOpen(true); }}>
+                                <Edit className="h-4 w-4" />
+                            </Button>
+                            <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                    <Button variant="ghost" size="icon" className='text-destructive hover:text-destructive'>
+                                        <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                    <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                        Esta ação não pode ser desfeita e excluirá o checklist "{selectedChecklist.name}" e todos os seus itens.
+                                    </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                    <AlertDialogAction
+                                        className='bg-destructive hover:bg-destructive/90'
+                                        onClick={() => handleDeleteChecklist(selectedChecklist.id)}
+                                    >
+                                        Excluir
+                                    </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
+                        </div>
+                    )}
                 </div>
               </CardHeader>
               <CardContent>
@@ -199,9 +211,11 @@ export default function ChecklistsPage() {
                           <div key={item.id} className="flex items-center gap-3 bg-muted/50 p-3 rounded-md">
                             <Checkbox id={`item-${item.id}`} checked={item.isCompleted} onCheckedChange={() => handleToggleItem(item)} />
                             <label htmlFor={`item-${item.id}`} className={cn("flex-1 text-sm cursor-pointer", item.isCompleted && "line-through text-muted-foreground")}>{item.description}</label>
-                            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive/70 hover:text-destructive/100" onClick={() => handleDeleteItem(item.id)}>
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                            {isManager && (
+                                <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive/70 hover:text-destructive/100" onClick={() => handleDeleteItem(item.id)}>
+                                <Trash2 className="h-4 w-4" />
+                                </Button>
+                            )}
                           </div>
                         ))
                       ) : (
@@ -209,20 +223,22 @@ export default function ChecklistsPage() {
                       )}
                     </div>
                   </div>
-                   <form
-                      onSubmit={(e) => {
-                        e.preventDefault();
-                        handleAddNewItem();
-                      }}
-                      className="flex items-center gap-2 pt-4 border-t"
-                    >
-                      <Input
-                        value={newItemText}
-                        onChange={(e) => setNewItemText(e.target.value)}
-                        placeholder="Adicionar novo passo..."
-                      />
-                      <Button type="submit" disabled={!newItemText.trim()}>Adicionar Passo</Button>
-                    </form>
+                   {isManager && (
+                        <form
+                            onSubmit={(e) => {
+                                e.preventDefault();
+                                handleAddNewItem();
+                            }}
+                            className="flex items-center gap-2 pt-4 border-t"
+                        >
+                            <Input
+                                value={newItemText}
+                                onChange={(e) => setNewItemText(e.target.value)}
+                                placeholder="Adicionar novo passo..."
+                            />
+                            <Button type="submit" disabled={!newItemText.trim()}>Adicionar Passo</Button>
+                        </form>
+                   )}
                 </div>
               </CardContent>
             </>
@@ -238,7 +254,7 @@ export default function ChecklistsPage() {
         </Card>
       </div>
 
-      {isFormOpen && (
+      {isManager && isFormOpen && (
         <ChecklistFormDialog
             isOpen={isFormOpen}
             onOpenChange={setIsFormOpen}
