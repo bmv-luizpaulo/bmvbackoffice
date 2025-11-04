@@ -78,6 +78,7 @@ export function KanbanBoard() {
   
   const [isTaskDialogOpen, setIsTaskDialogOpen] = useState(false);
   const [taskToEdit, setTaskToEdit] = useState<Task | null>(null);
+  const [dependencyForNewTask, setDependencyForNewTask] = useState<string | null>(null);
 
   const [isAddProjectDialogOpen, setIsAddProjectDialogOpen] = useState(false);
   const [isProjectFilesDialogOpen, setIsProjectFilesDialogOpen] = useState(false);
@@ -239,11 +240,19 @@ export function KanbanBoard() {
   
   const handleEditTask = useCallback((task: Task) => {
     setTaskToEdit(task);
+    setDependencyForNewTask(null);
     setIsTaskDialogOpen(true);
   }, []);
 
   const handleAddTaskClick = useCallback(() => {
     setTaskToEdit(null);
+    setDependencyForNewTask(null);
+    setIsTaskDialogOpen(true);
+  }, []);
+
+  const handleAddDependentTask = useCallback((dependencyId: string) => {
+    setTaskToEdit(null);
+    setDependencyForNewTask(dependencyId);
     setIsTaskDialogOpen(true);
   }, []);
 
@@ -386,6 +395,7 @@ export function KanbanBoard() {
                         onUpdateTask={handleUpdateTaskStatus}
                         onDeleteTask={handleDeleteTask}
                         onEditTask={handleEditTask}
+                        onAddDependentTask={handleAddDependentTask}
                     />
                   ))
                 )}
@@ -399,6 +409,7 @@ export function KanbanBoard() {
             onSaveTask={handleSaveTask}
             projectId={selectedProject?.id || ''}
             taskToEdit={taskToEdit}
+            dependencyId={dependencyForNewTask}
         />
         <AddProjectDialog
             isOpen={isAddProjectDialogOpen}

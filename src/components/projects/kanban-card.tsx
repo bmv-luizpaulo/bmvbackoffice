@@ -6,7 +6,7 @@ import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/componen
 import type { Task, User } from '@/lib/types';
 import { Checkbox } from '../ui/checkbox';
 import { Button } from '../ui/button';
-import { Trash2, Lock, Calendar as CalendarIcon, Edit } from 'lucide-react';
+import { Trash2, Lock, Calendar as CalendarIcon, Edit, PlusCircle } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -29,9 +29,10 @@ type KanbanCardProps = {
   onUpdateTask: (taskId: string, updates: Partial<Omit<Task, 'id'>>) => void;
   onDeleteTask: (taskId: string) => void;
   onEditTask: (task: Task) => void;
+  onAddDependentTask: (dependencyId: string) => void;
 };
 
-function KanbanCardComponent({ task, onUpdateTask, onDeleteTask, onEditTask }: KanbanCardProps) {
+function KanbanCardComponent({ task, onUpdateTask, onDeleteTask, onEditTask, onAddDependentTask }: KanbanCardProps) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: task.id,
     disabled: task.isLocked,
@@ -144,6 +145,18 @@ function KanbanCardComponent({ task, onUpdateTask, onDeleteTask, onEditTask }: K
                     <span>{dueDateInfo.text}</span>
                 </div>
             )}
+            <TooltipProvider>
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-6 w-6 opacity-0 group-hover:opacity-100" onClick={() => onAddDependentTask(task.id)}>
+                            <PlusCircle className="h-4 w-4 text-primary" />
+                        </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                        <p>Adicionar tarefa dependente</p>
+                    </TooltipContent>
+                </Tooltip>
+            </TooltipProvider>
         </div>
         {task.assignee && (
              <TooltipProvider>

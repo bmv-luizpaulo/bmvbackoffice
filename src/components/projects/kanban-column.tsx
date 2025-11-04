@@ -15,9 +15,10 @@ type KanbanColumnProps = {
   onUpdateTask: (taskId: string, updates: Partial<Omit<Task, 'id'>>) => void;
   onDeleteTask: (taskId: string) => void;
   onEditTask: (task: Task) => void;
+  onAddDependentTask: (dependencyId: string) => void;
 };
 
-function KanbanColumnComponent({ stage, tasks, onUpdateTask, onDeleteTask, onEditTask }: KanbanColumnProps) {
+function KanbanColumnComponent({ stage, tasks, onUpdateTask, onDeleteTask, onEditTask, onAddDependentTask }: KanbanColumnProps) {
   const { setNodeRef, isOver } = useDroppable({ id: stage.id });
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const rowVirtualizer = useVirtualizer({
@@ -81,6 +82,7 @@ function KanbanColumnComponent({ stage, tasks, onUpdateTask, onDeleteTask, onEdi
                     onUpdateTask={onUpdateTask}
                     onDeleteTask={onDeleteTask}
                     onEditTask={onEditTask}
+                    onAddDependentTask={onAddDependentTask}
                   />
                 </div>
               );

@@ -46,6 +46,7 @@ type AddTaskDialogProps = {
   tasks: Task[];
   projectId: string;
   taskToEdit?: Task | null;
+  dependencyId?: string | null;
 };
 
 const formSchema = z.object({
@@ -69,7 +70,7 @@ const formSchema = z.object({
 });
 
 
-export function AddTaskDialog({ isOpen, onOpenChange, onSaveTask, stages, tasks, projectId, taskToEdit }: AddTaskDialogProps) {
+export function AddTaskDialog({ isOpen, onOpenChange, onSaveTask, stages, tasks, projectId, taskToEdit, dependencyId }: AddTaskDialogProps) {
   const firestore = useFirestore();
   const usersQuery = React.useMemo(() => firestore ? collection(firestore, 'users') : null, [firestore]);
   const { data: usersData } = useCollection<UserType>(usersQuery);
@@ -108,7 +109,7 @@ export function AddTaskDialog({ isOpen, onOpenChange, onSaveTask, stages, tasks,
           stageId: stages.length > 0 ? stages[0].id : '',
           name: '',
           description: '',
-          dependentTaskIds: [],
+          dependentTaskIds: dependencyId ? [dependencyId] : [],
           assigneeId: undefined,
           dueDate: undefined,
           isRecurring: false,
@@ -117,7 +118,7 @@ export function AddTaskDialog({ isOpen, onOpenChange, onSaveTask, stages, tasks,
         });
       }
     }
-  }, [isOpen, taskToEdit, form, stages]);
+  }, [isOpen, taskToEdit, dependencyId, form, stages]);
 
 
   function onSubmit(values: z.infer<typeof formSchema>) {
@@ -133,8 +134,8 @@ export function AddTaskDialog({ isOpen, onOpenChange, onSaveTask, stages, tasks,
     };
 
     if (!taskData.isRecurring) {
-      delete taskData.recurrenceFrequency;
-      delete taskData.recurrenceEndDate;
+      delete (taskData as Partial<typeof taskData>).recurrenceFrequency;
+      delete (taskData as Partial<typeof taskData>).recurrenceEndDate;
     }
     
     onSaveTask(taskData, taskToEdit?.id);
