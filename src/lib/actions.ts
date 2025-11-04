@@ -2,11 +2,13 @@
 
 import { getSuggestedFollowUps, SuggestedFollowUpsInput } from "@/ai/flows/ai-suggested-follow-ups";
 import { generateDailyChatSummary } from "@/ai/flows/daily-chat-summary";
-import { getDocs, collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { getDocs, collection, addDoc, serverTimestamp, doc, setDoc } from 'firebase/firestore';
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
 import { initializeFirebase } from "@/firebase";
-import type { Project, Task } from "./types";
+import type { Project, Task, User } from "./types";
 import { unstable_noStore as noStore } from 'next/cache';
+import * as admin from 'firebase-admin';
+import { headers } from 'next/headers';
 
 // This is a placeholder for a real chat log fetching mechanism
 const getChatLogForDay = async (): Promise<string> => {
@@ -19,6 +21,80 @@ const getChatLogForDay = async (): Promise<string> => {
       Alex Thompson para Diana Evans [11:10 AM]: Excelentes notícias, Diana! Me avise se precisar de apoio para a demonstração.
     `.trim();
 };
+
+const getAdminApp = () => {
+    const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+    if (!serviceAccount) {
+        throw new Error('A chave da conta de serviço do Firebase não está configurada no ambiente.');
+    }
+
+    if (admin.apps.length > 0) {
+        return admin.app();
+    }
+
+    return admin.initializeApp({
+        credential: admin.credential.cert(JSON.parse(serviceAccount)),
+    });
+};
+
+export async function createUserAction(userData: Omit<User, 'id' | 'avatarUrl'>) {
+    noStore();
+    try {
+        const adminApp = getAdminApp();
+        const auth = admin.auth(adminApp);
+        const firestore = admin.firestore(adminApp);
+
+        // Verify the calling user is an admin/manager
+        const idToken = headers().get('Authorization')?.split('Bearer ')[1];
+        if (!idToken) {
+            return { success: false, error: 'Usuário não autenticado.' };
+        }
+        const decodedToken = await auth.verifyIdToken(idToken);
+        const callingUserDoc = await firestore.collection('users').doc(decodedToken.uid).get();
+        const callingUserRoleId = callingUserDoc.data()?.roleId;
+
+        if (!callingUserRoleId) {
+             return { success: false, error: 'Permissão negada. Função do usuário não encontrada.' };
+        }
+
+        const callingUserRoleDoc = await firestore.collection('roles').doc(callingUserRoleId).get();
+        if (!callingUserRoleDoc.data()?.isManager) {
+            return { success: false, error: 'Permissão negada. Apenas gestores podem criar usuários.' };
+        }
+
+
+        // Create user in Firebase Auth
+        const tempPassword = Math.random().toString(36).slice(-16);
+        const userRecord = await auth.createUser({
+            email: userData.email,
+            emailVerified: false,
+            password: tempPassword,
+            displayName: userData.name,
+            disabled: false,
+        });
+
+        // Create user profile in Firestore
+        const newUserProfile: Omit<User, 'id'> = {
+            ...userData,
+            avatarUrl: `https://picsum.photos/seed/${userRecord.uid}/200`
+        };
+        await firestore.collection("users").doc(userRecord.uid).set(newUserProfile);
+
+        // Send password reset email
+        await auth.generatePasswordResetLink(userData.email);
+
+        return { success: true, data: { uid: userRecord.uid } };
+    } catch (error: any) {
+        console.error("Erro ao criar usuário:", error);
+        let errorMessage = 'Ocorreu um erro ao criar o usuário.';
+        if (error.code === 'auth/email-already-exists') {
+            errorMessage = 'Este e-mail já está em uso por outra conta.';
+        } else if (error.code === 'auth/invalid-email') {
+            errorMessage = 'O formato do e-mail é inválido.';
+        }
+        return { success: false, error: errorMessage };
+    }
+}
 
 
 export async function getFollowUpSuggestionsAction(project: Project) {

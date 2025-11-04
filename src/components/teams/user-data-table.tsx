@@ -47,14 +47,13 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { useToast } from "@/hooks/use-toast"
-import { createUserWithEmailAndPassword, sendPasswordResetEmail, signInWithEmailAndPassword, EmailAuthProvider, reauthenticateWithCredential } from "firebase/auth";
+import { createUserAction } from "@/lib/actions";
 import { deleteDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase"
 
 const UserFormDialog = dynamic(() => import('./user-form-dialog').then(m => m.UserFormDialog), { ssr: false });
 
 export function UserDataTable() {
   const firestore = useFirestore();
-  const auth = useAuth();
   const { user: currentUser } = useAuthUser();
   const { toast } = useToast();
   
@@ -86,60 +85,29 @@ export function UserDataTable() {
   }, []);
 
   const handleSaveUser = React.useCallback(async (userData: Omit<User, 'id' | 'avatarUrl'>) => {
-    if (!firestore || !auth || !currentUser) {
+    if (!firestore || !currentUser) {
         toast({ variant: 'destructive', title: "Erro", description: "Serviços de autenticação não disponíveis." });
         return;
     }
-
+    
     if (selectedUser) {
+        // Update existing user
         const userRef = doc(firestore, 'users', selectedUser.id);
         await updateDocumentNonBlocking(userRef, userData);
         toast({ title: "Usuário Atualizado", description: `As informações de ${userData.name} foram salvas.` });
-        setIsFormOpen(false);
     } else {
-        const adminPassword = prompt("Para criar um novo usuário, por favor, confirme sua senha de Administrador:");
-        if (!adminPassword) {
-            toast({ variant: 'destructive', title: "Criação Cancelada", description: "Senha de administrador não fornecida." });
-            return;
-        }
-
-        const adminUser = currentUser;
-        const credential = EmailAuthProvider.credential(adminUser.email!, adminPassword);
-
-        try {
-            await reauthenticateWithCredential(adminUser, credential);
-
-            const tempPassword = Math.random().toString(36).slice(-16);
-            
-            // This part of the logic requires a separate Auth instance to not interfere with the current user's session
-            // For simplicity in this environment, we'll proceed, but in a real app, this should be handled by a backend function.
-            const userCredential = await createUserWithEmailAndPassword(auth, userData.email, tempPassword);
-            const newUserId = userCredential.user.uid;
-
-            const newUserProfile = {
-                ...userData,
-                id: newUserId,
-                avatarUrl: `https://picsum.photos/seed/${newUserId}/200`
-            };
-            await setDoc(doc(firestore, "users", newUserId), newUserProfile);
-            
-            await sendPasswordResetEmail(auth, userData.email);
-
+        // Create new user
+        const result = await createUserAction(userData);
+        if (result.success) {
             toast({ title: "Usuário Criado e Convite Enviado", description: `${userData.name} foi adicionado. Um e-mail foi enviado para que o usuário defina sua senha.` });
-            setIsFormOpen(false);
-
-        } catch (error: any) {
-            console.error("Erro ao criar usuário:", error);
-            let errorMessage = 'Ocorreu um erro ao criar o usuário.';
-            if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
-                errorMessage = 'Senha de administrador incorreta.';
-            } else if (error.code === 'auth/email-already-in-use') {
-                errorMessage = 'Este e-mail já está em uso por outra conta.';
-            }
-            toast({ variant: 'destructive', title: "Erro ao Criar Usuário", description: errorMessage });
+        } else {
+            toast({ variant: 'destructive', title: "Erro ao Criar Usuário", description: result.error });
         }
     }
-}, [firestore, auth, selectedUser, currentUser, toast]);
+    setIsFormOpen(false);
+
+}, [firestore, selectedUser, currentUser, toast]);
+
 
   const handleDeleteUser = React.useCallback(() => {
     if (!firestore || !selectedUser) return;
