@@ -293,3 +293,23 @@ export type Message = {
     timestamp: any;
     read: boolean;
 }
+
+export type Ticket = {
+    id: string;
+    title: string;
+    description: string;
+    requesterId: string;
+    assigneeId?: string;
+    status: 'Aberto' | 'Em Andamento' | 'Fechado';
+    priority: 'Baixa' | 'Média' | 'Alta';
+    createdAt: any;
+    updatedAt?: any;
+}
+
+export type DeveloperTool = {
+    id: string;
+    name: string;
+    description: string;
+    componentName: string;
+    requiresDevRole: boolean;
+}

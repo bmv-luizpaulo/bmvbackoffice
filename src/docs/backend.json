@@ -729,6 +729,34 @@
         }
       },
       "required": ["name"]
+    },
+    "Ticket": {
+      "title": "Ticket",
+      "type": "object",
+      "description": "Represents a support ticket.",
+      "properties": {
+        "title": { "type": "string", "description": "The title of the ticket." },
+        "description": { "type": "string", "description": "A detailed description of the issue." },
+        "requesterId": { "type": "string", "description": "The ID of the user who created the ticket." },
+        "assigneeId": { "type": "string", "description": "The ID of the support agent assigned to the ticket." },
+        "status": { "type": "string", "enum": ["Aberto", "Em Andamento", "Fechado"], "description": "The current status of the ticket." },
+        "priority": { "type": "string", "enum": ["Baixa", "Média", "Alta"], "description": "The priority level of the ticket." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "The timestamp when the ticket was created." },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "The timestamp when the ticket was last updated." }
+      },
+      "required": ["title", "description", "requesterId", "status", "priority", "createdAt"]
+    },
+    "DeveloperTool": {
+      "title": "DeveloperTool",
+      "type": "object",
+      "description": "Represents a tool available on the developer tools page.",
+      "properties": {
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "componentName": { "type": "string" },
+        "requiresDevRole": { "type": "boolean" }
+      },
+      "required": ["name", "componentName"]
     }
   },
   "auth": {
@@ -829,6 +857,14 @@
     "/costCenters/{costCenterId}": {
       "schema": { "$ref": "#/entities/CostCenter" },
       "description": "Stores all company cost centers for financial tracking."
+    },
+    "/tickets/{ticketId}": {
+      "schema": { "$ref": "#/entities/Ticket" },
+      "description": "Stores user support tickets."
+    },
+    "/developerTools/{toolId}": {
+      "schema": { "$ref": "#/entities/DeveloperTool" },
+      "description": "Stores metadata for developer tools."
     }
   }
 }

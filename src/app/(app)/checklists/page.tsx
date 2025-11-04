@@ -468,7 +468,7 @@ export default function ChecklistsPage() {
               <ListChecks className="h-16 w-16 text-muted-foreground/50" />
               <p className="text-lg font-semibold mt-4">Selecione um Checklist</p>
               <p className="text-muted-foreground mt-2">
-                  Escolha um checklist da lista para ver seus detalhes ou crie um novo para começar.
+                  Escolha um checklist da lista para ver seus detalhes ou {isManager ? "crie um novo para começar." : "comece a executar um."}
               </p>
             </div>
           )}
