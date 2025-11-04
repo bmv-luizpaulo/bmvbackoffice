@@ -160,7 +160,7 @@ export default function ChecklistReportPage() {
             </section>
         </main>
 
-        <footer className="mt-24 border-t pt-6 text-center">
+        <footer className="mt-32 border-t pt-6 text-center">
             <p className="text-sm">Relatório gerado por: <strong>{userProfile?.name || authUser?.email || 'Usuário desconhecido'}</strong></p>
             <p className="text-xs text-gray-500">Em: {generationDate.toLocaleString('pt-BR', { dateStyle: 'long', timeStyle: 'short' })}</p>
             <div className='mt-8 flex items-center justify-center gap-2 text-xs text-gray-400'>
