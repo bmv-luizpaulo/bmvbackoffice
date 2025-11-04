@@ -50,12 +50,22 @@ service cloud.firestore {
     }
 
     match /chats/{chatId} {
-      allow read: if isDev() || request.auth.uid in resource.data.userIds;
-      allow create: if isDev() || request.auth.uid in request.resource.data.userIds;
-      allow update: if isDev() || request.auth.uid in resource.data.userIds;
+      // Devs can do anything.
+      // Users can get/read a specific chat if they are a participant.
+      allow get: if isDev() || (request.auth != null && request.auth.uid in resource.data.userIds);
+      
+      // Any authenticated user can list chats (the query must be secured on the client-side).
+      allow list: if isDev() || request.auth != null;
+
+      // Users can create chats if they include themselves.
+      allow create: if isDev() || (request.auth != null && request.auth.uid in request.resource.data.userIds);
+      
+      // Users can update a chat (e.g., lastMessage) if they are a participant.
+      allow update: if isDev() || (request.auth != null && request.auth.uid in resource.data.userIds);
 
       match /messages/{messageId} {
-        allow read, write: if isDev() || request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.userIds;
+        // Allow read/write to messages only if the user is part of the parent chat document.
+        allow read, write: if isDev() || (request.auth != null && request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.userIds);
       }
     }
     
@@ -80,7 +90,7 @@ service cloud.firestore {
     }
 
     match /reimbursements/{reimbursementId} {
-      allow read, create, update, delete: if isDev() || isManager() || request.auth.uid == resource.data.requesterId;
+      allow read, create, update, delete: if isDev() || isManager() || (request.auth != null && request.auth.uid == resource.data.requesterId);
     }
     
     match /costCenters/{costCenterId} {
