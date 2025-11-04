@@ -10,7 +10,6 @@ import {
   useSensor,
   useSensors,
 } from '@dnd-kit/core';
-import { arrayMove } from '@dnd-kit/sortable';
 import {
   useFirestore,
   useCollection,
@@ -96,8 +95,8 @@ export function KanbanBoard({ openNewProjectDialog }: { openNewProjectDialog?: b
     if (stagesData) setStages(stagesData.sort((a, b) => a.order - b.order));
     if (tasksData) setTasks(tasksData);
 
-    const anyLoading = isLoadingProjects || isLoadingUsers || isLoadingTeams || (!selectedProjectId && projectsData) || (selectedProjectId && (isLoadingStages || isLoadingTasks));
-    setIsLoading(anyLoading);
+    const anyLoading = isLoadingProjects || isLoadingUsers || isLoadingTeams || (!selectedProjectId && !!projectsData) || (selectedProjectId && (isLoadingStages || isLoadingTasks));
+    setIsLoading(!!anyLoading);
 
   }, [projectsData, usersData, teamsData, stagesData, tasksData, isLoadingProjects, isLoadingUsers, isLoadingTeams, isLoadingStages, isLoadingTasks, selectedProjectId]);
 
@@ -189,21 +188,6 @@ export function KanbanBoard({ openNewProjectDialog }: { openNewProjectDialog?: b
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
-    if (active.id === over?.id || !over) return;
-
-    const activeTask = tasks.find(t => t.id === active.id);
-    const overTask = tasks.find(t => t.id === over.id);
-
-    if (!activeTask || !overTask) return;
-    
-    setTasks(currentTasks => {
-        const activeIndex = currentTasks.findIndex(t => t.id === active.id);
-        const overIndex = currentTasks.findIndex(t => t.id === over.id);
-        const newTasks = arrayMove(currentTasks, activeIndex, overIndex);
-        return newTasks;
-    });
-
     setActiveTask(null);
   };
   
