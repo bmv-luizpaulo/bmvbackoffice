@@ -53,6 +53,7 @@ import { addDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlo
 import dynamic from "next/dynamic";
 import { format } from "date-fns";
 import Link from "next/link";
+import { useNotifications } from "../notifications/notifications-provider";
 
 const AssetFormDialog = dynamic(() => import('./asset-form-dialog').then(m => m.AssetFormDialog), { ssr: false });
 const AssetHistoryDialog = dynamic(() => import('./asset-history-dialog').then(m => m.AssetHistoryDialog), { ssr: false });
@@ -65,6 +66,7 @@ export function AssetDataTable({ ownerFilter }: AssetDataTableProps) {
   const firestore = useFirestore();
   const { user: authUser } = useAuthUser();
   const { toast } = useToast();
+  const { createNotification } = useNotifications();
 
   const assetsQuery = useMemoFirebase(() => {
     if (!firestore || !authUser) return null;
@@ -135,6 +137,13 @@ export function AssetDataTable({ ownerFilter }: AssetDataTableProps) {
             from: usersMap.get(originalAsset?.assigneeId || '') || 'Ninguém', 
             to: usersMap.get(assetData.assigneeId || '') || 'Ninguém'
           });
+          if (assetData.assigneeId) {
+            createNotification(assetData.assigneeId, {
+                title: 'Novo Ativo Atribuído',
+                message: `Você recebeu a responsabilidade pelo ativo: "${assetData.name}".`,
+                link: `/assets?owner=me`
+            });
+          }
       }
       toast({ title: "Ativo Atualizado", description: "O ativo foi atualizado com sucesso." });
     } else {
@@ -142,10 +151,15 @@ export function AssetDataTable({ ownerFilter }: AssetDataTableProps) {
       await logHistory(newDocRef.id, 'Ativo Criado');
       if (assetData.assigneeId) {
           await logHistory(newDocRef.id, 'Atribuição Inicial', { to: usersMap.get(assetData.assigneeId) || 'N/A' });
+          createNotification(assetData.assigneeId, {
+            title: 'Novo Ativo Atribuído',
+            message: `Você recebeu a responsabilidade pelo ativo: "${assetData.name}".`,
+            link: `/assets?owner=me`
+          });
       }
       toast({ title: "Ativo Adicionado", description: "O novo ativo foi cadastrado." });
     }
-  }, [firestore, toast, assetsData, logHistory, usersMap]);
+  }, [firestore, toast, assetsData, logHistory, usersMap, createNotification]);
 
   const handleDeleteAsset = React.useCallback(async () => {
     if (!firestore || !selectedAsset) return;
