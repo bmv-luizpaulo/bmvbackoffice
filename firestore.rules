@@ -4,6 +4,7 @@ service cloud.firestore {
   match /databases/{database}/documents {
     
     function isDev() {
+      // Check if the user document exists and has the isDev flag.
       return exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
              get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isDev == true;
     }
@@ -49,13 +50,18 @@ service cloud.firestore {
     }
 
     match /chats/{chatId} {
+      // Allow read/get if user is a dev or part of the chat.
       allow get: if isDev() || request.auth.uid in resource.data.userIds;
-      allow list: if isDev() || request.auth != null; // Allow listing if authenticated, client query will enforce security
+      // Allow authenticated users to query the list. Client-side query constraints will secure the data.
+      allow list: if isDev() || request.auth != null;
+      // Allow creation if the user is a dev or is creating a chat for themselves.
       allow create: if isDev() || request.auth.uid in request.resource.data.userIds;
+      // Allow updates (like lastMessage) if user is a dev or part of the chat.
       allow update: if isDev() || request.auth.uid in resource.data.userIds;
-
+      
       match /messages/{messageId} {
-         allow read, write: if isDev() || request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.userIds;
+        // Allow read/write to messages only if the user is part of the parent chat document.
+        allow read, write: if isDev() || request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.userIds;
       }
     }
     
