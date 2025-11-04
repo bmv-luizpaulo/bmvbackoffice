@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import type { User, Message, Chat } from '@/lib/types';
+import type { User, Message, Chat, Forum } from '@/lib/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -11,7 +11,8 @@ import { cn } from '@/lib/utils';
 import { useUser, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query, where, addDoc, serverTimestamp, orderBy, doc, setDoc, updateDoc } from 'firebase/firestore';
 import React from 'react';
-import { Separator } from '../ui/separator';
+
+type Conversation = Chat | Forum;
 
 interface ChatLayoutProps {
   chatType: 'direct' | 'forum';
@@ -20,32 +21,29 @@ interface ChatLayoutProps {
 export function ChatLayout({ chatType }: ChatLayoutProps) {
   const firestore = useFirestore();
   const { user: currentUser } = useUser();
-  const [selectedChat, setSelectedChat] = useState<Chat | null>(null);
+  const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [newMessage, setNewMessage] = useState('');
   const messageEndRef = useRef<HTMLDivElement>(null);
+
+  const collectionName = chatType === 'direct' ? 'chats' : 'forums';
 
   const usersQuery = useMemoFirebase(() => firestore ? collection(firestore, 'users') : null, [firestore]);
   const { data: allUsers } = useCollection<User>(usersQuery);
 
-  const allChatsQuery = useMemoFirebase(() => {
+  const conversationsQuery = useMemoFirebase(() => {
     if (!firestore || !currentUser?.uid) return null;
     return query(
-      collection(firestore, 'chats'),
+      collection(firestore, collectionName),
       where('userIds', 'array-contains', currentUser.uid)
     );
-  }, [firestore, currentUser]);
+  }, [firestore, currentUser, collectionName]);
 
-  const { data: allUserChats, isLoading: isLoadingChats } = useCollection<Chat>(allChatsQuery);
-
-  const userChats = useMemo(() => {
-    return allUserChats?.filter(chat => chat.type === chatType) ?? [];
-  }, [allUserChats, chatType]);
-
+  const { data: conversations, isLoading: isLoadingConversations } = useCollection<Conversation>(conversationsQuery);
 
   const messagesQuery = useMemoFirebase(() => {
-    if (!firestore || !selectedChat?.id) return null;
-    return query(collection(firestore, 'chats', selectedChat.id, 'messages'), orderBy('timestamp', 'asc'));
-  }, [firestore, selectedChat]);
+    if (!firestore || !selectedConversation?.id) return null;
+    return query(collection(firestore, collectionName, selectedConversation.id, 'messages'), orderBy('timestamp', 'asc'));
+  }, [firestore, selectedConversation, collectionName]);
   const { data: messages, isLoading: isLoadingMessages } = useCollection<Message>(messagesQuery);
   
   useEffect(() => {
@@ -55,21 +53,21 @@ export function ChatLayout({ chatType }: ChatLayoutProps) {
 
   const handleSendMessage = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newMessage.trim() || !selectedChat || !currentUser || !firestore) return;
+    if (!newMessage.trim() || !selectedConversation || !currentUser || !firestore) return;
 
-    const messagesCollection = collection(firestore, 'chats', selectedChat.id, 'messages');
+    const messagesCollection = collection(firestore, collectionName, selectedConversation.id, 'messages');
     
     const timestamp = new Date();
 
     await addDoc(messagesCollection, {
-      chatId: selectedChat.id,
+      chatId: selectedConversation.id,
       senderId: currentUser.uid,
       text: newMessage,
       timestamp: timestamp,
       read: false,
     });
     
-    const chatRef = doc(firestore, 'chats', selectedChat.id);
+    const chatRef = doc(firestore, collectionName, selectedConversation.id);
     await updateDoc(chatRef, {
         lastMessage: {
             text: newMessage,
@@ -79,21 +77,21 @@ export function ChatLayout({ chatType }: ChatLayoutProps) {
     });
 
     setNewMessage('');
-  }, [newMessage, selectedChat, currentUser, firestore]);
+  }, [newMessage, selectedConversation, currentUser, firestore, collectionName]);
 
-  const handleSelectChat = useCallback(async (chatOrUser: Chat | User) => {
+  const handleSelectConversation = useCallback(async (convOrUser: Conversation | User) => {
       if (!currentUser?.uid || !firestore || !allUsers) return;
 
-      if ('type' in chatOrUser) { // It's a Chat object
-          setSelectedChat(chatOrUser);
+      if ('userIds' in convOrUser) { // It's a Conversation object
+          setSelectedConversation(convOrUser);
           return;
       }
       
       // It's a User object, find or create direct chat
-      const user = chatOrUser;
-      const existingChat = userChats?.find(c => c.type === 'direct' && c.userIds.length === 2 && c.userIds.includes(user.id));
+      const user = convOrUser;
+      const existingChat = conversations?.find(c => c.userIds.length === 2 && c.userIds.includes(user.id));
       if (existingChat) {
-          setSelectedChat(existingChat);
+          setSelectedConversation(existingChat);
           return;
       }
 
@@ -101,7 +99,6 @@ export function ChatLayout({ chatType }: ChatLayoutProps) {
       if (!currentUserData) return;
       
       const newChatData: Omit<Chat, 'id'> = {
-          type: 'direct',
           userIds: [currentUser.uid, user.id],
           lastMessage: null,
           users: {
@@ -120,27 +117,29 @@ export function ChatLayout({ chatType }: ChatLayoutProps) {
       
       const newChatRef = doc(collection(firestore, 'chats'));
       await setDoc(newChatRef, newChatData);
-      setSelectedChat({ id: newChatRef.id, ...newChatData } as Chat);
-  }, [currentUser, firestore, userChats, allUsers]);
+      setSelectedConversation({ id: newChatRef.id, ...newChatData } as Chat);
+  }, [currentUser, firestore, conversations, allUsers]);
   
-  const chatDisplayInfo = useMemo(() => {
-    if (!selectedChat || !currentUser) return { avatar: null, name: 'Selecione uma conversa' };
+  const conversationDisplayInfo = useMemo(() => {
+    if (!selectedConversation || !currentUser) return { avatar: null, name: 'Selecione uma conversa' };
     
-    if (selectedChat.type === 'forum') {
+    if (chatType === 'forum') {
+        const forum = selectedConversation as Forum;
         return { 
             avatar: <Avatar><AvatarFallback><Hash /></AvatarFallback></Avatar>,
-            name: selectedChat.name || 'Fórum' 
+            name: forum.name || 'Fórum' 
         };
     }
     
-    const otherUserId = selectedChat.userIds.find(id => id !== currentUser.uid);
-    if (!otherUserId || !selectedChat.users) return { avatar: null, name: 'Carregando...' };;
-    const otherUser = selectedChat.users[otherUserId];
+    const chat = selectedConversation as Chat;
+    const otherUserId = chat.userIds.find(id => id !== currentUser.uid);
+    if (!otherUserId || !chat.users) return { avatar: null, name: 'Carregando...' };;
+    const otherUser = chat.users[otherUserId];
     return {
         avatar: <Avatar><AvatarImage src={otherUser.avatarUrl} /><AvatarFallback>{otherUser.name.charAt(0)}</AvatarFallback></Avatar>,
         name: otherUser.name
     };
-  }, [selectedChat, currentUser]);
+  }, [selectedConversation, currentUser, chatType]);
 
   const directMessageUsers = useMemo(() => allUsers?.filter(u => u.id !== currentUser?.uid) || [], [allUsers, currentUser]);
 
@@ -148,42 +147,39 @@ export function ChatLayout({ chatType }: ChatLayoutProps) {
     <div className="flex h-full">
       <div className="w-1/3 border-r">
         <div className="p-4 border-b">
-            <h2 className="text-xl font-semibold">Conversas</h2>
+            <h2 className="text-xl font-semibold">{chatType === 'direct' ? 'Conversas' : 'Fóruns'}</h2>
         </div>
         <ScrollArea className="h-[calc(100%-65px)]">
-            {isLoadingChats ? (
+            {isLoadingConversations ? (
               <div className="p-4 text-sm text-muted-foreground">Carregando...</div>
-            ) : chatType === 'forum' ? (
+            ) : (
                 <div className="p-2">
-                    {userChats?.map(forum => (
+                    {chatType === 'forum' && conversations?.map(conv => (
                       <button
-                          key={forum.id}
+                          key={conv.id}
                           className={cn(
                               "flex w-full items-center gap-3 p-2 rounded-md text-left hover:bg-muted/50 transition-colors",
-                              selectedChat?.id === forum.id && "bg-muted"
+                              selectedConversation?.id === conv.id && "bg-muted"
                           )}
-                          onClick={() => handleSelectChat(forum)}
+                          onClick={() => handleSelectConversation(conv)}
                       >
                           <Avatar><AvatarFallback><Hash /></AvatarFallback></Avatar>
                           <div className='min-w-0'>
-                              <p className="font-semibold truncate">{forum.name}</p>
-                              <p className="text-sm text-muted-foreground truncate">{forum.lastMessage?.text || 'Nenhuma mensagem recente'}</p>
+                              <p className="font-semibold truncate">{(conv as Forum).name}</p>
+                              <p className="text-sm text-muted-foreground truncate">{conv.lastMessage?.text || 'Nenhuma mensagem recente'}</p>
                           </div>
                       </button>
-                  ))}
-                </div>
-            ) : (
-                <div className="p-2">
-                    {directMessageUsers.map(user => {
-                        const chatWithUser = userChats?.find(c => c.userIds.includes(user.id));
+                    ))}
+                    {chatType === 'direct' && directMessageUsers.map(user => {
+                        const chatWithUser = conversations?.find(c => c.userIds.includes(user.id));
                         return (
                             <button
                                 key={user.id}
                                 className={cn(
                                     "flex w-full items-center gap-3 p-2 rounded-md text-left hover:bg-muted/50 transition-colors",
-                                    selectedChat?.id === chatWithUser?.id && "bg-muted"
+                                    selectedConversation?.id === chatWithUser?.id && "bg-muted"
                                 )}
-                                onClick={() => handleSelectChat(user)}
+                                onClick={() => handleSelectConversation(user)}
                             >
                                 <Avatar>
                                     <AvatarImage src={user.avatarUrl} />
@@ -201,24 +197,24 @@ export function ChatLayout({ chatType }: ChatLayoutProps) {
         </ScrollArea>
       </div>
       <div className="w-2/3 flex flex-col">
-        {selectedChat ? (
+        {selectedConversation ? (
             <>
                 <div className="flex items-center gap-3 p-4 border-b">
-                    {chatDisplayInfo.avatar}
+                    {conversationDisplayInfo.avatar}
                     <div>
-                        <p className="font-semibold">{chatDisplayInfo.name}</p>
+                        <p className="font-semibold">{conversationDisplayInfo.name}</p>
                     </div>
                 </div>
                 <ScrollArea className="flex-1 p-4">
                     <div className="space-y-4">
                         {isLoadingMessages ? <p className='text-center text-muted-foreground'>Carregando mensagens...</p> : messages?.map(msg => {
-                            const sender = selectedChat.users[msg.senderId];
+                            const sender = selectedConversation.users[msg.senderId];
                             const isCurrentUserSender = msg.senderId === currentUser?.uid;
                             return (
                              <div key={msg.id} className={cn("flex items-end gap-2", isCurrentUserSender ? "justify-end" : "justify-start")}>
                                  {!isCurrentUserSender && <Avatar className="h-8 w-8"><AvatarImage src={sender?.avatarUrl} /><AvatarFallback>{sender?.name?.charAt(0)}</AvatarFallback></Avatar>}
                                  <div className={cn("max-w-xs lg:max-w-md rounded-lg p-3 text-sm", isCurrentUserSender ? "bg-primary text-primary-foreground" : "bg-muted")}>
-                                    {!isCurrentUserSender && selectedChat.type === 'forum' && <p className='text-xs font-bold mb-1 text-primary'>{sender?.name || 'Usuário'}</p>}
+                                    {!isCurrentUserSender && chatType === 'forum' && <p className='text-xs font-bold mb-1 text-primary'>{sender?.name || 'Usuário'}</p>}
                                     <p className='whitespace-pre-wrap'>{msg.text}</p>
                                     <p className={cn("text-xs mt-1 text-right", isCurrentUserSender ? "text-primary-foreground/70" : "text-muted-foreground/70")}>
                                         {msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'enviando...'}

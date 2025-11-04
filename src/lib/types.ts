@@ -54,11 +54,21 @@ export type Opportunity = {
 
 export type Chat = {
   id: string;
-  name?: string; // For forum channels
-  type: 'direct' | 'forum';
-  isGlobal?: boolean; // For the global, all-hands forum
-  teamId?: string; // For team-specific forums
-  userIds: string[]; // For direct messages, this will be 2 users. For forums, it can be more.
+  userIds: string[];
+  lastMessage: {
+    text: string;
+    timestamp: string;
+    senderId: string;
+  } | null;
+  users: { [key: string]: Pick<User, 'name' | 'avatarUrl' | 'email'> };
+}
+
+export type Forum = {
+  id: string;
+  name: string;
+  isGlobal?: boolean;
+  teamId?: string;
+  userIds: string[];
   lastMessage: {
     text: string;
     timestamp: string;

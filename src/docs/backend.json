@@ -434,29 +434,11 @@
      "Chat": {
       "title": "Chat",
       "type": "object",
-      "description": "Represents a chat conversation between users or a forum.",
+      "description": "Represents a direct message conversation between two users.",
       "properties": {
-        "name": {
-          "type": "string",
-          "description": "The name of the chat, used for forum channels."
-        },
-        "type": {
-          "type": "string",
-          "description": "The type of chat.",
-          "enum": ["direct", "forum"],
-          "default": "direct"
-        },
-        "isGlobal": {
-            "type": "boolean",
-            "description": "If true, this forum is visible to all users."
-        },
-        "teamId": {
-            "type": "string",
-            "description": "If it's a forum for a specific team, this is the team ID."
-        },
         "userIds": {
           "type": "array",
-          "description": "An array of user IDs participating in the chat. For direct messages, this will be 2 users. For forums, it can be more.",
+          "description": "An array of the two user IDs participating in the chat.",
           "items": { "type": "string" }
         },
         "lastMessage": {
@@ -481,14 +463,60 @@
           }
         }
       },
-      "required": ["userIds", "type"]
+      "required": ["userIds"]
+    },
+    "Forum": {
+      "title": "Forum",
+      "type": "object",
+      "description": "Represents a group conversation channel or forum.",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The name of the forum channel."
+        },
+        "isGlobal": {
+            "type": "boolean",
+            "description": "If true, this forum is visible to all users."
+        },
+        "teamId": {
+            "type": "string",
+            "description": "If it's a forum for a specific team, this is the team ID."
+        },
+        "userIds": {
+          "type": "array",
+          "description": "An array of user IDs participating in the forum.",
+          "items": { "type": "string" }
+        },
+        "lastMessage": {
+          "type": "object",
+          "description": "The last message sent in the forum for preview purposes.",
+          "properties": {
+            "text": { "type": "string" },
+            "timestamp": { "type": "string", "format": "date-time" },
+            "senderId": { "type": "string" }
+          }
+        },
+         "users": {
+          "type": "object",
+          "description": "Denormalized user data for quick display.",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "avatarUrl": { "type": "string", "format": "uri" },
+              "email": { "type": "string", "format": "email" }
+            }
+          }
+        }
+      },
+      "required": ["name", "userIds"]
     },
     "Message": {
       "title": "Message",
       "type": "object",
-      "description": "Represents a single message within a chat.",
+      "description": "Represents a single message within a chat or forum.",
       "properties": {
-        "chatId": { "type": "string", "description": "The ID of the chat this message belongs to." },
+        "chatId": { "type": "string", "description": "The ID of the chat or forum this message belongs to." },
         "senderId": { "type": "string", "description": "The ID of the user who sent the message." },
         "text": { "type": "string", "description": "The content of the message." },
         "timestamp": { "type": "string", "format": "date-time", "description": "The time the message was sent." },
@@ -754,11 +782,19 @@
     },
     "/chats/{chatId}": {
       "schema": { "$ref": "#/entities/Chat" },
-      "description": "Represents a chat conversation metadata."
+      "description": "Represents a direct message conversation metadata."
     },
     "/chats/{chatId}/messages/{messageId}": {
       "schema": { "$ref": "#/entities/Message" },
       "description": "Contains all messages for a given chat."
+    },
+     "/forums/{forumId}": {
+      "schema": { "$ref": "#/entities/Forum" },
+      "description": "Represents a forum channel metadata."
+    },
+    "/forums/{forumId}/messages/{messageId}": {
+      "schema": { "$ref": "#/entities/Message" },
+      "description": "Contains all messages for a given forum."
     },
     "/products/{productId}": {
         "schema": { "$ref": "#/entities/Product" },

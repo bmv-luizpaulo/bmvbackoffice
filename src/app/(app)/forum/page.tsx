@@ -2,14 +2,14 @@
 import { ChatLayout } from "@/components/chat/chat-layout";
 import { useFirestore, useCollection, useMemoFirebase, useUser } from "@/firebase";
 import { collection, getDocs, query, where, addDoc } from "firebase/firestore";
-import type { User as UserType, Chat } from "@/lib/types";
+import type { User as UserType, Forum } from "@/lib/types";
 import { useEffect } from "react";
 
 
 async function ensureGlobalForumExists(firestore: any, allUsers: UserType[]) {
     if (!firestore || !allUsers || allUsers.length === 0) return;
     
-    const forumQuery = query(collection(firestore, 'chats'), where('isGlobal', '==', true));
+    const forumQuery = query(collection(firestore, 'forums'), where('isGlobal', '==', true));
     const querySnapshot = await getDocs(forumQuery);
 
     if (querySnapshot.empty) {
@@ -20,16 +20,15 @@ async function ensureGlobalForumExists(firestore: any, allUsers: UserType[]) {
             return acc;
         }, {} as Record<string, any>);
 
-        const newForumData: Omit<Chat, 'id'> = {
+        const newForumData: Omit<Forum, 'id'> = {
             name: 'Geral',
-            type: 'forum',
             isGlobal: true,
             userIds: userIds,
             lastMessage: null,
             users: usersData,
         };
         try {
-            await addDoc(collection(firestore, 'chats'), newForumData);
+            await addDoc(collection(firestore, 'forums'), newForumData);
         } catch (e) {
             console.error("Failed to create global forum:", e);
         }
