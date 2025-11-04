@@ -1,25 +1,27 @@
 'use client';
 
 import * as React from 'react';
-import { useParams } from 'next/navigation';
-import { useFirestore, useDoc, useCollection, useMemoFirebase, useUser } from '@/firebase';
-import { doc, collection, query, orderBy } from 'firebase/firestore';
+import { useParams, useRouter } from 'next/navigation';
+import { useFirestore, useDoc, useCollection, useMemoFirebase, useUser, addDocumentNonBlocking } from '@/firebase';
+import { doc, collection, query, orderBy, writeBatch, serverTimestamp } from 'firebase/firestore';
 import type { Checklist, ChecklistItem, Team, User as UserType } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Loader2, Check, X, MessageSquare, CheckSquare, ShieldAlert, Download } from 'lucide-react';
-import Image from 'next/image';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import { useToast } from '@/hooks/use-toast';
 
 export default function ChecklistReportPage() {
   const params = useParams();
+  const router = useRouter();
   const firestore = useFirestore();
   const { user: authUser } = useUser();
   const checklistId = params.checklistId as string;
   const reportRef = React.useRef<HTMLDivElement>(null);
   const [isGeneratingPdf, setIsGeneratingPdf] = React.useState(false);
+  const { toast } = useToast();
 
 
   const checklistRef = useMemoFirebase(() => (firestore && checklistId ? doc(firestore, 'checklists', checklistId) : null), [firestore, checklistId]);
@@ -38,45 +40,60 @@ export default function ChecklistReportPage() {
   const isLoading = isLoadingChecklist || isLoadingItems || isLoadingTeam || isLoadingUserProfile;
 
   const [generationDate] = React.useState(new Date());
+
+  const resetChecklist = async () => {
+    if (!firestore || !items || items.length === 0) return;
+    
+    const batch = writeBatch(firestore);
+    items.forEach(item => {
+        const itemRef = doc(firestore, `checklists/${checklistId}/items/${item.id}`);
+        if (item.type === 'item') {
+            batch.update(itemRef, { isCompleted: false });
+        } else if (item.type === 'yes_no') {
+            batch.update(itemRef, { answer: 'unanswered', comment: '' });
+        }
+    });
+    await batch.commit();
+  };
   
-  const handleGeneratePdf = async () => {
-    const input = reportRef.current;
-    if (!input || !checklist) {
+  const handleGeneratePdfAndSave = async () => {
+    if (!reportRef.current || !checklist || !items || !authUser || !firestore) {
+      toast({ variant: 'destructive', title: 'Erro', description: 'Dados insuficientes para gerar o relatório.' });
       return;
     }
 
     setIsGeneratingPdf(true);
 
     try {
-      const canvas = await html2canvas(input, {
-        scale: 2, // Aumenta a resolução para melhor qualidade
-        useCORS: true,
-        backgroundColor: '#ffffff'
-      });
+      // 1. Salvar a execução do checklist
+      const executionData = {
+        checklistId: checklist.id,
+        checklistName: checklist.name,
+        teamId: checklist.teamId,
+        executedAt: serverTimestamp(),
+        executedBy: authUser.uid,
+        items: items,
+      };
+      await addDocumentNonBlocking(collection(firestore, 'checklistExecutions'), executionData);
       
+      // 2. Gerar o PDF
+      const canvas = await html2canvas(reportRef.current, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
       const imgData = canvas.toDataURL('image/png');
-      
-      // A4 dimensions in mm: 210 x 297
-      const pdf = new jsPDF({
-        orientation: 'p', // portrait
-        unit: 'mm',
-        format: 'a4'
-      });
+      const pdf = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
       
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = pdf.internal.pageSize.getHeight();
       const canvasWidth = canvas.width;
       const canvasHeight = canvas.height;
-      
       const ratio = canvasWidth / canvasHeight;
-      let imgWidth = pdfWidth - 20; // 10mm margin on each side
+      let imgWidth = pdfWidth - 20;
       let imgHeight = imgWidth / ratio;
       
       let heightLeft = imgHeight;
-      let position = 10; // 10mm margin from top
+      let position = 10;
       
       pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
-      heightLeft -= (pdfHeight - 20); // 10mm margin top and bottom
+      heightLeft -= (pdfHeight - 20);
 
       while (heightLeft > 0) {
         position = -heightLeft - 10;
@@ -86,9 +103,16 @@ export default function ChecklistReportPage() {
       }
       
       pdf.save(`Relatorio_Checklist_${checklist.name.replace(/ /g, '_')}.pdf`);
+      
+      // 3. Zerar o checklist
+      await resetChecklist();
+
+      toast({ title: 'Relatório Gerado e Salvo', description: 'A execução do checklist foi salva e o checklist foi zerado.'});
+      router.push('/checklists');
 
     } catch (error) {
-      console.error("Erro ao gerar PDF:", error);
+      console.error("Erro ao gerar PDF e salvar execução:", error);
+      toast({ variant: 'destructive', title: 'Erro', description: 'Ocorreu um erro inesperado.' });
     } finally {
       setIsGeneratingPdf(false);
     }
@@ -123,9 +147,9 @@ export default function ChecklistReportPage() {
   return (
     <div className="min-h-screen bg-gray-100 print:bg-white">
         <header className="bg-gray-100 p-4 print:hidden flex justify-end sticky top-0 z-20">
-            <Button onClick={handleGeneratePdf} disabled={isGeneratingPdf}>
+            <Button onClick={handleGeneratePdfAndSave} disabled={isGeneratingPdf}>
                 {isGeneratingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
-                {isGeneratingPdf ? 'Gerando...' : 'Baixar PDF'}
+                {isGeneratingPdf ? 'Gerando e Salvando...' : 'Finalizar e Gerar PDF'}
             </Button>
         </header>
 
@@ -133,7 +157,6 @@ export default function ChecklistReportPage() {
         <div ref={reportRef} className="mx-auto max-w-4xl bg-white p-12 shadow-lg print:shadow-none">
             <header className="flex items-start justify-between border-b pb-4">
                 <div className="flex items-center gap-4">
-                    {/* Use uma tag img padrão para melhor compatibilidade com html2canvas */}
                     <img src="/image/BMV.png" alt="BMV Logo" style={{ width: '150px', height: 'auto' }} />
                 </div>
                 <div className="text-right">
@@ -164,7 +187,7 @@ export default function ChecklistReportPage() {
                         <div className='w-24 text-center'>Status</div>
                     </div>
                     <div className='divide-y'>
-                        {items.map(item => {
+                        {items.sort((a,b) => a.order - b.order).map(item => {
                             if (item.type === 'header') {
                                 return (
                                     <div key={item.id} className="bg-gray-100 p-3 font-bold text-sm text-gray-600 flex items-center gap-2">

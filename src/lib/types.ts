@@ -199,6 +199,16 @@ export type ChecklistItem = {
   comment?: string;
 };
 
+export type ChecklistExecution = {
+    id: string;
+    checklistId: string;
+    checklistName: string;
+    teamId: string;
+    executedAt: any;
+    executedBy: string;
+    items: ChecklistItem[];
+}
+
 export type Asset = {
     id: string;
     name: string;
@@ -261,6 +271,7 @@ export type Conversation = {
     type: 'direct' | 'group';
     name?: string; // For group conversations
     isGlobal?: boolean; // For the global "Geral" forum
+    teamId?: string;
     userIds: string[];
     lastMessage: {
         text: string;

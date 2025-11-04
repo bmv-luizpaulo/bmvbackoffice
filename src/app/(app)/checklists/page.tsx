@@ -457,7 +457,7 @@ export default function ChecklistsPage() {
                     <Button asChild className='w-full'>
                       <Link href={`/reports/checklist/${selectedChecklist.id}`} target="_blank">
                         <FileText className="mr-2 h-4 w-4" />
-                        Gerar Relatório
+                        Gerar Relatório e Finalizar
                       </Link>
                     </Button>
                   </div>

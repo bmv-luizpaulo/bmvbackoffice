@@ -61,6 +61,11 @@ service cloud.firestore {
     match /checklists/{checklistId}/{document=**} {
         allow read, write: if isDev() || isManager() || request.auth != null;
     }
+
+    match /checklistExecutions/{executionId} {
+      allow read, create: if isDev() || isManager() || request.auth != null;
+      allow update, delete: if isDev() || isManager();
+    }
     
     match /assets/{assetId}/{document=**} {
         allow read, write: if isDev() || isManager() || request.auth != null;

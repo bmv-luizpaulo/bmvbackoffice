@@ -30,6 +30,7 @@ import {
   ClipboardList,
   MessagesSquare,
   FolderPlus,
+  History,
 } from 'lucide-react';
 import Image from 'next/image';
 import React, { useEffect } from 'react';
@@ -102,7 +103,15 @@ const navSections = [
             { href: '/projects', icon: KanbanSquare, label: 'Funil Kanban' },
             { href: '/projects?new=true', icon: FolderPlus, label: 'Novo Projeto' },
             { href: '/tasks/completed', icon: CheckCircle2, label: 'Tarefas Concluídas' },
-            { href: '/checklists', icon: ListChecks, label: 'Checklists' },
+            { 
+              href: '#', 
+              icon: ListChecks, 
+              label: 'Checklists',
+              subItems: [
+                { href: '/checklists', icon: ListPlus, label: 'Gerenciar Checklists' },
+                { href: '/executed-checklists', icon: History, label: 'Checklists Realizados' },
+              ]
+            },
         ]
     },
     {
@@ -126,6 +135,7 @@ const navSections = [
         items: [
             { href: '/agenda/tarefas', icon: Calendar, label: 'Agenda' },
             { href: '/chat', icon: MessageSquare, label: 'Chat Direto' },
+            { href: '/forum', icon: MessagesSquare, label: 'Fóruns de Equipe' },
             { 
               href: '#', 
               icon: Group, 

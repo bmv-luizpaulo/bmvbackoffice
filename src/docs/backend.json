@@ -112,6 +112,11 @@
         "technicalDetails": {
             "type": "string",
             "description": "Technical specifications and details of the project."
+        },
+        "status": {
+            "type": "string",
+            "enum": ["Em execução", "Arquivado"],
+            "description": "The current status of the project."
         }
       },
       "required": [
@@ -599,6 +604,24 @@
       },
       "required": ["checklistId", "description", "order", "type"]
     },
+    "ChecklistExecution": {
+      "title": "ChecklistExecution",
+      "type": "object",
+      "description": "Represents a completed instance of a checklist.",
+      "properties": {
+        "checklistId": { "type": "string", "description": "The ID of the original checklist template." },
+        "checklistName": { "type": "string", "description": "Denormalized name of the checklist." },
+        "teamId": { "type": "string", "description": "Denormalized ID of the team responsible." },
+        "executedAt": { "type": "string", "format": "date-time", "description": "Timestamp when the checklist was completed." },
+        "executedBy": { "type": "string", "description": "The ID of the user who completed the checklist." },
+        "items": {
+          "type": "array",
+          "description": "A snapshot of all items and their state at the time of execution.",
+          "items": { "$ref": "#/entities/ChecklistItem" }
+        }
+      },
+      "required": ["checklistId", "checklistName", "teamId", "executedAt", "executedBy", "items"]
+    },
     "Asset": {
       "title": "Asset",
       "type": "object",
@@ -763,6 +786,14 @@
         "schema": { "$ref": "#/entities/Reimbursement" },
         "description": "Stores all reimbursement requests."
     },
+    "/conversations/{conversationId}": {
+      "schema": { "$ref": "#/entities/Conversation" },
+      "description": "Represents a conversation metadata, which can be a direct message or a group chat."
+    },
+    "/conversations/{conversationId}/messages/{messageId}": {
+      "schema": { "$ref": "#/entities/Message" },
+      "description": "Contains all messages for a given conversation."
+    },
     "/products/{productId}": {
         "schema": { "$ref": "#/entities/Product" },
         "description": "Stores all products that can be certified with a seal."
@@ -778,6 +809,10 @@
     "/checklists/{checklistId}/items/{itemId}": {
       "schema": { "$ref": "#/entities/ChecklistItem" },
       "description": "Stores the items for a specific checklist."
+    },
+     "/checklistExecutions/{executionId}": {
+      "schema": { "$ref": "#/entities/ChecklistExecution" },
+      "description": "Stores a record of a completed checklist execution."
     },
     "/assets/{assetId}": {
       "schema": { "$ref": "#/entities/Asset" },
