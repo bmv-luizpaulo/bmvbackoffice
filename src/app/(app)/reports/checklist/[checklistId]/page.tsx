@@ -121,112 +121,114 @@ export default function ChecklistReportPage() {
 
 
   return (
-    <div className="min-h-screen bg-gray-100 p-4 sm:p-8 print:bg-white print:p-0">
-        <div className="fixed top-4 right-4 print:hidden">
+    <div className="min-h-screen bg-gray-100 print:bg-white">
+        <header className="bg-gray-100 p-4 print:hidden flex justify-end sticky top-0 z-20">
             <Button onClick={handleGeneratePdf} disabled={isGeneratingPdf}>
                 {isGeneratingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
                 {isGeneratingPdf ? 'Gerando...' : 'Baixar PDF'}
             </Button>
-        </div>
-      <div ref={reportRef} className="mx-auto max-w-4xl bg-white p-12 shadow-lg print:shadow-none">
-        <header className="flex items-start justify-between border-b pb-4">
-            <div className="flex items-center gap-4">
-                <Image src="/image/BMV.png" alt="BMV Logo" width={150} height={50} />
-            </div>
-            <div className="text-right">
-                <h1 className="text-2xl font-bold text-gray-800">Relatório de Checklist</h1>
-                <p className="text-sm text-gray-500">Data de Emissão: {generationDate.toLocaleDateString('pt-BR')}</p>
-            </div>
         </header>
 
-        <main className="mt-8">
-            <section className='mb-8'>
-                <h2 className="text-xl font-semibold uppercase tracking-wider text-gray-700">
-                    {checklist.name}
-                </h2>
-                <p className="mt-1 text-sm text-gray-600">{checklist.description}</p>
-                <div className='flex gap-8 mt-2 text-sm text-gray-600'>
-                    <p><strong>Equipe:</strong> {team?.name || 'N/D'}</p>
-                    <p><strong>Progresso:</strong> {Math.round(progress)}%</p>
+      <div className="p-4 sm:p-8">
+        <div ref={reportRef} className="mx-auto max-w-4xl bg-white p-12 shadow-lg print:shadow-none">
+            <header className="flex items-start justify-between border-b pb-4">
+                <div className="flex items-center gap-4">
+                    <Image src="/image/BMV.png" alt="BMV Logo" width={150} height={50} />
                 </div>
-            </section>
-            
-            <Separator className="my-6" />
-
-            <section className="space-y-4">
-                <div className='border rounded-lg'>
-                  <div className='flex items-center bg-gray-50 p-3 text-xs font-semibold uppercase text-gray-500 border-b'>
-                    <div className='flex-1 px-2'>Descrição</div>
-                    <div className='w-1/4 px-2'>Resultado / Comentário</div>
-                    <div className='w-24 text-center'>Status</div>
-                  </div>
-                  <div className='divide-y'>
-                    {items.map(item => {
-                        if (item.type === 'header') {
-                            return (
-                                <div key={item.id} className="bg-gray-100 p-3 font-bold text-sm text-gray-600 flex items-center gap-2">
-                                    {item.description}
-                                </div>
-                            )
-                        }
-                        if (item.type === 'item') {
-                            return (
-                                <div key={item.id} className="flex items-start text-sm p-3">
-                                  <div className={cn('flex-1 px-2', item.isCompleted && 'line-through text-gray-500')}>
-                                    {item.description}
-                                  </div>
-                                  <div className='w-1/4 px-2 text-gray-500 italic'>
-                                    -
-                                  </div>
-                                  <div className='w-24 flex justify-center pt-0.5'>
-                                    <CheckSquare className={cn("h-5 w-5", item.isCompleted ? 'text-green-600' : 'text-gray-300')} />
-                                  </div>
-                                </div>
-                            )
-                        }
-                        if (item.type === 'yes_no') {
-                            return (
-                                <div key={item.id} className="flex items-start text-sm p-3">
-                                   <div className='flex-1 px-2'>
-                                    {item.description}
-                                  </div>
-                                   <div className='w-1/4 px-2 space-y-1'>
-                                      {item.comment && (
-                                          <div className='flex items-start gap-2 text-gray-600'>
-                                              <MessageSquare className="h-4 w-4 mt-0.5 shrink-0" />
-                                              <p className='italic text-xs'>"{item.comment}"</p>
-                                          </div>
-                                      )}
-                                  </div>
-                                   <div className='w-24 flex justify-center pt-0.5'>
-                                     {item.answer === 'yes' && <Check className='h-5 w-5 text-green-600'/>}
-                                     {item.answer === 'no' && <X className='h-5 w-5 text-red-600'/>}
-                                     {item.answer === 'unanswered' && <div className="h-4 w-4 mt-0.5 border-2 rounded-sm border-gray-300" />}
-                                  </div>
-                                </div>
-                            )
-                        }
-                        return null;
-                    })}
-                  </div>
-                   {items.length === 0 && (
-                      <div className="p-8 text-center text-gray-500">
-                        Nenhum item neste checklist.
-                      </div>
-                    )}
+                <div className="text-right">
+                    <h1 className="text-2xl font-bold text-gray-800">Relatório de Checklist</h1>
+                    <p className="text-sm text-gray-500">Data de Emissão: {generationDate.toLocaleDateString('pt-BR')}</p>
                 </div>
-            </section>
-        </main>
+            </header>
 
-        <footer className="mt-24 border-t pt-6 text-center">
-            <p className="text-sm">Relatório gerado por: <strong>{userProfile?.name || authUser?.email || 'Usuário desconhecido'}</strong></p>
-            <p className="text-xs text-gray-500">Em: {generationDate.toLocaleString('pt-BR', { dateStyle: 'long', timeStyle: 'short' })}</p>
-            <div className='mt-8 flex items-center justify-center gap-2 text-xs text-gray-400'>
-              <ShieldAlert className='h-3 w-3' />
-              <p>Este é um documento de uso interno e confidencial da BMV Global.</p>
-            </div>
-        </footer>
+            <main className="mt-8">
+                <section className='mb-8'>
+                    <h2 className="text-xl font-semibold uppercase tracking-wider text-gray-700">
+                        {checklist.name}
+                    </h2>
+                    <p className="mt-1 text-sm text-gray-600">{checklist.description}</p>
+                    <div className='flex gap-8 mt-2 text-sm text-gray-600'>
+                        <p><strong>Equipe:</strong> {team?.name || 'N/D'}</p>
+                        <p><strong>Progresso:</strong> {Math.round(progress)}%</p>
+                    </div>
+                </section>
+                
+                <Separator className="my-6" />
 
+                <section className="space-y-4">
+                    <div className='border rounded-lg'>
+                    <div className='flex items-center bg-gray-50 p-3 text-xs font-semibold uppercase text-gray-500 border-b'>
+                        <div className='flex-1 px-2'>Descrição</div>
+                        <div className='w-1/4 px-2'>Resultado / Comentário</div>
+                        <div className='w-24 text-center'>Status</div>
+                    </div>
+                    <div className='divide-y'>
+                        {items.map(item => {
+                            if (item.type === 'header') {
+                                return (
+                                    <div key={item.id} className="bg-gray-100 p-3 font-bold text-sm text-gray-600 flex items-center gap-2">
+                                        {item.description}
+                                    </div>
+                                )
+                            }
+                            if (item.type === 'item') {
+                                return (
+                                    <div key={item.id} className="flex items-start text-sm p-3">
+                                    <div className={cn('flex-1 px-2', item.isCompleted && 'line-through text-gray-500')}>
+                                        {item.description}
+                                    </div>
+                                    <div className='w-1/4 px-2 text-gray-500 italic'>
+                                        -
+                                    </div>
+                                    <div className='w-24 flex justify-center pt-0.5'>
+                                        <CheckSquare className={cn("h-5 w-5", item.isCompleted ? 'text-green-600' : 'text-gray-300')} />
+                                    </div>
+                                    </div>
+                                )
+                            }
+                            if (item.type === 'yes_no') {
+                                return (
+                                    <div key={item.id} className="flex items-start text-sm p-3">
+                                    <div className='flex-1 px-2'>
+                                        {item.description}
+                                    </div>
+                                    <div className='w-1/4 px-2 space-y-1'>
+                                        {item.comment && (
+                                            <div className='flex items-start gap-2 text-gray-600'>
+                                                <MessageSquare className="h-4 w-4 mt-0.5 shrink-0" />
+                                                <p className='italic text-xs'>"{item.comment}"</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div className='w-24 flex justify-center pt-0.5'>
+                                        {item.answer === 'yes' && <Check className='h-5 w-5 text-green-600'/>}
+                                        {item.answer === 'no' && <X className='h-5 w-5 text-red-600'/>}
+                                        {item.answer === 'unanswered' && <div className="h-4 w-4 mt-0.5 border-2 rounded-sm border-gray-300" />}
+                                    </div>
+                                    </div>
+                                )
+                            }
+                            return null;
+                        })}
+                    </div>
+                    {items.length === 0 && (
+                        <div className="p-8 text-center text-gray-500">
+                            Nenhum item neste checklist.
+                        </div>
+                        )}
+                    </div>
+                </section>
+            </main>
+
+            <footer className="mt-24 border-t pt-6 text-center">
+                <p className="text-sm">Relatório gerado por: <strong>{userProfile?.name || authUser?.email || 'Usuário desconhecido'}</strong></p>
+                <p className="text-xs text-gray-500">Em: {generationDate.toLocaleString('pt-BR', { dateStyle: 'long', timeStyle: 'short' })}</p>
+                <div className='mt-8 flex items-center justify-center gap-2 text-xs text-gray-400'>
+                <ShieldAlert className='h-3 w-3' />
+                <p>Este é um documento de uso interno e confidencial da BMV Global.</p>
+                </div>
+            </footer>
+        </div>
       </div>
     </div>
   );
