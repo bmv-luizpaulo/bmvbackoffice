@@ -6,11 +6,10 @@ import { useFirestore, useDoc, useCollection, useMemoFirebase, useUser } from '@
 import { doc, collection, query, orderBy } from 'firebase/firestore';
 import type { Checklist, ChecklistItem, Team, User as UserType } from '@/lib/types';
 import { Button } from '@/components/ui/button';
-import { Loader2, Printer, Check, X, MessageSquare, CheckSquare, ShieldAlert, Download } from 'lucide-react';
+import { Loader2, Check, X, MessageSquare, CheckSquare, ShieldAlert, Download } from 'lucide-react';
 import Image from 'next/image';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
-import { Badge } from '@/components/ui/badge';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 
@@ -57,7 +56,7 @@ export default function ChecklistReportPage() {
       
       const imgData = canvas.toDataURL('image/png');
       
-      // Orientação e dimensões para um A4 padrão
+      // A4 dimensions in mm: 210 x 297
       const pdf = new jsPDF({
         orientation: 'p', // portrait
         unit: 'mm',
@@ -68,21 +67,24 @@ export default function ChecklistReportPage() {
       const pdfHeight = pdf.internal.pageSize.getHeight();
       const canvasWidth = canvas.width;
       const canvasHeight = canvas.height;
+      
       const ratio = canvasWidth / canvasHeight;
+      const imgWidth = pdfWidth - 20; // 10mm margin on each side
+      const imgHeight = imgWidth / ratio;
       
-      let imgWidth = pdfWidth - 20; // Margem de 10mm de cada lado
-      let imgHeight = imgWidth / ratio;
+      let heightLeft = imgHeight;
+      let position = 10; // 10mm margin from top
       
-      // Se a altura da imagem for maior que a altura do PDF, recalcula baseado na altura
-      if (imgHeight > pdfHeight - 20) {
-        imgHeight = pdfHeight - 20; // Margem de 10mm em cima e embaixo
-        imgWidth = imgHeight * ratio;
+      pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
+      heightLeft -= (pdfHeight - 20); // 10mm margin top and bottom
+
+      while (heightLeft > 0) {
+        position = -heightLeft - 10;
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
+        heightLeft -= (pdfHeight - 20);
       }
       
-      const x = (pdfWidth - imgWidth) / 2;
-      const y = 10; // Margem de 10mm no topo
-      
-      pdf.addImage(imgData, 'PNG', x, y, imgWidth, imgHeight);
       pdf.save(`Relatorio_Checklist_${checklist.name.replace(/ /g, '_')}.pdf`);
 
     } catch (error) {
@@ -216,7 +218,7 @@ export default function ChecklistReportPage() {
             </section>
         </main>
 
-        <footer className="mt-32 border-t pt-6 text-center">
+        <footer className="mt-24 border-t pt-6 text-center">
             <p className="text-sm">Relatório gerado por: <strong>{userProfile?.name || authUser?.email || 'Usuário desconhecido'}</strong></p>
             <p className="text-xs text-gray-500">Em: {generationDate.toLocaleString('pt-BR', { dateStyle: 'long', timeStyle: 'short' })}</p>
             <div className='mt-8 flex items-center justify-center gap-2 text-xs text-gray-400'>
