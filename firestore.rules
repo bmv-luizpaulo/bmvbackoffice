@@ -51,7 +51,7 @@ service cloud.firestore {
 
     match /chats/{chatId} {
       allow get, update: if isDev() || request.auth.uid in resource.data.userIds;
-      allow list: if isDev() || isManager() || request.auth != null;
+      allow list: if isDev() || request.auth != null; // Allows the 'array-contains' query
       allow create: if isDev() || request.auth.uid in request.resource.data.userIds;
 
       match /messages/{messageId} {
