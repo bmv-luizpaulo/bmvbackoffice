@@ -141,7 +141,7 @@ export function SealFormDialog({ isOpen, onOpenChange, onSave, seal, products, c
                                 </FormControl>
                                 <SelectContent>
                                 {contacts.filter(c => c.type === 'cliente').map(contact => (
-                                    <SelectItem key={contact.id} value={contact.id}>{contact.name}</SelectItem>
+                                    <SelectItem key={contact.id} value={contact.id}>{contact.personType === 'Pessoa Física' ? contact.fullName : contact.tradeName}</SelectItem>
                                 ))}
                                 </SelectContent>
                             </Select>

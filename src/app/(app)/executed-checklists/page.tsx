@@ -102,7 +102,6 @@ export default function ExecutedChecklistsPage() {
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getExpandedRowModel: getExpandedRowModel(),
-    getSubRowModel: () => undefined,
   });
 
   const renderSubComponent = ({ row }: { row: any }) => {

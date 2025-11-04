@@ -76,10 +76,16 @@ export function TicketDataTable() {
   }, [firestore, authUser, isManager]);
 
   const { data: ticketsData, isLoading } = useCollection<Ticket>(ticketsQuery);
+  
   const usersQuery = useMemoFirebase(() => firestore ? collection(firestore, 'users') : null, [firestore]);
   const { data: usersData } = useCollection<User>(usersQuery);
   
+  const rolesQuery = useMemoFirebase(() => firestore ? collection(firestore, 'roles') : null, [firestore]);
+  const { data: rolesData } = useCollection<Role>(rolesQuery);
+  
   const usersMap = React.useMemo(() => new Map(usersData?.map(u => [u.id, u.name])), [usersData]);
+  const rolesMap = React.useMemo(() => new Map(rolesData?.map(r => [r.id, r])), [rolesData]);
+  
   const data = React.useMemo(() => ticketsData ?? [], [ticketsData]);
 
   const [sorting, setSorting] = React.useState<SortingState>([{ id: 'createdAt', desc: true }]);
@@ -123,9 +129,6 @@ export function TicketDataTable() {
       }
       setIsFormOpen(false);
   };
-
-    const rolesMap = React.useMemo(() => new Map(usersData?.map(u => [u.id, u.roleId])), [usersData]);
-
 
   const handleStatusChange = async (ticket: Ticket, newStatus: 'Aberto' | 'Em Andamento' | 'Fechado') => {
       if (!firestore || !authUser) return;

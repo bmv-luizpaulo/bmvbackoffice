@@ -1,14 +1,12 @@
+'use client';
 import { Suspense } from "react";
 import { KanbanBoardSkeleton } from "@/components/projects/kanban-board-skeleton";
 import ClientKanbanBoard from "@/components/projects/client-kanban-board";
+import { useSearchParams } from "next/navigation";
 
-export default function KanbanPage({
-  searchParams,
-}: {
-  searchParams: { [key: string]: string | string[] | undefined }
-}) {
-
-  const newProject = searchParams?.new === 'true';
+function KanbanPageContent() {
+  const searchParams = useSearchParams();
+  const newProject = searchParams.get('new') === 'true';
 
   return (
     <div className="flex h-[calc(100vh-theme(spacing.14)-2*theme(spacing.6))] flex-col gap-4">
@@ -17,10 +15,17 @@ export default function KanbanPage({
         <p className="text-muted-foreground">Gerencie seus projetos e tarefas do início ao fim com a visualização em colunas.</p>
       </header>
       <div className="flex-1 overflow-hidden">
-        <Suspense fallback={<KanbanBoardSkeleton />}>
-          <ClientKanbanBoard openNewProjectDialog={newProject} />
-        </Suspense>
+        <ClientKanbanBoard openNewProjectDialog={newProject} />
       </div>
     </div>
   );
+}
+
+
+export default function KanbanPage() {
+  return (
+    <Suspense fallback={<KanbanBoardSkeleton />}>
+      <KanbanPageContent />
+    </Suspense>
+  )
 }

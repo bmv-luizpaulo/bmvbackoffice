@@ -26,6 +26,7 @@ import { memo } from 'react';
 import { useUser as useAuthUser, useDoc, useFirestore } from '@/firebase';
 import type { Role } from '@/lib/types';
 import React from 'react';
+import { doc } from 'firebase/firestore';
 
 
 type KanbanCardProps = {

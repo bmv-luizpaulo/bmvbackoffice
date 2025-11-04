@@ -82,7 +82,7 @@ export function SealDataTable() {
   const usersMap = React.useMemo(() => new Map(usersData?.map(u => [u.id, u])), [usersData]);
 
   const productsMap = React.useMemo(() => new Map(products?.map(p => [p.id, p.name])), [products]);
-  const contactsMap = React.useMemo(() => new Map(contacts?.map(c => [c.id, c.name])), [contacts]);
+  const contactsMap = React.useMemo(() => new Map(contacts?.map(c => [c.id, c.personType === 'Pessoa Física' ? c.fullName : c.tradeName])), [contacts]);
 
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
