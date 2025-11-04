@@ -17,7 +17,7 @@ const ProjectFilesDialog = dynamic(() => import('./project-files-dialog').then(m
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '../ui/command';
 import { useCollection, useDoc, useFirestore, useUser as useAuthUser, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
-import { collection, doc, writeBatch, query, where } from 'firebase/firestore';
+import { collection, doc, writeBatch, query, where, serverTimestamp } from 'firebase/firestore';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { useNotifications } from '../notifications/notifications-provider';
@@ -135,22 +135,42 @@ export function KanbanBoard() {
     const newDocRef = await addDocumentNonBlocking(projectCollection, newProject);
     
     // Create default stages for the new project
-    const batch = writeBatch(firestore);
+    const stagesBatch = writeBatch(firestore);
     const stagesCollection = collection(firestore, 'projects', newDocRef.id, 'stages');
     const defaultStages = [
       { name: 'A Fazer', order: 1, description: 'Tarefas que ainda não foram iniciadas.' },
       { name: 'Em Progresso', order: 2, description: 'Tarefas que estão sendo trabalhadas ativamente.' },
       { name: 'Concluído', order: 3, description: 'Tarefas que foram finalizadas.' }
     ];
-    defaultStages.forEach(stage => {
-      const stageRef = doc(stagesCollection);
-      batch.set(stageRef, {id: stageRef.id, ...stage});
+
+    const stageRefs = defaultStages.map(() => doc(stagesCollection));
+    stageRefs.forEach((ref, index) => {
+        stagesBatch.set(ref, { id: ref.id, ...defaultStages[index] });
     });
-    await batch.commit();
+    await stagesBatch.commit();
+
+    // Create template tasks with dependencies
+    const tasksBatch = writeBatch(firestore);
+    const tasksCollection = collection(firestore, 'projects', newDocRef.id, 'tasks');
+    const toDoStage = stageRefs.find((_, index) => defaultStages[index].name === 'A Fazer');
+    
+    if (toDoStage) {
+        const task1Ref = doc(tasksCollection);
+        tasksBatch.set(task1Ref, { name: "Levantamento de dados dos clientes", stageId: toDoStage.id, projectId: newDocRef.id, isCompleted: false, createdAt: serverTimestamp() });
+        
+        const task2Ref = doc(tasksCollection);
+        tasksBatch.set(task2Ref, { name: "Organização e higienização dos dados", stageId: toDoStage.id, projectId: newDocRef.id, isCompleted: false, dependentTaskIds: [task1Ref.id], createdAt: serverTimestamp() });
+        
+        const task3Ref = doc(tasksCollection);
+        tasksBatch.set(task3Ref, { name: "Upload dos dados atualizados no sistema", stageId: toDoStage.id, projectId: newDocRef.id, isCompleted: false, dependentTaskIds: [task2Ref.id], createdAt: serverTimestamp() });
+        
+        await tasksBatch.commit();
+    }
+
 
     toast({
         title: "Projeto Adicionado",
-        description: `O projeto "${newProject.name}" foi criado com sucesso.`
+        description: `O projeto "${newProject.name}" foi criado com sucesso e tarefas iniciais foram geradas.`
     });
     const newlyCreatedProject = { id: newDocRef.id, ...newProject };
     // The new project will appear via the realtime listener, and we can select it.
@@ -164,7 +184,7 @@ export function KanbanBoard() {
         // Update existing task
         const existingTask = tasksData?.find(t => t.id === taskId);
         const taskRef = doc(firestore, 'projects', selectedProject.id, 'tasks', taskId);
-        await updateDocumentNonBlocking(taskRef, taskData);
+        await updateDocumentNonBlocking(taskRef, taskData as any);
 
         // Notify on re-assignment
         if (taskData.assigneeId && taskData.assigneeId !== existingTask?.assigneeId) {
@@ -187,7 +207,7 @@ export function KanbanBoard() {
             isCompleted: false,
         };
         const tasksCollection = collection(firestore, 'projects', selectedProject.id, 'tasks');
-        addDocumentNonBlocking(tasksCollection, taskToAdd).then(docRef => {
+        addDocumentNonBlocking(tasksCollection, taskToAdd as any).then(docRef => {
             if (taskToAdd.assigneeId) {
                 createNotification(taskToAdd.assigneeId, {
                     title: 'Nova Tarefa Atribuída',
@@ -206,7 +226,7 @@ export function KanbanBoard() {
   const handleUpdateTaskStatus = useCallback(async (taskId: string, updates: Partial<Omit<Task, 'id'>>) => {
       if (!firestore || !selectedProject || !authUser) return;
       const taskRef = doc(firestore, 'projects', selectedProject.id, 'tasks', taskId);
-      await updateDocumentNonBlocking(taskRef, updates);
+      await updateDocumentNonBlocking(taskRef, updates as any);
 
       const task = tasksData?.find(t => t.id === taskId);
       if (task && updates.isCompleted) {
