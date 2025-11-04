@@ -6,17 +6,22 @@ import { useFirestore, useDoc, useCollection, useMemoFirebase, useUser } from '@
 import { doc, collection, query, orderBy } from 'firebase/firestore';
 import type { Checklist, ChecklistItem, Team, User as UserType } from '@/lib/types';
 import { Button } from '@/components/ui/button';
-import { Loader2, Printer, Check, X, MessageSquare, CheckSquare, ShieldAlert } from 'lucide-react';
+import { Loader2, Printer, Check, X, MessageSquare, CheckSquare, ShieldAlert, Download } from 'lucide-react';
 import Image from 'next/image';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 export default function ChecklistReportPage() {
   const params = useParams();
   const firestore = useFirestore();
   const { user: authUser } = useUser();
   const checklistId = params.checklistId as string;
+  const reportRef = React.useRef<HTMLDivElement>(null);
+  const [isGeneratingPdf, setIsGeneratingPdf] = React.useState(false);
+
 
   const checklistRef = useMemoFirebase(() => (firestore && checklistId ? doc(firestore, 'checklists', checklistId) : null), [firestore, checklistId]);
   const { data: checklist, isLoading: isLoadingChecklist } = useDoc<Checklist>(checklistRef);
@@ -34,14 +39,58 @@ export default function ChecklistReportPage() {
   const isLoading = isLoadingChecklist || isLoadingItems || isLoadingTeam || isLoadingUserProfile;
 
   const [generationDate] = React.useState(new Date());
-
-  React.useEffect(() => {
-    if (!isLoading && checklist && items) {
-      setTimeout(() => {
-        window.print();
-      }, 500); // Small delay to ensure everything is rendered
+  
+  const handleGeneratePdf = async () => {
+    const input = reportRef.current;
+    if (!input || !checklist) {
+      return;
     }
-  }, [isLoading, checklist, items]);
+
+    setIsGeneratingPdf(true);
+
+    try {
+      const canvas = await html2canvas(input, {
+        scale: 2, // Aumenta a resolução para melhor qualidade
+        useCORS: true,
+        backgroundColor: '#ffffff'
+      });
+      
+      const imgData = canvas.toDataURL('image/png');
+      
+      // Orientação e dimensões para um A4 padrão
+      const pdf = new jsPDF({
+        orientation: 'p', // portrait
+        unit: 'mm',
+        format: 'a4'
+      });
+      
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+      const canvasWidth = canvas.width;
+      const canvasHeight = canvas.height;
+      const ratio = canvasWidth / canvasHeight;
+      
+      let imgWidth = pdfWidth - 20; // Margem de 10mm de cada lado
+      let imgHeight = imgWidth / ratio;
+      
+      // Se a altura da imagem for maior que a altura do PDF, recalcula baseado na altura
+      if (imgHeight > pdfHeight - 20) {
+        imgHeight = pdfHeight - 20; // Margem de 10mm em cima e embaixo
+        imgWidth = imgHeight * ratio;
+      }
+      
+      const x = (pdfWidth - imgWidth) / 2;
+      const y = 10; // Margem de 10mm no topo
+      
+      pdf.addImage(imgData, 'PNG', x, y, imgWidth, imgHeight);
+      pdf.save(`Relatorio_Checklist_${checklist.name.replace(/ /g, '_')}.pdf`);
+
+    } catch (error) {
+      console.error("Erro ao gerar PDF:", error);
+    } finally {
+      setIsGeneratingPdf(false);
+    }
+  };
 
 
   if (isLoading) {
@@ -71,7 +120,13 @@ export default function ChecklistReportPage() {
 
   return (
     <div className="min-h-screen bg-gray-100 p-4 sm:p-8 print:bg-white print:p-0">
-      <div className="mx-auto max-w-4xl bg-white p-12 shadow-lg print:shadow-none">
+        <div className="fixed top-4 right-4 print:hidden">
+            <Button onClick={handleGeneratePdf} disabled={isGeneratingPdf}>
+                {isGeneratingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+                {isGeneratingPdf ? 'Gerando...' : 'Baixar PDF'}
+            </Button>
+        </div>
+      <div ref={reportRef} className="mx-auto max-w-4xl bg-white p-12 shadow-lg print:shadow-none">
         <header className="flex items-start justify-between border-b pb-4">
             <div className="flex items-center gap-4">
                 <Image src="/image/BMV.png" alt="BMV Logo" width={150} height={50} />

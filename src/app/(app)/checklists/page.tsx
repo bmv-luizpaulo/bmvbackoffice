@@ -316,9 +316,34 @@ export default function ChecklistsPage() {
                             <Button variant="ghost" size="icon" onClick={() => { setChecklistToEdit(selectedChecklist); setIsFormOpen(true); }}>
                                 <Edit className="h-4 w-4" />
                             </Button>
-                            <Button variant="ghost" size="icon" className='text-destructive hover:text-destructive' onClick={() => setChecklistToDelete(selectedChecklist)}>
-                                <Trash2 className="h-4 w-4" />
-                            </Button>
+                            <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                    <Button variant="ghost" size="icon" className='text-destructive hover:text-destructive'>
+                                        <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                <AlertDialogHeader>
+                                    <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                        Esta ação não pode ser desfeita e excluirá o checklist "{selectedChecklist?.name}" e todos os seus itens.
+                                    </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                    <AlertDialogAction
+                                        className='bg-destructive hover:bg-destructive/90'
+                                        onClick={() => {
+                                            if (selectedChecklist) {
+                                                confirmDelete();
+                                            }
+                                        }}
+                                    >
+                                        Excluir
+                                    </AlertDialogAction>
+                                </AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
                         </div>
                     )}
                 </div>
@@ -460,25 +485,27 @@ export default function ChecklistsPage() {
         />
       )}
 
-      <AlertDialog open={!!checklistToDelete} onOpenChange={(open) => !open && setChecklistToDelete(null)}>
-        <AlertDialogContent>
-            <AlertDialogHeader>
-                <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
-                <AlertDialogDescription>
-                    Esta ação não pode ser desfeita e excluirá o checklist "{checklistToDelete?.name}" e todos os seus itens.
-                </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-                <AlertDialogCancel onClick={() => setChecklistToDelete(null)}>Cancelar</AlertDialogCancel>
-                <AlertDialogAction
-                    className='bg-destructive hover:bg-destructive/90'
-                    onClick={confirmDelete}
-                >
-                    Excluir
-                </AlertDialogAction>
-            </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {checklistToDelete && (
+          <AlertDialog open={!!checklistToDelete} onOpenChange={(open) => !open && setChecklistToDelete(null)}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        Esta ação não pode ser desfeita e excluirá o checklist "{checklistToDelete?.name}" e todos os seus itens.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel onClick={() => setChecklistToDelete(null)}>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction
+                        className='bg-destructive hover:bg-destructive/90'
+                        onClick={confirmDelete}
+                    >
+                        Excluir
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+      )}
     </div>
   );
 }
