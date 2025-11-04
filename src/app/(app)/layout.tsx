@@ -96,6 +96,7 @@ const navSections = [
             { href: '/agenda/tarefas?filter=me', icon: ListTodo, label: 'Minhas Tarefas' },
             { href: '/projetos?filter=me', icon: FolderKanban, label: 'Meus Projetos' },
             { href: '/assets?owner=me', icon: UserSquare, label: 'Meus Ativos' },
+            { href: '/checklists?filter=me', icon: ListChecks, label: 'Meus Checklists' },
         ]
     },
     {

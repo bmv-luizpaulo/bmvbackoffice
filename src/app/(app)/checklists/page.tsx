@@ -23,6 +23,7 @@ import { Textarea } from '@/components/ui/textarea';
 import Link from 'next/link';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { useSearchParams } from 'next/navigation';
 
 
 export const dynamic = 'force-dynamic';
@@ -31,6 +32,8 @@ const ChecklistFormDialog = NextDynamic(() => import('@/components/checklists/ch
 
 export default function ChecklistsPage() {
   const firestore = useFirestore();
+  const searchParams = useSearchParams();
+  const filterParam = searchParams.get('filter');
   const { toast } = useToast();
   const { user: authUser } = useUser();
   
@@ -51,7 +54,14 @@ export default function ChecklistsPage() {
   const [commentDebounceTimers, setCommentDebounceTimers] = React.useState<Record<string, NodeJS.Timeout>>({});
 
 
-  const checklistsQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'checklists'), orderBy('name')) : null, [firestore]);
+  const checklistsQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    let q = query(collection(firestore, 'checklists'), orderBy('name'));
+    if (filterParam === 'me' && userProfile?.teamIds && userProfile.teamIds.length > 0) {
+      q = query(q, where('teamId', 'in', userProfile.teamIds));
+    }
+    return q;
+  }, [firestore, filterParam, userProfile?.teamIds]);
   const { data: checklists, isLoading: isLoadingChecklists } = useCollection<Checklist>(checklistsQuery);
   
   const teamsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'teams') : null, [firestore]);
@@ -195,10 +205,15 @@ export default function ChecklistsPage() {
         <div>
           <h1 className="font-headline text-3xl font-bold tracking-tight flex items-center gap-2">
             <ListChecks className="h-8 w-8 text-primary" />
-            Checklists
+            {filterParam === 'me' ? 'Meus Checklists' : 'Checklists'}
           </h1>
           <p className="text-muted-foreground">
-            {isManager ? 'Crie e gerencie checklists padronizados.' : 'Execute os checklists para seus processos.'}
+             {filterParam === 'me'
+              ? 'Execute os checklists relevantes para suas equipes.'
+              : isManager
+                ? 'Crie e gerencie checklists padronizados para suas equipes.'
+                : 'Execute os checklists para seus processos.'
+            }
           </p>
         </div>
         <div className="flex items-center gap-2">
