@@ -24,11 +24,20 @@ export type User = {
 
 export type Contact = {
   id: string;
-  name: string;
+  type: 'cliente' | 'fornecedor' | 'parceiro';
+  personType: 'Pessoa Física' | 'Pessoa Jurídica';
+  // Pessoa Física
+  fullName?: string;
+  cpf?: string;
+  rg?: string;
+  // Pessoa Jurídica
+  legalName?: string;
+  tradeName?: string;
+  cnpj?: string;
+  stateRegistration?: string;
+  // Comum
   email: string;
   phone?: string;
-  companyName?: string;
-  type: 'cliente' | 'fornecedor' | 'parceiro';
   linkedinUrl?: string;
   address?: {
     street?: string;

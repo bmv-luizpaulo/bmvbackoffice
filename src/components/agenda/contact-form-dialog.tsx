@@ -28,7 +28,8 @@ import { Separator } from "../ui/separator";
 import type { Contact } from "@/lib/types";
 import { Loader2 } from "lucide-react";
 import { getCepInfoAction } from "@/lib/actions";
-import { formatPhone } from "@/lib/masks";
+import { formatCPF, formatPhone } from "@/lib/masks";
+import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 
 type ContactFormDialogProps = {
   isOpen: boolean;
@@ -39,10 +40,16 @@ type ContactFormDialogProps = {
 };
 
 const formSchema = z.object({
-  name: z.string().min(1, "O nome é obrigatório."),
+  personType: z.enum(['Pessoa Física', 'Pessoa Jurídica'], { required_error: 'O tipo de pessoa é obrigatório.' }),
+  fullName: z.string().optional(),
+  cpf: z.string().optional(),
+  rg: z.string().optional(),
+  legalName: z.string().optional(),
+  tradeName: z.string().optional(),
+  cnpj: z.string().optional(),
+  stateRegistration: z.string().optional(),
   email: z.string().email("O e-mail é inválido."),
   phone: z.string().optional(),
-  companyName: z.string().optional(),
   linkedinUrl: z.string().url("URL do LinkedIn inválida.").optional().or(z.literal('')),
   address: z.object({
     street: z.string().optional(),
@@ -53,13 +60,31 @@ const formSchema = z.object({
     state: z.string().optional(),
     zipCode: z.string().optional(),
   }).optional(),
+}).refine(data => {
+    if (data.personType === 'Pessoa Física') return !!data.fullName;
+    return true;
+}, {
+    message: "O nome completo é obrigatório.",
+    path: ['fullName'],
+}).refine(data => {
+    if (data.personType === 'Pessoa Jurídica') return !!data.tradeName || !!data.legalName;
+    return true;
+}, {
+    message: "O Nome Fantasia ou a Razão Social é obrigatório.",
+    path: ['tradeName'],
 });
 
-const defaultValues = {
-  name: '',
+const defaultValues: Partial<z.infer<typeof formSchema>> = {
+  personType: 'Pessoa Física',
+  fullName: '',
+  cpf: '',
+  rg: '',
+  legalName: '',
+  tradeName: '',
+  cnpj: '',
+  stateRegistration: '',
   email: '',
   phone: '',
-  companyName: '',
   linkedinUrl: '',
   address: {
     street: '',
@@ -79,15 +104,23 @@ export function ContactFormDialog({ isOpen, onOpenChange, onSave, contact, type 
     resolver: zodResolver(formSchema),
     defaultValues: defaultValues
   });
+  
+  const personType = form.watch('personType');
 
   React.useEffect(() => {
     if (isOpen) {
       if (contact) {
         form.reset({
-          name: contact.name || '',
+          personType: contact.personType,
+          fullName: contact.fullName || '',
+          cpf: contact.cpf || '',
+          rg: contact.rg || '',
+          legalName: contact.legalName || '',
+          tradeName: contact.tradeName || '',
+          cnpj: contact.cnpj || '',
+          stateRegistration: contact.stateRegistration || '',
           email: contact.email || '',
           phone: contact.phone || '',
-          companyName: contact.companyName || '',
           linkedinUrl: contact.linkedinUrl || '',
           address: {
             street: contact.address?.street || '',
@@ -144,35 +177,82 @@ export function ContactFormDialog({ isOpen, onOpenChange, onSave, contact, type 
         </DialogHeader>
         <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 max-h-[80vh] overflow-y-auto p-1">
+                
+                <FormField
+                  control={form.control}
+                  name="personType"
+                  render={({ field }) => (
+                    <FormItem className="space-y-3">
+                      <FormLabel>Tipo de Pessoa</FormLabel>
+                      <FormControl>
+                        <RadioGroup
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
+                          className="flex space-x-4"
+                        >
+                          <FormItem className="flex items-center space-x-3 space-y-0">
+                            <FormControl>
+                              <RadioGroupItem value="Pessoa Física" />
+                            </FormControl>
+                            <FormLabel className="font-normal">Pessoa Física</FormLabel>
+                          </FormItem>
+                          <FormItem className="flex items-center space-x-3 space-y-0">
+                            <FormControl>
+                              <RadioGroupItem value="Pessoa Jurídica" />
+                            </FormControl>
+                            <FormLabel className="font-normal">Pessoa Jurídica</FormLabel>
+                          </FormItem>
+                        </RadioGroup>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <Separator/>
+
+                {personType === 'Pessoa Física' && (
+                    <div className="space-y-4 animate-in fade-in-0 duration-300">
+                      <h3 className="text-lg font-medium">Informações Pessoais (PF)</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <FormField control={form.control} name="fullName" render={({ field }) => (
+                           <FormItem className="col-span-2"><FormLabel>Nome Completo</FormLabel><FormControl><Input placeholder="Ex: José da Silva" {...field} /></FormControl><FormMessage /></FormItem>
+                        )}/>
+                        <FormField control={form.control} name="cpf" render={({ field }) => (
+                           <FormItem><FormLabel>CPF</FormLabel><FormControl><Input placeholder="000.000.000-00" {...field} /></FormControl><FormMessage /></FormItem>
+                        )}/>
+                        <FormField control={form.control} name="rg" render={({ field }) => (
+                           <FormItem><FormLabel>RG</FormLabel><FormControl><Input placeholder="00.000.000-0" {...field} /></FormControl><FormMessage /></FormItem>
+                        )}/>
+                      </div>
+                    </div>
+                )}
+                
+                {personType === 'Pessoa Jurídica' && (
+                     <div className="space-y-4 animate-in fade-in-0 duration-300">
+                      <h3 className="text-lg font-medium">Informações da Empresa (PJ)</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <FormField control={form.control} name="legalName" render={({ field }) => (
+                           <FormItem><FormLabel>Razão Social</FormLabel><FormControl><Input placeholder="Ex: José da Silva LTDA" {...field} /></FormControl><FormMessage /></FormItem>
+                        )}/>
+                        <FormField control={form.control} name="tradeName" render={({ field }) => (
+                           <FormItem><FormLabel>Nome Fantasia</FormLabel><FormControl><Input placeholder="Ex: Silva Soluções" {...field} /></FormControl><FormMessage /></FormItem>
+                        )}/>
+                        <FormField control={form.control} name="cnpj" render={({ field }) => (
+                           <FormItem><FormLabel>CNPJ</FormLabel><FormControl><Input placeholder="00.000.000/0000-00" {...field} /></FormControl><FormMessage /></FormItem>
+                        )}/>
+                        <FormField control={form.control} name="stateRegistration" render={({ field }) => (
+                           <FormItem><FormLabel>Inscrição Estadual</FormLabel><FormControl><Input placeholder="Número da Inscrição Estadual" {...field} /></FormControl><FormMessage /></FormItem>
+                        )}/>
+                      </div>
+                    </div>
+                )}
+
+                <Separator />
+                
                 <div className="space-y-2">
                     <h3 className="text-lg font-medium">Informações de Contato</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <FormField
-                            control={form.control}
-                            name="name"
-                            render={({ field }) => (
-                                <FormItem>
-                                <FormLabel>Nome Completo</FormLabel>
-                                <FormControl>
-                                    <Input placeholder="Ex: José" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                         <FormField
-                            control={form.control}
-                            name="companyName"
-                            render={({ field }) => (
-                                <FormItem>
-                                <FormLabel>Empresa</FormLabel>
-                                <FormControl>
-                                    <Input placeholder="Ex: Empresa Exemplo LTDA" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                                </FormItem>
-                            )}
-                        />
                          <FormField
                             control={form.control}
                             name="email"

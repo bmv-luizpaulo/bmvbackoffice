@@ -345,27 +345,52 @@
       "type": "object",
       "description": "Represents a contact, which can be a client, a supplier, or a partner.",
       "properties": {
-        "name": {
-          "type": "string",
-          "description": "The contact's full name."
-        },
-        "email": {
-          "type": "string",
-          "format": "email",
-          "description": "The contact's email address."
-        },
-        "phone": {
-          "type": "string",
-          "description": "The contact's phone number."
-        },
-        "companyName": {
-            "type": "string",
-            "description": "The name of the company the contact works for."
-        },
         "type": {
           "type": "string",
           "description": "The type of contact.",
           "enum": ["cliente", "fornecedor", "parceiro"]
+        },
+        "personType": {
+          "type": "string",
+          "description": "The type of person, either individual or corporate.",
+          "enum": ["Pessoa Física", "Pessoa Jurídica"]
+        },
+        "fullName": {
+          "type": "string",
+          "description": "The contact's full name (for individuals)."
+        },
+        "cpf": {
+          "type": "string",
+          "description": "The contact's CPF document number (for individuals)."
+        },
+        "rg": {
+          "type": "string",
+          "description": "The contact's RG document number (for individuals)."
+        },
+        "legalName": {
+            "type": "string",
+            "description": "The legal name of the company (for corporate entities)."
+        },
+        "tradeName": {
+            "type": "string",
+            "description": "The trade name or 'nome fantasia' of the company (for corporate entities)."
+        },
+        "cnpj": {
+          "type": "string",
+          "description": "The company's CNPJ document number (for corporate entities)."
+        },
+        "stateRegistration": {
+          "type": "string",
+          "description": "The company's state registration number (Inscrição Estadual)."
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "The primary contact email address."
+        },
+        "phone": {
+          "type": "string",
+          "description": "The primary contact phone number."
         },
         "linkedinUrl": {
           "type": "string",
@@ -386,7 +411,7 @@
           }
         }
       },
-      "required": ["name", "email", "type"]
+      "required": ["type", "personType", "email"]
     },
     "ProjectFile": {
       "title": "ProjectFile",

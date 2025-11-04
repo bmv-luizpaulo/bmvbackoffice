@@ -63,7 +63,8 @@ export function ContactDataTable({ type }: ContactDataTableProps) {
         ? query(
             collection(firestore, 'contacts'),
             where('type', '==', type),
-            orderBy('name'),
+            orderBy('tradeName'),
+            orderBy('fullName'),
             fbLimit(pageSize)
           )
         : null,
@@ -95,15 +96,15 @@ export function ContactDataTable({ type }: ContactDataTableProps) {
   const handleSaveContact = React.useCallback(async (contactData: Omit<Contact, 'id' | 'type'>) => {
     if (!firestore) return;
     
-    const dataToSave = { ...contactData, type };
+    const dataToSave: Omit<Contact, 'id'> = { ...contactData, type };
 
     if (selectedContact) {
       // Update
       const contactRef = doc(firestore, 'contacts', selectedContact.id);
-      await updateDocumentNonBlocking(contactRef, dataToSave);
+      await updateDocumentNonBlocking(contactRef, dataToSave as any);
     } else {
       // Create
-      await addDocumentNonBlocking(collection(firestore, 'contacts'), dataToSave);
+      await addDocumentNonBlocking(collection(firestore, 'contacts'), dataToSave as any);
     }
   }, [firestore, selectedContact, type]);
 
@@ -124,8 +125,26 @@ export function ContactDataTable({ type }: ContactDataTableProps) {
 
   const columns: ColumnDef<Contact>[] = React.useMemo(() => [
     {
-      accessorKey: "name",
-      header: "Nome",
+        id: "displayName",
+        header: "Nome",
+        cell: ({ row }) => {
+            const contact = row.original;
+            return contact.personType === 'Pessoa Jurídica' 
+                ? (
+                    <div>
+                        <div className="font-medium">{contact.tradeName || contact.legalName}</div>
+                        <div className="text-xs text-muted-foreground">{contact.legalName}</div>
+                    </div>
+                )
+                : <div className="font-medium">{contact.fullName}</div>
+        },
+        filterFn: (row, id, value) => {
+            const contact = row.original;
+            const name = contact.personType === 'Pessoa Jurídica' 
+                ? `${contact.tradeName || ''} ${contact.legalName || ''}`
+                : contact.fullName || '';
+            return name.toLowerCase().includes(String(value).toLowerCase());
+        },
     },
     {
       accessorKey: "email",
@@ -136,8 +155,8 @@ export function ContactDataTable({ type }: ContactDataTableProps) {
       header: "Telefone",
     },
     {
-      accessorKey: "companyName",
-      header: "Empresa",
+      accessorKey: "personType",
+      header: "Tipo de Pessoa",
     },
     {
       id: "actions",
@@ -190,7 +209,7 @@ export function ContactDataTable({ type }: ContactDataTableProps) {
   });
 
   React.useEffect(() => {
-    table.getColumn('name')?.setFilterValue(deferredNameFilter);
+    table.getColumn('displayName')?.setFilterValue(deferredNameFilter);
   }, [deferredNameFilter, table]);
 
   return (
@@ -296,7 +315,7 @@ export function ContactDataTable({ type }: ContactDataTableProps) {
                 <AlertDialogHeader>
                   <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    Esta ação não pode ser desfeita. Isso excluirá permanentemente o contato "{selectedContact?.name}".
+                    Esta ação não pode ser desfeita. Isso excluirá permanentemente o contato "{selectedContact?.fullName || selectedContact?.tradeName}".
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
@@ -309,5 +328,3 @@ export function ContactDataTable({ type }: ContactDataTableProps) {
     </div>
   )
 }
-
-    
