@@ -27,6 +27,14 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from "../ui/textarea";
 import type { Checklist, Team } from "@/lib/types";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
+import { CalendarIcon, RefreshCcw } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { Calendar } from "../ui/calendar";
+import { Separator } from "../ui/separator";
+import { Switch } from "../ui/switch";
 
 type ChecklistFormDialogProps = {
   isOpen: boolean;
@@ -41,6 +49,17 @@ const formSchema = z.object({
   description: z.string().optional(),
   teamId: z.string({ required_error: "A equipe é obrigatória." }),
   status: z.enum(['ativo', 'arquivado']).default('ativo'),
+  deadlineDate: z.date().optional(),
+  isRecurring: z.boolean().default(false),
+  recurrenceFrequency: z.enum(['diaria', 'semanal', 'mensal']).optional(),
+}).refine(data => {
+    if (data.isRecurring) {
+        return !!data.recurrenceFrequency;
+    }
+    return true;
+}, {
+    message: "A frequência é obrigatória para checklists recorrentes.",
+    path: ["recurrenceFrequency"],
 });
 
 export function ChecklistFormDialog({ isOpen, onOpenChange, onSave, checklist, teams }: ChecklistFormDialogProps) {
@@ -51,8 +70,11 @@ export function ChecklistFormDialog({ isOpen, onOpenChange, onSave, checklist, t
       name: '',
       description: '',
       status: 'ativo',
+      isRecurring: false,
     }
   });
+
+  const isRecurring = form.watch('isRecurring');
 
   React.useEffect(() => {
     if (isOpen) {
@@ -62,6 +84,9 @@ export function ChecklistFormDialog({ isOpen, onOpenChange, onSave, checklist, t
           description: checklist.description || '',
           teamId: checklist.teamId,
           status: checklist.status || 'ativo',
+          deadlineDate: checklist.deadlineDate ? new Date(checklist.deadlineDate) : undefined,
+          isRecurring: checklist.isRecurring || false,
+          recurrenceFrequency: checklist.recurrenceFrequency,
         });
       } else {
         form.reset({
@@ -69,6 +94,9 @@ export function ChecklistFormDialog({ isOpen, onOpenChange, onSave, checklist, t
           description: '',
           teamId: undefined,
           status: 'ativo',
+          deadlineDate: undefined,
+          isRecurring: false,
+          recurrenceFrequency: undefined,
         });
       }
     }
@@ -76,7 +104,15 @@ export function ChecklistFormDialog({ isOpen, onOpenChange, onSave, checklist, t
 
 
   function onSubmit(values: z.infer<typeof formSchema>) {
-    onSave(values, checklist?.id);
+    const dataToSave = {
+        ...values,
+        deadlineDate: values.deadlineDate?.toISOString(),
+        recurrenceFrequency: values.isRecurring ? values.recurrenceFrequency : undefined,
+    };
+     if (!dataToSave.isRecurring) {
+      delete (dataToSave as Partial<typeof dataToSave>).recurrenceFrequency;
+    }
+    onSave(dataToSave, checklist?.id);
     onOpenChange(false);
   }
   
@@ -90,7 +126,7 @@ export function ChecklistFormDialog({ isOpen, onOpenChange, onSave, checklist, t
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 max-h-[70vh] overflow-y-auto pr-4">
                 <FormField
                     control={form.control}
                     name="name"
@@ -139,6 +175,90 @@ export function ChecklistFormDialog({ isOpen, onOpenChange, onSave, checklist, t
                         </FormItem>
                     )}
                 />
+                <Separator />
+                <div className="space-y-4">
+                     <FormField
+                        control={form.control}
+                        name="deadlineDate"
+                        render={({ field }) => (
+                            <FormItem className="flex flex-col">
+                            <FormLabel>Prazo Final (Opcional)</FormLabel>
+                             <Popover>
+                                <PopoverTrigger asChild>
+                                <FormControl>
+                                    <Button
+                                    variant={"outline"}
+                                    className={cn(
+                                        "w-full pl-3 text-left font-normal",
+                                        !field.value && "text-muted-foreground"
+                                    )}
+                                    >
+                                    {field.value ? (
+                                        format(field.value, "PPP", { locale: ptBR })
+                                    ) : (
+                                        <span>Escolha uma data</span>
+                                    )}
+                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                    </Button>
+                                </FormControl>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0" align="start">
+                                <Calendar
+                                    mode="single"
+                                    selected={field.value}
+                                    onSelect={field.onChange}
+                                    locale={ptBR}
+                                    initialFocus
+                                />
+                                </PopoverContent>
+                            </Popover>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                        />
+                    <FormField
+                        control={form.control}
+                        name="isRecurring"
+                        render={({ field }) => (
+                            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                                <div className="space-y-0.5">
+                                    <FormLabel className="flex items-center gap-2"><RefreshCcw className="h-4 w-4"/>Checklist Recorrente</FormLabel>
+                                </div>
+                                <FormControl>
+                                    <Switch
+                                    checked={field.value}
+                                    onCheckedChange={field.onChange}
+                                    />
+                                </FormControl>
+                            </FormItem>
+                        )}
+                    />
+                    {isRecurring && (
+                        <FormField
+                            control={form.control}
+                            name="recurrenceFrequency"
+                            render={({ field }) => (
+                                <FormItem>
+                                <FormLabel>Frequência</FormLabel>
+                                <Select onValueChange={field.onChange} value={field.value}>
+                                    <FormControl>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Selecione a frequência" />
+                                    </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                        <SelectItem value="diaria">Diária</SelectItem>
+                                        <SelectItem value="semanal">Semanal</SelectItem>
+                                        <SelectItem value="mensal">Mensal</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                    )}
+                </div>
+
                 <DialogFooter className="pt-4">
                     <DialogClose asChild>
                         <Button type="button" variant="outline">Cancelar</Button>
@@ -151,3 +271,5 @@ export function ChecklistFormDialog({ isOpen, onOpenChange, onSave, checklist, t
     </Dialog>
   );
 }
+
+    

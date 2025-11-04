@@ -56,14 +56,19 @@ export default function ChecklistsPage() {
   const isManager = role?.isManager || role?.isDev;
 
   const checklistsQuery = useMemoFirebase(() => {
-    if (!firestore || !authUser || !userProfile || !role) return null;
+    if (!firestore || !authUser || !role || !userProfile) return null;
     let q = query(collection(firestore, 'checklists'), orderBy('name'));
-    if (filterParam === 'me' && !isManager && userProfile?.teamIds && userProfile.teamIds.length > 0) {
+    
+    const isFiltered = filterParam === 'me';
+    const canSeeAll = role.isManager || role.isDev;
+
+    if (isFiltered && !canSeeAll && userProfile.teamIds && userProfile.teamIds.length > 0) {
       q = query(q, where('teamId', 'in', userProfile.teamIds));
     }
+    
     return q;
-  }, [firestore, authUser, filterParam, userProfile, role, isManager]);
-  
+  }, [firestore, authUser, filterParam, userProfile, role]);
+
   const { data: checklists, isLoading: isLoadingChecklists } = useCollection<Checklist>(checklistsQuery);
   
   const teamsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'teams') : null, [firestore]);
@@ -525,3 +530,5 @@ export default function ChecklistsPage() {
     </div>
   );
 }
+
+    

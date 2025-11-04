@@ -610,6 +610,20 @@
             "type": "string",
             "enum": ["ativo", "arquivado"],
             "description": "The status of the checklist."
+        },
+        "deadlineDate": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Optional deadline for checklist completion."
+        },
+        "isRecurring": {
+          "type": "boolean",
+          "description": "Indicates if the checklist is recurring."
+        },
+        "recurrenceFrequency": {
+          "type": "string",
+          "description": "Frequency of recurrence if isRecurring is true.",
+          "enum": ["diaria", "semanal", "mensal"]
         }
       },
       "required": ["name", "teamId"]
@@ -914,3 +928,5 @@
     }
   }
 }
+
+    

@@ -195,6 +195,9 @@ export type Checklist = {
   description?: string;
   teamId: string;
   status?: 'ativo' | 'arquivado';
+  deadlineDate?: string;
+  isRecurring?: boolean;
+  recurrenceFrequency?: 'diaria' | 'semanal' | 'mensal';
 };
 
 export type ChecklistItem = {
@@ -322,3 +325,5 @@ export type DeveloperTool = {
     componentName: string;
     requiresDevRole: boolean;
 }
+
+    
