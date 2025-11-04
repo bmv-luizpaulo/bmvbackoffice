@@ -70,7 +70,7 @@ export default function ChecklistReportPage() {
             </Button>
         </div>
       <div className="mx-auto max-w-4xl bg-white p-12 shadow-lg print:shadow-none">
-        <header className="flex items-center justify-between border-b pb-6">
+        <header className="flex items-start justify-between border-b pb-4">
             <div className="flex items-center gap-4">
                 <Image src="/image/BMV.png" alt="BMV Logo" width={150} height={50} />
             </div>
