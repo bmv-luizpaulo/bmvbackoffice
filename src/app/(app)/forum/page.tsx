@@ -1,12 +1,12 @@
 'use client';
 import { ChatLayout } from "@/components/chat/chat-layout";
-import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
+import { useFirestore, useCollection, useMemoFirebase, useUser } from "@/firebase";
 import { collection, getDocs, query, where, addDoc } from "firebase/firestore";
-import type { User, Chat } from "@/lib/types";
+import type { User as UserType, Chat } from "@/lib/types";
 import { useEffect } from "react";
 
 
-async function ensureGlobalForumExists(firestore: any, allUsers: User[]) {
+async function ensureGlobalForumExists(firestore: any, allUsers: UserType[]) {
     if (!firestore || !allUsers || allUsers.length === 0) return;
     
     const forumQuery = query(collection(firestore, 'chats'), where('isGlobal', '==', true));
@@ -39,12 +39,16 @@ async function ensureGlobalForumExists(firestore: any, allUsers: User[]) {
 
 export default function ForumPage() {
   const firestore = useFirestore();
+  const { user } = useUser();
+
   const usersQuery = useMemoFirebase(() => firestore ? collection(firestore, 'users') : null, [firestore]);
-  const { data: allUsers } = useCollection<User>(usersQuery);
+  const { data: allUsers } = useCollection<UserType>(usersQuery);
 
   useEffect(() => {
+    if (user) { // Ensure user is loaded before trying to create forum
       ensureGlobalForumExists(firestore, allUsers || []);
-  }, [firestore, allUsers]);
+    }
+  }, [firestore, allUsers, user]);
 
   return (
     <div className="flex flex-col gap-6 h-[calc(100vh-theme(spacing.14)-2*theme(spacing.6))]">
