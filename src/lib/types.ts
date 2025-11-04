@@ -190,10 +190,12 @@ export type Checklist = {
 export type ChecklistItem = {
   id: string;
   checklistId: string;
-  type: 'item' | 'header';
+  type: 'item' | 'header' | 'yes_no';
   description: string;
   order: number;
-  isCompleted?: boolean; // Opcional, pois headers não terão
+  isCompleted?: boolean;
+  answer?: 'yes' | 'no' | 'unanswered';
+  comment?: string;
 };
 
 export type Asset = {

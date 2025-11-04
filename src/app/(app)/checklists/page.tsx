@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, ListChecks, Trash2, Edit, Eye, MessageSquare, Heading2 } from "lucide-react";
+import { Plus, ListChecks, Trash2, Edit, Eye, MessageSquare, Heading2, Check, X } from "lucide-react";
 import { useCollection, useFirestore, useMemoFirebase, useUser, useDoc } from '@/firebase';
 import { collection, doc, orderBy, query } from 'firebase/firestore';
 import type { Checklist, ChecklistItem, Team, User as UserType, Role } from '@/lib/types';
@@ -19,6 +19,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { Progress } from '@/components/ui/progress';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { ThumbsUp } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
@@ -39,8 +41,10 @@ export default function ChecklistsPage() {
   const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [checklistToEdit, setChecklistToEdit] = React.useState<Checklist | null>(null);
   const [newItemText, setNewItemText] = React.useState('');
-  const [newItemType, setNewItemType] = React.useState<'item' | 'header'>('item');
+  const [newItemType, setNewItemType] = React.useState<'item' | 'header' | 'yes_no'>('item');
   const [isEditMode, setIsEditMode] = React.useState(true);
+  const [commentDebounceTimers, setCommentDebounceTimers] = React.useState<Record<string, NodeJS.Timeout>>({});
+
 
   const checklistsQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'checklists'), orderBy('name')) : null, [firestore]);
   const { data: checklists, isLoading: isLoadingChecklists } = useCollection<Checklist>(checklistsQuery);
@@ -54,11 +58,19 @@ export default function ChecklistsPage() {
   
   const progress = React.useMemo(() => {
     if (!checklistItems || checklistItems.length === 0) return 0;
-    const itemsOnly = checklistItems.filter(item => item.type === 'item');
-    if(itemsOnly.length === 0) return 0;
-    const completed = itemsOnly.filter(item => item.isCompleted).length;
-    return (completed / itemsOnly.length) * 100;
+    
+    const completableItems = checklistItems.filter(item => item.type === 'item' || item.type === 'yes_no');
+    if (completableItems.length === 0) return 0;
+
+    const completed = completableItems.filter(item => {
+        if (item.type === 'item') return item.isCompleted;
+        if (item.type === 'yes_no') return item.answer !== 'unanswered';
+        return false;
+    }).length;
+    
+    return (completed / completableItems.length) * 100;
   }, [checklistItems]);
+
 
   React.useEffect(() => {
     if (!selectedChecklist && checklists && checklists.length > 0) {
@@ -105,10 +117,13 @@ export default function ChecklistsPage() {
       order: newOrder,
       checklistId: selectedChecklist.id,
       type: newItemType,
-    }
+    };
 
     if (newItemType === 'item') {
         newItem.isCompleted = false;
+    } else if (newItemType === 'yes_no') {
+        newItem.answer = 'unanswered';
+        newItem.comment = '';
     }
 
     await addDocumentNonBlocking(itemsCollection, newItem);
@@ -124,6 +139,28 @@ export default function ChecklistsPage() {
     if (!firestore || !selectedChecklist || item.type !== 'item') return;
     const itemRef = doc(firestore, `checklists/${selectedChecklist.id}/items`, item.id);
     updateDocumentNonBlocking(itemRef, { isCompleted: !item.isCompleted });
+  };
+  
+  const handleAnswerItem = (item: ChecklistItem, answer: 'yes' | 'no') => {
+    if (!firestore || !selectedChecklist || item.type !== 'yes_no') return;
+    const itemRef = doc(firestore, `checklists/${selectedChecklist.id}/items`, item.id);
+    updateDocumentNonBlocking(itemRef, { answer });
+  };
+  
+  const handleCommentChange = (item: ChecklistItem, comment: string) => {
+    if (!firestore || !selectedChecklist || item.type !== 'yes_no') return;
+    
+    // Clear previous timeout if it exists
+    if (commentDebounceTimers[item.id]) {
+      clearTimeout(commentDebounceTimers[item.id]);
+    }
+    
+    const timer = setTimeout(() => {
+      const itemRef = doc(firestore, `checklists/${selectedChecklist.id}/items`, item.id);
+      updateDocumentNonBlocking(itemRef, { comment });
+    }, 1000); // Debounce time of 1 second
+
+    setCommentDebounceTimers(prev => ({ ...prev, [item.id]: timer }));
   };
 
   const isManager = role?.isManager || role?.isDev;
@@ -270,6 +307,30 @@ export default function ChecklistsPage() {
                                     </div>
                                 )
                             }
+                            if (item.type === 'yes_no') {
+                                return (
+                                     <div key={item.id} className="p-3 rounded-md border bg-background flex flex-col gap-3">
+                                        <div className="flex items-start justify-between">
+                                            <label className="text-sm flex-1 pr-4">{item.description}</label>
+                                            <div className="flex items-center gap-2">
+                                                <Button size="sm" variant={item.answer === 'yes' ? 'default' : 'outline'} onClick={() => handleAnswerItem(item, 'yes')} className='h-8'><Check className='h-4 w-4 mr-1'/>Sim</Button>
+                                                <Button size="sm" variant={item.answer === 'no' ? 'destructive' : 'outline'} onClick={() => handleAnswerItem(item, 'no')} className='h-8'><X className='h-4 w-4 mr-1'/>Não</Button>
+                                                {canEdit && (
+                                                    <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive/70 hover:text-destructive/100" onClick={() => handleDeleteItem(item.id)}>
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <Textarea 
+                                            placeholder="Adicionar comentário (opcional)..." 
+                                            defaultValue={item.comment || ''}
+                                            onChange={(e) => handleCommentChange(item, e.target.value)}
+                                            className="text-sm"
+                                        />
+                                    </div>
+                                )
+                            }
                             return (
                                 <div key={item.id} className="flex items-center gap-3 p-3 rounded-md">
                                     <Checkbox id={`item-${item.id}`} checked={item.isCompleted} onCheckedChange={() => handleToggleItem(item)} />
@@ -295,21 +356,29 @@ export default function ChecklistsPage() {
                             }}
                             className="flex flex-col gap-4 pt-4 border-t"
                         >
-                            <RadioGroup defaultValue="item" value={newItemType} onValueChange={(value: 'item' | 'header') => setNewItemType(value)} className="flex items-center gap-4">
+                            <RadioGroup defaultValue="item" value={newItemType} onValueChange={(value: 'item' | 'header' | 'yes_no') => setNewItemType(value)} className="flex items-center gap-4">
                                 <div className="flex items-center space-x-2">
                                     <RadioGroupItem value="item" id="r-item" />
                                     <Label htmlFor="r-item" className='flex items-center gap-1'><MessageSquare className='h-4 w-4'/>Passo (item)</Label>
                                 </div>
                                 <div className="flex items-center space-x-2">
                                     <RadioGroupItem value="header" id="r-header" />
-                                    <Label htmlFor="r-header" className='flex items-center gap-1'><Heading2 className='h-4 w-4'/>Título de Seção (etapa)</Label>
+                                    <Label htmlFor="r-header" className='flex items-center gap-1'><Heading2 className='h-4 w-4'/>Título de Seção</Label>
+                                </div>
+                                 <div className="flex items-center space-x-2">
+                                    <RadioGroupItem value="yes_no" id="r-yes-no" />
+                                    <Label htmlFor="r-yes-no" className='flex items-center gap-1'><ThumbsUp className='h-4 w-4'/>Verificação (Sim/Não)</Label>
                                 </div>
                             </RadioGroup>
                             <div className="flex items-center gap-2">
                                 <Input
                                     value={newItemText}
                                     onChange={(e) => setNewItemText(e.target.value)}
-                                    placeholder={newItemType === 'item' ? "Adicionar novo passo..." : "Adicionar novo título de seção..."}
+                                    placeholder={
+                                        newItemType === 'item' ? "Adicionar novo passo..." : 
+                                        newItemType === 'header' ? "Adicionar novo título de seção..." :
+                                        "Adicionar nova pergunta de verificação..."
+                                    }
                                 />
                                 <Button type="submit" disabled={!newItemText.trim()}>Adicionar</Button>
                             </div>
