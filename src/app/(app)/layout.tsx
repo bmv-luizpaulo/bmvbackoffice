@@ -185,33 +185,66 @@ function UserAvatar() {
     );
 }
 
-function NavItem({ item, pathname, isDev }: { item: (typeof navSections)[0]['items'][0] & { subItems?: any[], devOnly?: boolean }, pathname: string, isDev: boolean }) {
-  const { state } = useSidebar();
+const CollapsibleNavItem = ({ item, pathname }: { item: any, pathname: string }) => {
+    const { state } = useSidebar();
+    const isParentActive = item.subItems.some((sub: any) => pathname.startsWith(sub.href.split('?')[0]));
+
+    const [isOpen, setIsOpen] = React.useState(isParentActive);
+
+    React.useEffect(() => {
+        if (!isParentActive && state === 'expanded') {
+            // Don't close on navigation away if it's a collapsible parent
+        } else {
+            setIsOpen(isParentActive);
+        }
+    }, [isParentActive, state]);
+
+    useEffect(() => {
+        if (state === 'collapsed') {
+            setIsOpen(false);
+        }
+    }, [state]);
+
+    return (
+        <Collapsible open={isOpen} onOpenChange={setIsOpen} className='w-full'>
+            <CollapsibleTrigger asChild>
+                <SidebarMenuButton
+                    isActive={isParentActive}
+                    tooltip={item.label}
+                    className="justify-between"
+                >
+                    <div className='flex items-center gap-2'>
+                        <item.icon />
+                        <span>{item.label}</span>
+                    </div>
+                    <ChevronDown className={cn("h-4 w-4 shrink-0 transition-transform", isOpen && "rotate-180")} />
+                </SidebarMenuButton>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+                <SidebarMenuSub>
+                    {item.subItems?.map((subItem: any) => (
+                        <SidebarMenuItem key={subItem.href}>
+                            <SidebarMenuSubButton
+                                href={subItem.href}
+                                isActive={pathname.startsWith(subItem.href.split('?')[0])}
+                            >
+                                <subItem.icon />
+                                <span>{subItem.label}</span>
+                            </SidebarMenuSubButton>
+                        </SidebarMenuItem>
+                    ))}
+                </SidebarMenuSub>
+            </CollapsibleContent>
+        </Collapsible>
+    );
+};
+
+function NavItem({ item, pathname, isDev }: { item: any, pathname: string, isDev: boolean }) {
   const hasSubItems = item.subItems && item.subItems.length > 0;
   
   if (item.devOnly && !isDev) {
     return null;
   }
-  
-  const isParentActive = hasSubItems
-    ? item.subItems.some(sub => pathname.startsWith(sub.href.split('?')[0]))
-    : pathname.startsWith(item.href.split('?')[0]);
-
-  const [isOpen, setIsOpen] = React.useState(isParentActive);
-
-  React.useEffect(() => {
-      if (!isParentActive && state === 'expanded') {
-        // Don't close on navigation away if it's a collapsible parent
-      } else {
-        setIsOpen(isParentActive);
-      }
-  }, [isParentActive, state]);
-  
-  useEffect(() => {
-    if (state === 'collapsed') {
-      setIsOpen(false);
-    }
-  }, [state]);
   
   if (!hasSubItems) {
     return (
@@ -226,38 +259,7 @@ function NavItem({ item, pathname, isDev }: { item: (typeof navSections)[0]['ite
     );
   }
 
-  return (
-     <Collapsible open={isOpen} onOpenChange={setIsOpen} className='w-full'>
-        <CollapsibleTrigger asChild>
-            <SidebarMenuButton
-                isActive={isParentActive}
-                tooltip={item.label}
-                className="justify-between"
-            >
-                <div className='flex items-center gap-2'>
-                    <item.icon />
-                    <span>{item.label}</span>
-                </div>
-                <ChevronDown className={cn("h-4 w-4 shrink-0 transition-transform", isOpen && "rotate-180")} />
-            </SidebarMenuButton>
-        </CollapsibleTrigger>
-        <CollapsibleContent>
-             <SidebarMenuSub>
-                {item.subItems?.map(subItem => (
-                     <SidebarMenuItem key={subItem.href}>
-                        <SidebarMenuSubButton
-                          href={subItem.href}
-                          isActive={pathname.startsWith(subItem.href.split('?')[0])}
-                        >
-                            <subItem.icon />
-                            <span>{subItem.label}</span>
-                        </SidebarMenuSubButton>
-                    </SidebarMenuItem>
-                ))}
-            </SidebarMenuSub>
-        </CollapsibleContent>
-     </Collapsible>
-  )
+  return <CollapsibleNavItem item={item} pathname={pathname} />;
 }
 
 function InnerLayout({ children }: { children: React.ReactNode }) {
