@@ -97,7 +97,6 @@ export default function ChecklistReportPage() {
             <Separator className="my-6" />
 
             <section className="space-y-4">
-                <h3 className="text-lg font-semibold text-gray-800 mb-4">Itens do Checklist</h3>
                 <div className='border rounded-lg'>
                   <div className='flex items-center bg-gray-50 p-3 text-xs font-semibold uppercase text-gray-500 border-b'>
                     <div className='flex-1 px-2'>Descrição</div>
