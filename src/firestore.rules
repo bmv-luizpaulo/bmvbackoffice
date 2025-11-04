@@ -50,33 +50,34 @@ service cloud.firestore {
     }
 
     match /chats/{chatId} {
-      // Allow read (get, list) if the user's ID is in the userIds array.
-      // This is the standard and correct way to secure collection queries with 'array-contains'.
-      allow read: if request.auth.uid in resource.data.userIds;
+      // Allow a user to LIST chats only if they are querying for their own chats.
+      allow list: if request.auth != null && request.query.where.keys().hasAny(['userIds']);
       
-      // Allow creation if the user is including themselves in the chat.
+      // Allow a user to GET, UPDATE or DELETE a chat document if they are a member.
+      allow get, update, delete: if request.auth.uid in resource.data.userIds;
+      
+      // Allow a user to CREATE a chat if they are including themselves.
       allow create: if request.auth.uid in request.resource.data.userIds;
-
-      // Allow updates and deletes if the user is already part of the chat.
-      allow update, delete: if request.auth.uid in resource.data.userIds;
 
       match /messages/{messageId} {
         // Allow message read/write only if the user is part of the parent chat.
-        allow read, write: if request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.userIds;
+        allow read, write: if get(/databases/$(database)/documents/chats/$(chatId)).data.userIds.hasAny([request.auth.uid]);
       }
     }
 
     match /forums/{forumId} {
-      // Allow a user to read/list forums if they are a member
-      allow read: if request.auth.uid in resource.data.userIds;
-      // Allow a user to create a forum if they are included in the new forum
+      // Allow a user to LIST forums only if they are querying for their own forums.
+      allow list: if request.auth != null && request.query.where.keys().hasAny(['userIds']);
+
+      // Allow a user to GET, UPDATE or DELETE a forum document if they are a member.
+      allow get, update, delete: if request.auth.uid in resource.data.userIds;
+      
+      // Allow a user to CREATE a forum if they are including themselves.
       allow create: if request.auth.uid in request.resource.data.userIds;
-      // Allow a user to update/delete a forum if they are a member
-      allow update, delete: if request.auth.uid in resource.data.userIds;
       
       match /messages/{messageId} {
         // Allow message read/write if the user is part of the parent forum
-        allow read, write: if request.auth.uid in get(/databases/$(database)/documents/forums/$(forumId)).data.userIds;
+        allow read, write: if get(/databases/$(database)/documents/forums/$(forumId)).data.userIds.hasAny([request.auth.uid]);
       }
     }
     

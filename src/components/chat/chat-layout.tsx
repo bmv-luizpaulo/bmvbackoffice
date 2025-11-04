@@ -71,9 +71,13 @@ export function ChatLayout({ chatType }: ChatLayoutProps) {
   const { data: conversations, isLoading: isLoadingConversations } = useCollection<Conversation>(conversationsQuery);
 
   const messagesQuery = useMemoFirebase(() => {
-    if (!firestore || !selectedConversation?.id) return null;
-    return query(collection(firestore, collectionName, selectedConversation.id, 'messages'), orderBy('timestamp', 'asc'));
+    if (!firestore || !selectedConversation) return null;
+    return query(
+        collection(firestore, collectionName, selectedConversation.id, 'messages'), 
+        orderBy('timestamp', 'asc')
+    );
   }, [firestore, selectedConversation, collectionName]);
+
   const { data: messages, isLoading: isLoadingMessages } = useCollection<Message>(messagesQuery);
   
   useEffect(() => {
@@ -153,7 +157,7 @@ export function ChatLayout({ chatType }: ChatLayoutProps) {
   const conversationDisplayInfo = useMemo(() => {
     if (!selectedConversation || !currentUser) return { avatar: null, name: 'Selecione uma conversa' };
     
-    if (chatType === 'forum') {
+    if (collectionName === 'forums') {
         const forum = selectedConversation as Forum;
         return { 
             avatar: <Avatar><AvatarFallback><Hash /></AvatarFallback></Avatar>,
@@ -169,7 +173,7 @@ export function ChatLayout({ chatType }: ChatLayoutProps) {
         avatar: <Avatar><AvatarImage src={otherUser.avatarUrl} /><AvatarFallback>{otherUser.name.charAt(0)}</AvatarFallback></Avatar>,
         name: otherUser.name
     };
-  }, [selectedConversation, currentUser, chatType]);
+  }, [selectedConversation, currentUser, collectionName]);
 
   const directMessageUsers = useMemo(() => allUsers?.filter(u => u.id !== currentUser?.uid) || [], [allUsers, currentUser]);
 
@@ -245,7 +249,7 @@ export function ChatLayout({ chatType }: ChatLayoutProps) {
                              <div key={msg.id} className={cn("flex items-end gap-2", isCurrentUserSender ? "justify-end" : "justify-start")}>
                                  {!isCurrentUserSender && <Avatar className="h-8 w-8"><AvatarImage src={sender?.avatarUrl} /><AvatarFallback>{sender?.name?.charAt(0)}</AvatarFallback></Avatar>}
                                  <div className={cn("max-w-xs lg:max-w-md rounded-lg p-3 text-sm", isCurrentUserSender ? "bg-primary text-primary-foreground" : "bg-muted")}>
-                                    {!isCurrentUserSender && chatType === 'forum' && <p className='text-xs font-bold mb-1 text-primary'>{sender?.name || 'Usuário'}</p>}
+                                    {!isCurrentUserSender && collectionName === 'forums' && <p className='text-xs font-bold mb-1 text-primary'>{sender?.name || 'Usuário'}</p>}
                                     <p className='whitespace-pre-wrap'>{msg.text}</p>
                                     <p className={cn("text-xs mt-1 text-right", isCurrentUserSender ? "text-primary-foreground/70" : "text-muted-foreground/70")}>
                                         {msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'enviando...'}
