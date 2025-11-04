@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, ListChecks, Trash2, Edit, Eye, CheckSquare, Heading2, Check, X, ThumbsUp, FileText, Archive, ArchiveRestore } from "lucide-react";
+import { Plus, ListChecks, Trash2, Edit, Eye, CheckSquare, Heading2, Check, X, ThumbsUp, FileText, Archive, ArchiveRestore, MoreHorizontal } from "lucide-react";
 import { useCollection, useFirestore, useMemoFirebase, useUser, useDoc } from '@/firebase';
 import { collection, doc, orderBy, query, where } from 'firebase/firestore';
 import type { Checklist, ChecklistItem, Team, User as UserType, Role } from '@/lib/types';
@@ -22,6 +22,8 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import Link from 'next/link';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+
 
 export const dynamic = 'force-dynamic';
 
@@ -42,6 +44,7 @@ export default function ChecklistsPage() {
   const [selectedChecklist, setSelectedChecklist] = React.useState<Checklist | null>(null);
   const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [checklistToEdit, setChecklistToEdit] = React.useState<Checklist | null>(null);
+  const [checklistToDelete, setChecklistToDelete] = React.useState<Checklist | null>(null);
   const [newItemText, setNewItemText] = React.useState('');
   const [newItemType, setNewItemType] = React.useState<'header' | 'item' | 'yes_no'>('header');
   const [isEditMode, setIsEditMode] = React.useState(true);
@@ -103,13 +106,15 @@ export default function ChecklistsPage() {
       toast({ title: "Checklist Criado", description: "O novo checklist está pronto." });
     }
     setIsFormOpen(false);
+    setChecklistToEdit(null);
   }, [firestore, toast]);
   
-  const handleDeleteChecklist = React.useCallback((id: string) => {
-    if (!firestore) return;
-    deleteDocumentNonBlocking(doc(firestore, 'checklists', id));
+  const confirmDelete = React.useCallback(() => {
+    if (!firestore || !checklistToDelete) return;
+    deleteDocumentNonBlocking(doc(firestore, 'checklists', checklistToDelete.id));
     toast({ title: "Checklist Excluído", variant: "destructive" });
-  }, [firestore, toast]);
+    setChecklistToDelete(null);
+  }, [firestore, toast, checklistToDelete]);
 
   const handleToggleArchive = React.useCallback((checklist: Checklist) => {
     if (!firestore) return;
@@ -162,7 +167,6 @@ export default function ChecklistsPage() {
   const handleCommentChange = (item: ChecklistItem, comment: string) => {
     if (!firestore || !selectedChecklist || item.type !== 'yes_no') return;
     
-    // Clear previous timeout if it exists
     if (commentDebounceTimers[item.id]) {
       clearTimeout(commentDebounceTimers[item.id]);
     }
@@ -170,7 +174,7 @@ export default function ChecklistsPage() {
     const timer = setTimeout(() => {
       const itemRef = doc(firestore, `checklists/${selectedChecklist.id}/items`, item.id);
       updateDocumentNonBlocking(itemRef, { comment });
-    }, 1000); // Debounce time of 1 second
+    }, 1000); 
 
     setCommentDebounceTimers(prev => ({ ...prev, [item.id]: timer }));
   };
@@ -227,7 +231,6 @@ export default function ChecklistsPage() {
           </TabsList>
       </Tabs>
 
-
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card className="md:col-span-1">
           <CardHeader>
@@ -239,18 +242,43 @@ export default function ChecklistsPage() {
                 Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-12 w-full" />)
               ) : currentChecklistList.length > 0 ? (
                 currentChecklistList.map(checklist => (
-                  <Button
-                    key={checklist.id}
-                    variant={selectedChecklist?.id === checklist.id ? "secondary" : "ghost"}
-                    className="w-full h-auto justify-between text-left flex items-start p-2"
-                    onClick={() => setSelectedChecklist(checklist)}
-                  >
-                    <div className='flex flex-col items-start'>
-                        <span className="font-medium">{checklist.name}</span>
-                        <span className="text-xs text-muted-foreground">{teamsMap.get(checklist.teamId) || 'Equipe desconhecida'}</span>
+                    <div
+                        key={checklist.id}
+                        className={cn(
+                            "group flex w-full h-auto justify-between items-start p-2 rounded-md transition-colors",
+                            selectedChecklist?.id === checklist.id ? "bg-secondary" : "hover:bg-muted/50"
+                        )}
+                    >
+                        <button className="flex-1 flex flex-col items-start text-left" onClick={() => setSelectedChecklist(checklist)}>
+                            <span className="font-medium">{checklist.name}</span>
+                            <span className="text-xs text-muted-foreground">{teamsMap.get(checklist.teamId) || 'Equipe desconhecida'}</span>
+                        </button>
+                        <div className="flex items-center">
+                            <span className='font-mono text-xs text-muted-foreground/80 mr-2'>#{checklist.id.substring(0,6).toUpperCase()}</span>
+                            {isManager && (
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100 focus:opacity-100">
+                                            <MoreHorizontal className="h-4 w-4" />
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                        <DropdownMenuItem onClick={() => { setChecklistToEdit(checklist); setIsFormOpen(true); }}>
+                                            <Edit className="mr-2 h-4 w-4" /> Editar
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem onClick={() => handleToggleArchive(checklist)}>
+                                            {checklist.status === 'arquivado' ? <ArchiveRestore className="mr-2 h-4 w-4" /> : <Archive className="mr-2 h-4 w-4" />}
+                                            {checklist.status === 'arquivado' ? 'Restaurar' : 'Arquivar'}
+                                        </DropdownMenuItem>
+                                        <DropdownMenuSeparator />
+                                        <DropdownMenuItem className="text-destructive" onClick={() => setChecklistToDelete(checklist)}>
+                                            <Trash2 className="mr-2 h-4 w-4" /> Excluir
+                                        </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                            )}
+                        </div>
                     </div>
-                     <span className='font-mono text-xs text-muted-foreground/80'>#{checklist.id.substring(0,6).toUpperCase()}</span>
-                  </Button>
                 ))
               ) : (
                 <p className="text-sm text-muted-foreground p-4 text-center">Nenhum checklist encontrado.</p>
@@ -288,30 +316,9 @@ export default function ChecklistsPage() {
                             <Button variant="ghost" size="icon" onClick={() => { setChecklistToEdit(selectedChecklist); setIsFormOpen(true); }}>
                                 <Edit className="h-4 w-4" />
                             </Button>
-                            <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                    <Button variant="ghost" size="icon" className='text-destructive hover:text-destructive'>
-                                        <Trash2 className="h-4 w-4" />
-                                    </Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                    <AlertDialogHeader>
-                                    <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                        Esta ação não pode ser desfeita e excluirá o checklist "{selectedChecklist.name}" e todos os seus itens.
-                                    </AlertDialogDescription>
-                                    </AlertDialogHeader>
-                                    <AlertDialogFooter>
-                                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                    <AlertDialogAction
-                                        className='bg-destructive hover:bg-destructive/90'
-                                        onClick={() => handleDeleteChecklist(selectedChecklist.id)}
-                                    >
-                                        Excluir
-                                    </AlertDialogAction>
-                                    </AlertDialogFooter>
-                                </AlertDialogContent>
-                            </AlertDialog>
+                            <Button variant="ghost" size="icon" className='text-destructive hover:text-destructive' onClick={() => setChecklistToDelete(selectedChecklist)}>
+                                <Trash2 className="h-4 w-4" />
+                            </Button>
                         </div>
                     )}
                 </div>
@@ -452,6 +459,26 @@ export default function ChecklistsPage() {
             teams={teams || []}
         />
       )}
+
+      <AlertDialog open={!!checklistToDelete} onOpenChange={(open) => !open && setChecklistToDelete(null)}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+                <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
+                <AlertDialogDescription>
+                    Esta ação não pode ser desfeita e excluirá o checklist "{checklistToDelete?.name}" e todos os seus itens.
+                </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+                <AlertDialogCancel onClick={() => setChecklistToDelete(null)}>Cancelar</AlertDialogCancel>
+                <AlertDialogAction
+                    className='bg-destructive hover:bg-destructive/90'
+                    onClick={confirmDelete}
+                >
+                    Excluir
+                </AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
