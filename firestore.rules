@@ -50,15 +50,14 @@ service cloud.firestore {
     }
 
     match /chats/{chatId} {
-      // Allow a user to read a chat document (get) or a list of documents (list)
-      // if their user ID is in the `userIds` array of the document.
-      // This rule works with `where('userIds', 'array-contains', request.auth.uid)` queries.
+      // Allow read (get/list) if the user's ID is in the userIds array.
+      // This rule enables 'array-contains' queries.
       allow read: if request.auth.uid in resource.data.userIds;
       
-      // Allow a user to create a chat if they are including themselves in the chat.
+      // Allow creation if the user is including themselves in the chat.
       allow create: if request.auth.uid in request.resource.data.userIds;
       
-      // Allow a user to update or delete a chat if they are a participant.
+      // Allow update/delete if the user is a participant.
       allow update, delete: if request.auth.uid in resource.data.userIds;
       
       match /messages/{messageId} {
