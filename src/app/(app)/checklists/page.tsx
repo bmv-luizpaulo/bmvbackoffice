@@ -41,7 +41,7 @@ export default function ChecklistsPage() {
   const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [checklistToEdit, setChecklistToEdit] = React.useState<Checklist | null>(null);
   const [newItemText, setNewItemText] = React.useState('');
-  const [newItemType, setNewItemType] = React.useState<'item' | 'header' | 'yes_no'>('item');
+  const [newItemType, setNewItemType] = React.useState<'item' | 'header' | 'yes_no'>('header');
   const [isEditMode, setIsEditMode] = React.useState(true);
   const [commentDebounceTimers, setCommentDebounceTimers] = React.useState<Record<string, NodeJS.Timeout>>({});
 
@@ -297,7 +297,7 @@ export default function ChecklistsPage() {
                         checklistItems.map((item) => {
                             if (item.type === 'header') {
                                 return (
-                                    <div key={item.id} className="flex items-center gap-3 bg-muted/60 p-3 rounded-md mt-4 mb-2">
+                                    <div key={item.id} className="flex items-center gap-3 bg-muted p-3 rounded-md mt-4 mb-2">
                                         <h4 className="flex-1 font-semibold text-sm">{item.description}</h4>
                                         {canEdit && (
                                             <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive/70 hover:text-destructive/100" onClick={() => handleDeleteItem(item.id)}>
