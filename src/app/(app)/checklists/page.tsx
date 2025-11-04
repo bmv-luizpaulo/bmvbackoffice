@@ -16,6 +16,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Progress } from '@/components/ui/progress';
 
 export const dynamic = 'force-dynamic';
 
@@ -47,6 +48,12 @@ export default function ChecklistsPage() {
 
   const itemsQuery = useMemoFirebase(() => firestore && selectedChecklist ? query(collection(firestore, `checklists/${selectedChecklist.id}/items`), orderBy('order')) : null, [firestore, selectedChecklist?.id]);
   const { data: checklistItems, isLoading: isLoadingItems } = useCollection<ChecklistItem>(itemsQuery);
+  
+  const progress = React.useMemo(() => {
+    if (!checklistItems || checklistItems.length === 0) return 0;
+    const completed = checklistItems.filter(item => item.isCompleted).length;
+    return (completed / checklistItems.length) * 100;
+  }, [checklistItems]);
 
   React.useEffect(() => {
     if (!selectedChecklist && checklists && checklists.length > 0) {
@@ -223,6 +230,12 @@ export default function ChecklistsPage() {
                             </AlertDialog>
                         </div>
                     )}
+                </div>
+                <div className="mt-4 space-y-2">
+                    <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                        <Progress value={progress} className="w-full" />
+                        <span>{Math.round(progress)}%</span>
+                    </div>
                 </div>
               </CardHeader>
               <CardContent>
