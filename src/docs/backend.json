@@ -575,7 +575,12 @@
       "properties": {
         "name": { "type": "string", "description": "The name of the checklist." },
         "description": { "type": "string", "description": "A brief description of the checklist's purpose." },
-        "teamId": { "type": "string", "description": "The ID of the team this checklist is for." }
+        "teamId": { "type": "string", "description": "The ID of the team this checklist is for." },
+        "status": {
+            "type": "string",
+            "enum": ["ativo", "arquivado"],
+            "description": "The status of the checklist."
+        }
       },
       "required": ["name", "teamId"]
     },

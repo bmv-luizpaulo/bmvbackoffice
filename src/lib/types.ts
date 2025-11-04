@@ -185,6 +185,7 @@ export type Checklist = {
   name: string;
   description?: string;
   teamId: string;
+  status?: 'ativo' | 'arquivado';
 };
 
 export type ChecklistItem = {

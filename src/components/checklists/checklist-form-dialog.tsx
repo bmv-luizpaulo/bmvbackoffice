@@ -40,6 +40,7 @@ const formSchema = z.object({
   name: z.string().min(1, "O nome do checklist é obrigatório."),
   description: z.string().optional(),
   teamId: z.string({ required_error: "A equipe é obrigatória." }),
+  status: z.enum(['ativo', 'arquivado']).default('ativo'),
 });
 
 export function ChecklistFormDialog({ isOpen, onOpenChange, onSave, checklist, teams }: ChecklistFormDialogProps) {
@@ -49,6 +50,7 @@ export function ChecklistFormDialog({ isOpen, onOpenChange, onSave, checklist, t
     defaultValues: {
       name: '',
       description: '',
+      status: 'ativo',
     }
   });
 
@@ -59,12 +61,14 @@ export function ChecklistFormDialog({ isOpen, onOpenChange, onSave, checklist, t
           name: checklist.name,
           description: checklist.description || '',
           teamId: checklist.teamId,
+          status: checklist.status || 'ativo',
         });
       } else {
         form.reset({
           name: '',
           description: '',
           teamId: undefined,
+          status: 'ativo',
         });
       }
     }

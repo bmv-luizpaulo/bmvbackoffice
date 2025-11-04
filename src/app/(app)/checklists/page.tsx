@@ -3,9 +3,9 @@
 import * as React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, ListChecks, Trash2, Edit, Eye, CheckSquare, Heading2, Check, X, ThumbsUp, FileText } from "lucide-react";
+import { Plus, ListChecks, Trash2, Edit, Eye, CheckSquare, Heading2, Check, X, ThumbsUp, FileText, Archive, ArchiveRestore } from "lucide-react";
 import { useCollection, useFirestore, useMemoFirebase, useUser, useDoc } from '@/firebase';
-import { collection, doc, orderBy, query } from 'firebase/firestore';
+import { collection, doc, orderBy, query, where } from 'firebase/firestore';
 import type { Checklist, ChecklistItem, Team, User as UserType, Role } from '@/lib/types';
 import { addDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
@@ -21,6 +21,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import Link from 'next/link';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export const dynamic = 'force-dynamic';
 
@@ -37,11 +38,12 @@ export default function ChecklistsPage() {
   const roleQuery = useMemoFirebase(() => firestore && userProfile?.roleId ? doc(firestore, 'roles', userProfile.roleId) : null, [firestore, userProfile?.roleId]);
   const { data: role } = useDoc<Role>(roleQuery);
 
+  const [activeTab, setActiveTab] = React.useState<'ativo' | 'arquivado'>('ativo');
   const [selectedChecklist, setSelectedChecklist] = React.useState<Checklist | null>(null);
   const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [checklistToEdit, setChecklistToEdit] = React.useState<Checklist | null>(null);
   const [newItemText, setNewItemText] = React.useState('');
-  const [newItemType, setNewItemType] = React.useState<'item' | 'header' | 'yes_no'>('header');
+  const [newItemType, setNewItemType] = React.useState<'header' | 'item' | 'yes_no'>('header');
   const [isEditMode, setIsEditMode] = React.useState(true);
   const [commentDebounceTimers, setCommentDebounceTimers] = React.useState<Record<string, NodeJS.Timeout>>({});
 
@@ -55,6 +57,14 @@ export default function ChecklistsPage() {
 
   const itemsQuery = useMemoFirebase(() => firestore && selectedChecklist ? query(collection(firestore, `checklists/${selectedChecklist.id}/items`), orderBy('order')) : null, [firestore, selectedChecklist?.id]);
   const { data: checklistItems, isLoading: isLoadingItems } = useCollection<ChecklistItem>(itemsQuery);
+  
+  const { activeChecklists, archivedChecklists } = React.useMemo(() => {
+    const active = checklists?.filter(c => c.status !== 'arquivado') || [];
+    const archived = checklists?.filter(c => c.status === 'arquivado') || [];
+    return { activeChecklists: active, archivedChecklists: archived };
+  }, [checklists]);
+  
+  const currentChecklistList = activeTab === 'ativo' ? activeChecklists : archivedChecklists;
   
   const progress = React.useMemo(() => {
     if (!checklistItems || checklistItems.length === 0) return 0;
@@ -73,28 +83,23 @@ export default function ChecklistsPage() {
 
 
   React.useEffect(() => {
-    if (!selectedChecklist && checklists && checklists.length > 0) {
-      setSelectedChecklist(checklists[0]);
-    } else if (selectedChecklist) {
-      // Keep selected checklist in sync
-      const updatedChecklist = checklists?.find(c => c.id === selectedChecklist.id);
-      if(updatedChecklist) {
-        setSelectedChecklist(updatedChecklist);
-      } else if (checklists && checklists.length > 0) {
-        setSelectedChecklist(checklists[0]);
-      } else if (checklists && checklists.length === 0) {
-        setSelectedChecklist(null);
-      }
+    if (!selectedChecklist && currentChecklistList.length > 0) {
+        setSelectedChecklist(currentChecklistList[0]);
+    } else if (selectedChecklist && !currentChecklistList.some(c => c.id === selectedChecklist.id)) {
+        setSelectedChecklist(currentChecklistList[0] || null);
     }
-  }, [checklists, selectedChecklist]);
+  }, [currentChecklistList, selectedChecklist]);
 
   const handleSaveChecklist = React.useCallback(async (data: Omit<Checklist, 'id'>, id?: string) => {
     if (!firestore) return;
+    
+    const dataToSave = { ...data, status: data.status || 'ativo' };
+
     if (id) {
-      await updateDocumentNonBlocking(doc(firestore, 'checklists', id), data);
+      await updateDocumentNonBlocking(doc(firestore, 'checklists', id), dataToSave);
       toast({ title: "Checklist Atualizado", description: "As alterações foram salvas." });
     } else {
-      await addDocumentNonBlocking(collection(firestore, 'checklists'), data);
+      await addDocumentNonBlocking(collection(firestore, 'checklists'), dataToSave);
       toast({ title: "Checklist Criado", description: "O novo checklist está pronto." });
     }
     setIsFormOpen(false);
@@ -104,6 +109,13 @@ export default function ChecklistsPage() {
     if (!firestore) return;
     deleteDocumentNonBlocking(doc(firestore, 'checklists', id));
     toast({ title: "Checklist Excluído", variant: "destructive" });
+  }, [firestore, toast]);
+
+  const handleToggleArchive = React.useCallback((checklist: Checklist) => {
+    if (!firestore) return;
+    const newStatus = checklist.status === 'arquivado' ? 'ativo' : 'arquivado';
+    updateDocumentNonBlocking(doc(firestore, 'checklists', checklist.id), { status: newStatus });
+    toast({ title: `Checklist ${newStatus === 'ativo' ? 'Restaurado' : 'Arquivado'}` });
   }, [firestore, toast]);
 
   const handleAddNewItem = async () => {
@@ -207,6 +219,14 @@ export default function ChecklistsPage() {
             )}
         </div>
       </header>
+        
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="w-full">
+          <TabsList>
+            <TabsTrigger value="ativo">Ativos</TabsTrigger>
+            <TabsTrigger value="arquivado">Arquivados</TabsTrigger>
+          </TabsList>
+      </Tabs>
+
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card className="md:col-span-1">
@@ -217,20 +237,23 @@ export default function ChecklistsPage() {
             <div className="space-y-1 max-h-[60vh] overflow-y-auto">
               {isLoadingChecklists ? (
                 Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-12 w-full" />)
-              ) : checklists && checklists.length > 0 ? (
-                checklists.map(checklist => (
+              ) : currentChecklistList.length > 0 ? (
+                currentChecklistList.map(checklist => (
                   <Button
                     key={checklist.id}
                     variant={selectedChecklist?.id === checklist.id ? "secondary" : "ghost"}
-                    className="w-full h-auto justify-start text-left flex flex-col items-start p-2"
+                    className="w-full h-auto justify-between text-left flex items-start p-2"
                     onClick={() => setSelectedChecklist(checklist)}
                   >
-                    <span className="font-medium">{checklist.name}</span>
-                    <span className="text-xs text-muted-foreground">{teamsMap.get(checklist.teamId) || 'Equipe desconhecida'}</span>
+                    <div className='flex flex-col items-start'>
+                        <span className="font-medium">{checklist.name}</span>
+                        <span className="text-xs text-muted-foreground">{teamsMap.get(checklist.teamId) || 'Equipe desconhecida'}</span>
+                    </div>
+                     <span className='font-mono text-xs text-muted-foreground/80'>#{checklist.id.substring(0,6).toUpperCase()}</span>
                   </Button>
                 ))
               ) : (
-                <p className="text-sm text-muted-foreground p-4 text-center">Nenhum checklist criado.</p>
+                <p className="text-sm text-muted-foreground p-4 text-center">Nenhum checklist encontrado.</p>
               )}
             </div>
           </CardContent>
@@ -249,6 +272,19 @@ export default function ChecklistsPage() {
                     </div>
                     {canEdit && (
                         <div className='flex items-center'>
+                            <TooltipProvider>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Button variant="ghost" size="icon" onClick={() => handleToggleArchive(selectedChecklist)}>
+                                            {selectedChecklist.status === 'arquivado' ? <ArchiveRestore className="h-4 w-4" /> : <Archive className="h-4 w-4" />}
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                        <p>{selectedChecklist.status === 'arquivado' ? 'Restaurar' : 'Arquivar'}</p>
+                                    </TooltipContent>
+                                </Tooltip>
+                            </TooltipProvider>
+
                             <Button variant="ghost" size="icon" onClick={() => { setChecklistToEdit(selectedChecklist); setIsFormOpen(true); }}>
                                 <Edit className="h-4 w-4" />
                             </Button>
