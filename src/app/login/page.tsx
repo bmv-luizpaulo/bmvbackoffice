@@ -4,6 +4,7 @@ import { LoginForm } from "@/components/auth/login-form";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import Image from 'next/image';
 import { FirebaseClientProvider } from "@/firebase/client-provider";
+import { ShieldAlert } from "lucide-react";
 
 export default function LoginPage() {
   return (
@@ -36,6 +37,12 @@ export default function LoginPage() {
                     <CardDescription>Insira suas credenciais para acessar seu painel.</CardDescription>
                   </div>
                   <LoginForm />
+                  <div className="pt-4 text-center text-xs text-muted-foreground flex items-center justify-center gap-2">
+                    <ShieldAlert className="h-4 w-4"/>
+                    <div>
+                        <p>Uso interno. As informações contidas neste sistema são confidenciais.</p>
+                    </div>
+                </div>
                 </div>
               </CardContent>
             </div>
