@@ -4,9 +4,10 @@ service cloud.firestore {
   match /databases/{database}/documents {
     
     function isDev() {
-      // Check if the user document exists and has the isDev flag.
       return exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isDev == true;
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.roleId != null &&
+             exists(/databases/$(database)/documents/roles/$(get(/databases/$(database)/documents/users/$(request.auth.uid)).data.roleId)) &&
+             get(/databases/$(database)/documents/roles/$(get(/databases/$(database)/documents/users/$(request.auth.uid)).data.roleId)).data.isDev == true;
     }
 
     function isManager() {
@@ -23,7 +24,8 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      allow read, write: if isDev() || request.auth.uid == userId;
+      allow read: if isManager() || request.auth.uid == userId;
+      allow write: if isDev() || request.auth.uid == userId;
 
       match /notifications/{notificationId} {
         allow read, write: if isDev() || request.auth.uid == userId;
@@ -31,7 +33,7 @@ service cloud.firestore {
     }
 
     match /projects/{projectId} {
-      allow create: if request.auth != null;
+      allow create: if isDev() || request.auth != null;
       allow read: if isDev() || isManager() || isProjectMember(projectId);
       allow update: if isDev() || isManager() || isProjectMember(projectId);
       allow delete: if isDev() || isManager();
@@ -64,7 +66,8 @@ service cloud.firestore {
     }
 
     match /contacts/{contactId} {
-      allow list, get, create, update, delete: if isDev() || request.auth != null;
+      allow list, get: if isDev() || isManager() || request.auth != null;
+      allow create, update, delete: if isDev() || request.auth != null;
     }
     
     match /contracts/{contractId} {
