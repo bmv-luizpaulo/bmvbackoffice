@@ -27,15 +27,20 @@ export function ChatLayout({ chatType }: ChatLayoutProps) {
   const usersQuery = useMemoFirebase(() => firestore ? collection(firestore, 'users') : null, [firestore]);
   const { data: allUsers } = useCollection<User>(usersQuery);
 
-  const chatsQuery = useMemoFirebase(() => {
+  const allChatsQuery = useMemoFirebase(() => {
     if (!firestore || !currentUser?.uid) return null;
     return query(
-      collection(firestore, 'chats'), 
-      where('type', '==', chatType),
+      collection(firestore, 'chats'),
       where('userIds', 'array-contains', currentUser.uid)
     );
-  }, [firestore, currentUser, chatType]);
-  const { data: userChats, isLoading: isLoadingChats } = useCollection<Chat>(chatsQuery);
+  }, [firestore, currentUser]);
+
+  const { data: allUserChats, isLoading: isLoadingChats } = useCollection<Chat>(allChatsQuery);
+
+  const userChats = useMemo(() => {
+    return allUserChats?.filter(chat => chat.type === chatType) ?? [];
+  }, [allUserChats, chatType]);
+
 
   const messagesQuery = useMemoFirebase(() => {
     if (!firestore || !selectedChat?.id) return null;
