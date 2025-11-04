@@ -190,9 +190,10 @@ export type Checklist = {
 export type ChecklistItem = {
   id: string;
   checklistId: string;
+  type: 'item' | 'header';
   description: string;
   order: number;
-  isCompleted: boolean;
+  isCompleted?: boolean; // Opcional, pois headers não terão
 };
 
 export type Asset = {

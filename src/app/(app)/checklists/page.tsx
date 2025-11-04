@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, ListChecks, Trash2, Edit, Eye } from "lucide-react";
+import { Plus, ListChecks, Trash2, Edit, Eye, MessageSquare, Heading2 } from "lucide-react";
 import { useCollection, useFirestore, useMemoFirebase, useUser, useDoc } from '@/firebase';
 import { collection, doc, orderBy, query } from 'firebase/firestore';
 import type { Checklist, ChecklistItem, Team, User as UserType, Role } from '@/lib/types';
@@ -17,6 +17,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Progress } from '@/components/ui/progress';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Label } from '@/components/ui/label';
 
 export const dynamic = 'force-dynamic';
 
@@ -37,6 +39,7 @@ export default function ChecklistsPage() {
   const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [checklistToEdit, setChecklistToEdit] = React.useState<Checklist | null>(null);
   const [newItemText, setNewItemText] = React.useState('');
+  const [newItemType, setNewItemType] = React.useState<'item' | 'header'>('item');
   const [isEditMode, setIsEditMode] = React.useState(true);
 
   const checklistsQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'checklists'), orderBy('name')) : null, [firestore]);
@@ -51,8 +54,10 @@ export default function ChecklistsPage() {
   
   const progress = React.useMemo(() => {
     if (!checklistItems || checklistItems.length === 0) return 0;
-    const completed = checklistItems.filter(item => item.isCompleted).length;
-    return (completed / checklistItems.length) * 100;
+    const itemsOnly = checklistItems.filter(item => item.type === 'item');
+    if(itemsOnly.length === 0) return 0;
+    const completed = itemsOnly.filter(item => item.isCompleted).length;
+    return (completed / itemsOnly.length) * 100;
   }, [checklistItems]);
 
   React.useEffect(() => {
@@ -94,13 +99,19 @@ export default function ChecklistsPage() {
     
     const itemsCollection = collection(firestore, `checklists/${selectedChecklist.id}/items`);
     const newOrder = (checklistItems?.length || 0) + 1;
-
-    await addDocumentNonBlocking(itemsCollection, {
+    
+    const newItem: Partial<ChecklistItem> = {
       description: newItemText.trim(),
       order: newOrder,
       checklistId: selectedChecklist.id,
-      isCompleted: false,
-    });
+      type: newItemType,
+    }
+
+    if (newItemType === 'item') {
+        newItem.isCompleted = false;
+    }
+
+    await addDocumentNonBlocking(itemsCollection, newItem);
     setNewItemText('');
   };
 
@@ -110,7 +121,7 @@ export default function ChecklistsPage() {
   };
   
   const handleToggleItem = (item: ChecklistItem) => {
-    if (!firestore || !selectedChecklist) return;
+    if (!firestore || !selectedChecklist || item.type !== 'item') return;
     const itemRef = doc(firestore, `checklists/${selectedChecklist.id}/items`, item.id);
     updateDocumentNonBlocking(itemRef, { isCompleted: !item.isCompleted });
   };
@@ -242,21 +253,35 @@ export default function ChecklistsPage() {
                 <div className="space-y-4">
                   <div>
                     <h3 className="text-lg font-medium mb-2">Passos do Checklist</h3>
-                    <div className="space-y-2 max-h-[45vh] overflow-y-auto pr-2">
+                    <div className="space-y-1 max-h-[45vh] overflow-y-auto pr-2">
                       {isLoadingItems ? (
                         Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-10 w-full" />)
                       ) : checklistItems && checklistItems.length > 0 ? (
-                        checklistItems.map((item) => (
-                          <div key={item.id} className="flex items-center gap-3 bg-muted/50 p-3 rounded-md">
-                            <Checkbox id={`item-${item.id}`} checked={item.isCompleted} onCheckedChange={() => handleToggleItem(item)} />
-                            <label htmlFor={`item-${item.id}`} className={cn("flex-1 text-sm cursor-pointer", item.isCompleted && "line-through text-muted-foreground")}>{item.description}</label>
-                            {canEdit && (
-                                <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive/70 hover:text-destructive/100" onClick={() => handleDeleteItem(item.id)}>
-                                <Trash2 className="h-4 w-4" />
-                                </Button>
-                            )}
-                          </div>
-                        ))
+                        checklistItems.map((item) => {
+                            if (item.type === 'header') {
+                                return (
+                                    <div key={item.id} className="flex items-center gap-3 bg-muted/60 p-3 rounded-md mt-4 mb-2">
+                                        <h4 className="flex-1 font-semibold text-sm">{item.description}</h4>
+                                        {canEdit && (
+                                            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive/70 hover:text-destructive/100" onClick={() => handleDeleteItem(item.id)}>
+                                            <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                        )}
+                                    </div>
+                                )
+                            }
+                            return (
+                                <div key={item.id} className="flex items-center gap-3 p-3 rounded-md">
+                                    <Checkbox id={`item-${item.id}`} checked={item.isCompleted} onCheckedChange={() => handleToggleItem(item)} />
+                                    <label htmlFor={`item-${item.id}`} className={cn("flex-1 text-sm cursor-pointer", item.isCompleted && "line-through text-muted-foreground")}>{item.description}</label>
+                                    {canEdit && (
+                                        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive/70 hover:text-destructive/100" onClick={() => handleDeleteItem(item.id)}>
+                                        <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                    )}
+                                </div>
+                            )
+                        })
                       ) : (
                         <p className="text-sm text-muted-foreground pt-4 text-center">Nenhum passo adicionado ainda.</p>
                       )}
@@ -268,14 +293,26 @@ export default function ChecklistsPage() {
                                 e.preventDefault();
                                 handleAddNewItem();
                             }}
-                            className="flex items-center gap-2 pt-4 border-t"
+                            className="flex flex-col gap-4 pt-4 border-t"
                         >
-                            <Input
-                                value={newItemText}
-                                onChange={(e) => setNewItemText(e.target.value)}
-                                placeholder="Adicionar novo passo..."
-                            />
-                            <Button type="submit" disabled={!newItemText.trim()}>Adicionar Passo</Button>
+                            <RadioGroup defaultValue="item" value={newItemType} onValueChange={(value: 'item' | 'header') => setNewItemType(value)} className="flex items-center gap-4">
+                                <div className="flex items-center space-x-2">
+                                    <RadioGroupItem value="item" id="r-item" />
+                                    <Label htmlFor="r-item" className='flex items-center gap-1'><MessageSquare className='h-4 w-4'/>Passo (item)</Label>
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                    <RadioGroupItem value="header" id="r-header" />
+                                    <Label htmlFor="r-header" className='flex items-center gap-1'><Heading2 className='h-4 w-4'/>Título de Seção (etapa)</Label>
+                                </div>
+                            </RadioGroup>
+                            <div className="flex items-center gap-2">
+                                <Input
+                                    value={newItemText}
+                                    onChange={(e) => setNewItemText(e.target.value)}
+                                    placeholder={newItemType === 'item' ? "Adicionar novo passo..." : "Adicionar novo título de seção..."}
+                                />
+                                <Button type="submit" disabled={!newItemText.trim()}>Adicionar</Button>
+                            </div>
                         </form>
                    )}
                 </div>

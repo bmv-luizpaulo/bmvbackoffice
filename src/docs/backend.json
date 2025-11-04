@@ -585,11 +585,12 @@
       "description": "Represents a single step or item within a checklist.",
       "properties": {
         "checklistId": { "type": "string", "description": "The ID of the parent checklist." },
+        "type": { "type": "string", "enum": ["item", "header"], "description": "The type of the item."},
         "description": { "type": "string", "description": "The text of the checklist item/step." },
         "order": { "type": "number", "description": "The numerical order of the item in the list." },
-        "isCompleted": { "type": "boolean", "description": "Indicates if the checklist item is completed." }
+        "isCompleted": { "type": "boolean", "description": "Indicates if the checklist item is completed (only for type 'item')." }
       },
-      "required": ["checklistId", "description", "order", "isCompleted"]
+      "required": ["checklistId", "description", "order", "type"]
     },
     "Asset": {
       "title": "Asset",
