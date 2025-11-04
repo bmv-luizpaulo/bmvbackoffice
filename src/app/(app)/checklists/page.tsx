@@ -53,15 +53,17 @@ export default function ChecklistsPage() {
   const [isEditMode, setIsEditMode] = React.useState(true);
   const [commentDebounceTimers, setCommentDebounceTimers] = React.useState<Record<string, NodeJS.Timeout>>({});
 
+  const isManager = role?.isManager || role?.isDev;
 
   const checklistsQuery = useMemoFirebase(() => {
-    if (!firestore || !authUser || !userProfile) return null; // Condição para evitar consulta prematura
+    if (!firestore || !authUser || !userProfile || !role) return null;
     let q = query(collection(firestore, 'checklists'), orderBy('name'));
-    if (filterParam === 'me' && userProfile?.teamIds && userProfile.teamIds.length > 0) {
+    if (filterParam === 'me' && !isManager && userProfile?.teamIds && userProfile.teamIds.length > 0) {
       q = query(q, where('teamId', 'in', userProfile.teamIds));
     }
     return q;
-  }, [firestore, authUser, filterParam, userProfile]);
+  }, [firestore, authUser, filterParam, userProfile, role, isManager]);
+  
   const { data: checklists, isLoading: isLoadingChecklists } = useCollection<Checklist>(checklistsQuery);
   
   const teamsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'teams') : null, [firestore]);
@@ -189,7 +191,6 @@ export default function ChecklistsPage() {
     setCommentDebounceTimers(prev => ({ ...prev, [item.id]: timer }));
   };
 
-  const isManager = role?.isManager || role?.isDev;
   const canEdit = isManager && isEditMode;
 
   React.useEffect(() => {
