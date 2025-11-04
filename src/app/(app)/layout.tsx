@@ -256,10 +256,10 @@ const CollapsibleNavItem = ({ item, pathname }: { item: any, pathname: string })
     );
 };
 
-function NavItem({ item, pathname, isDev }: { item: any, pathname: string, isDev: boolean }) {
+function NavItem({ item, pathname }: { item: any, pathname: string }) {
   const hasSubItems = item.subItems && item.subItems.length > 0;
   
-  if (item.devOnly && !isDev) {
+  if (item.devOnly && process.env.NODE_ENV !== 'development') {
     return null;
   }
   
@@ -282,14 +282,8 @@ function NavItem({ item, pathname, isDev }: { item: any, pathname: string, isDev
 function InnerLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const auth = useAuth();
-  const firestore = useFirestore();
   const { user, isUserLoading } = useUser();
   const router = useRouter();
-
-  const userProfileQuery = useMemoFirebase(() => firestore && user?.uid ? doc(firestore, 'users', user.uid) : null, [firestore, user?.uid]);
-  const { data: userProfile } = useDoc<UserType>(userProfileQuery);
-  const roleQuery = useMemoFirebase(() => firestore && userProfile?.roleId ? doc(firestore, 'roles', userProfile.roleId) : null, [firestore, userProfile?.roleId]);
-  const { data: role } = useDoc<Role>(roleQuery);
 
   useEffect(() => {
     if (!isUserLoading && !user) {
@@ -336,8 +330,6 @@ function InnerLayout({ children }: { children: React.ReactNode }) {
         );
   }
   
-  const isDev = role?.isDev || false;
-
   return (
       <SidebarProvider>
         <Sidebar collapsible="icon">
@@ -353,7 +345,7 @@ function InnerLayout({ children }: { children: React.ReactNode }) {
                         <SidebarSeparator />
                         <SidebarGroupLabel>{section.name}</SidebarGroupLabel>
                         {section.items.map((item) => (
-                           <NavItem key={item.label} item={item as any} pathname={pathname} isDev={isDev} />
+                           <NavItem key={item.label} item={item as any} pathname={pathname} />
                         ))}
                     </SidebarGroup>
                 ))}
