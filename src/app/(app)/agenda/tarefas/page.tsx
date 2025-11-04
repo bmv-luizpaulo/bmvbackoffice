@@ -24,18 +24,19 @@ export default function TaskAgendaPage() {
 
   const userProfileQuery = useMemoFirebase(() => firestore && authUser?.uid ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser?.uid]);
   const { data: userProfile } = useDoc<User>(userProfileQuery);
-  const userRole = userProfile?.roleId;
+  
+  const roleQuery = useMemoFirebase(() => firestore && userProfile?.roleId ? doc(firestore, 'roles', userProfile.roleId) : null, [firestore, userProfile?.roleId]);
+  const { data: role } = useDoc(roleQuery);
 
   const allUsersQuery = useMemoFirebase(() => firestore ? collection(firestore, 'users') : null, [firestore]);
   const { data: allUsers } = useCollection<User>(allUsersQuery);
 
   const tasksQuery = useMemoFirebase(() => {
-    if (!firestore || !userRole || !authUser?.uid) return null;
+    if (!firestore || !role || !authUser?.uid) return null;
 
     const tasksCollection = collectionGroup(firestore, 'tasks');
     
-    // A role lookup is required, but this is a temporary workaround.
-    if (userRole === 'Gestor' || userRole === 'Desenvolvedor') {
+    if (role.isManager || role.isDev) {
       if (selectedUserId === 'all') {
         return query(tasksCollection);
       }
@@ -43,7 +44,7 @@ export default function TaskAgendaPage() {
     }
     
     return query(tasksCollection, where('assigneeId', '==', authUser.uid));
-  }, [firestore, userRole, selectedUserId, authUser?.uid]);
+  }, [firestore, role, selectedUserId, authUser?.uid]);
   const { data: tasksData, isLoading: isLoadingTasks } = useCollection<Task>(tasksQuery);
   
   const projectsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'projects') : null, [firestore]);
@@ -65,7 +66,7 @@ export default function TaskAgendaPage() {
       .sort((a, b) => a.dueDateObj!.getTime() - b.dueDateObj!.getTime());
   }, [tasksWithDates, selectedDate]);
   
-  const isGestor = userRole === 'Gestor' || userRole === 'Desenvolvedor';
+  const isGestor = role?.isManager || role?.isDev;
 
   return (
     <div className="space-y-6">
