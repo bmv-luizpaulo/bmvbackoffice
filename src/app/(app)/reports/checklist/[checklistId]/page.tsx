@@ -73,16 +73,16 @@ export default function ChecklistReportPage() {
                 <Image src="/image/BMV.png" alt="BMV Logo" width={150} height={50} />
             </div>
             <div className="text-right">
-                <h2 className="text-2xl font-bold text-gray-800">Relatório de Checklist</h2>
+                <h1 className="text-2xl font-bold text-gray-800">Relatório de Checklist</h1>
                 <p className="text-sm text-gray-500">Data de Emissão: {today}</p>
             </div>
         </header>
 
         <main className="mt-8">
             <section className='mb-8'>
-                <h1 className="text-xl font-semibold uppercase tracking-wider text-gray-700">
+                <h2 className="text-xl font-semibold uppercase tracking-wider text-gray-700">
                     {checklist.name}
-                </h1>
+                </h2>
                 <p className="mt-1 text-sm text-gray-600">{checklist.description}</p>
                 <div className='flex gap-8 mt-2 text-sm text-gray-600'>
                     <p><strong>Equipe:</strong> {team?.name || 'N/D'}</p>
@@ -93,15 +93,15 @@ export default function ChecklistReportPage() {
             <Separator className="my-6" />
 
             <section className="space-y-4">
-                <h2 className="text-lg font-semibold text-gray-800">Itens do Checklist</h2>
+                <h3 className="text-lg font-semibold text-gray-800">Itens do Checklist</h3>
                 {items.map(item => {
                     if (item.type === 'header') {
                         return (
                             <div key={item.id} className="pt-4 pb-2 border-b">
-                                <h3 className="font-bold text-base text-gray-700 flex items-center gap-2">
+                                <h4 className="font-bold text-base text-gray-700 flex items-center gap-2">
                                     <Heading2 className='h-4 w-4'/>
                                     {item.description}
-                                </h3>
+                                </h4>
                             </div>
                         )
                     }
