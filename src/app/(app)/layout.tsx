@@ -131,7 +131,6 @@ const navSections = [
         name: 'Equipe',
         items: [
             { href: '/agenda/tarefas', icon: Calendar, label: 'Agenda' },
-            { href: '/forum', icon: MessagesSquare, label: 'Fóruns' },
             { 
               href: '#', 
               icon: Group, 

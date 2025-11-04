@@ -13,9 +13,6 @@ import dynamic from 'next/dynamic';
 const RecentTasksCard = dynamic(() => import('@/components/dashboard/recent-tasks-card'), {
   loading: () => <Skeleton className="h-[400px]" />,
 });
-const ActiveForumsCard = dynamic(() => import('@/components/dashboard/active-forums-card'), {
-  loading: () => <Skeleton className="h-[400px]" />,
-});
 
 interface UserDashboardProps {
     user: User;
@@ -89,7 +86,7 @@ function UserDashboard({ user }: UserDashboardProps) {
                  <RecentTasksCard userId={user.id} />
             </div>
             <div className="lg:col-span-1 space-y-6">
-               <ActiveForumsCard />
+               {/* Placeholder for future cards */}
             </div>
         </div>
     </div>

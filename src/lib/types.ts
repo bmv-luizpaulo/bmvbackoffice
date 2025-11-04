@@ -53,31 +53,6 @@ export type Opportunity = {
   history: { stage: string; date: string }[];
 };
 
-export type Conversation = {
-  id: string;
-  type: 'direct' | 'group';
-  name?: string; // For group conversations
-  isGlobal?: boolean; // For global group conversations
-  teamId?: string; // For team-specific group conversations
-  userIds: string[];
-  lastMessage: {
-    text: string;
-    timestamp: string;
-    senderId: string;
-  } | null;
-  users: { [key: string]: Pick<User, 'name' | 'avatarUrl' | 'email'> };
-}
-
-export type Message = {
-  id: string;
-  conversationId: string;
-  senderId: string;
-  text: string;
-  timestamp: string;
-  read: boolean;
-  attachment?: string;
-};
-
 // Tipos para o Funil de Projetos
 export type Project = {
     id: string;

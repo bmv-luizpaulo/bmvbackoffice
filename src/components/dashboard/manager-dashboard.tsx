@@ -4,7 +4,6 @@ import { useMemo } from 'react';
 import { KpiCard } from "@/components/dashboard/kpi-card";
 import { CheckCircle, Target, FolderKanban, Award, DollarSign } from "lucide-react";
 import { PipelineChart } from "@/components/dashboard/pipeline-chart";
-import { ChatSummary } from "@/components/dashboard/chat-summary";
 import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { collection, collectionGroup } from "firebase/firestore";
 import type { Project, Task, Stage, Seal } from '@/lib/types';
@@ -14,9 +13,6 @@ import React from 'react';
 import dynamic from 'next/dynamic';
 
 const RecentTasksCard = dynamic(() => import('@/components/dashboard/recent-tasks-card'), {
-  loading: () => <Skeleton className="h-[400px]" />,
-});
-const ActiveForumsCard = dynamic(() => import('@/components/dashboard/active-forums-card'), {
   loading: () => <Skeleton className="h-[400px]" />,
 });
 
@@ -145,11 +141,9 @@ function ManagerDashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2 space-y-6">
                 <PipelineChart data={tasksByStage} isLoading={isLoading} />
-                <ChatSummary />
             </div>
             <div className="lg:col-span-1 space-y-6">
                 <RecentTasksCard />
-                <ActiveForumsCard />
             </div>
         </div>
     </div>
