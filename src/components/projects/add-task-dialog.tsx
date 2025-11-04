@@ -31,7 +31,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import type { Stage, Task, User as UserType } from "@/lib/types";
 import { MultiSelect } from "../ui/multi-select";
 import { useCollection, useFirestore } from "@/firebase";
-import { collection } from "firebase/firestore";
+import { collection, serverTimestamp } from "firebase/firestore";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { Calendar } from "../ui/calendar";
 import { cn } from "@/lib/utils";
@@ -124,7 +124,7 @@ export function AddTaskDialog({ isOpen, onOpenChange, onSaveTask, stages, tasks,
     onSaveTask({ 
         ...values,
         projectId,
-        createdAt: taskToEdit?.createdAt || new Date().toISOString(),
+        createdAt: taskToEdit?.createdAt || serverTimestamp(),
         description: values.description || '',
         dependentTaskIds: values.dependentTaskIds || [],
         dueDate: values.dueDate?.toISOString(),

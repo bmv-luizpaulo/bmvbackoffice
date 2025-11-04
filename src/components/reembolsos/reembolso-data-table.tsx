@@ -115,7 +115,7 @@ export function ReembolsoDataTable() {
           await updateDocumentNonBlocking(doc(firestore, 'reimbursements', selectedReimbursement.id), finalData);
           toast({ title: "Reembolso Atualizado", description: "Sua solicitação foi atualizada." });
       } else {
-          const finalData = { ...reimbursementData, receiptUrl: receiptUrl || '', requesterId: authUser.uid };
+          const finalData = { ...reimbursementData, receiptUrl: receiptUrl || '', requesterId: authUser.uid, requestDate: serverTimestamp() };
           await addDocumentNonBlocking(collection(firestore, 'reimbursements'), finalData);
           toast({ title: "Reembolso Solicitado", description: "Sua solicitação foi enviada para aprovação." });
       }
@@ -152,7 +152,7 @@ export function ReembolsoDataTable() {
     {
       accessorKey: "requestDate",
       header: "Data da Solicitação",
-      cell: ({ row }) => format(new Date(row.original.requestDate), 'dd/MM/yyyy')
+      cell: ({ row }) => row.original.requestDate ? format(new Date(row.original.requestDate.toDate()), 'dd/MM/yyyy') : 'N/A'
     },
     {
       accessorKey: "status",
@@ -174,9 +174,7 @@ export function ReembolsoDataTable() {
         return (
           <div className="text-right">
             <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="h-8 w-8 p-0"><MoreHorizontal className="h-4 w-4" /></Button>
-              </DropdownMenuTrigger>
+              <DropdownMenuTrigger asChild><Button variant="ghost" className="h-8 w-8 p-0"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuLabel>Ações</DropdownMenuLabel>
                 {reimbursement.receiptUrl && <a href={reimbursement.receiptUrl} target="_blank" rel="noopener noreferrer"><DropdownMenuItem><LinkIcon className="mr-2 h-4 w-4"/>Ver Comprovante</DropdownMenuItem></a>}

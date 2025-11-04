@@ -81,7 +81,7 @@ export type Task = {
     projectId: string;
     stageId: string;
     isCompleted: boolean;
-    createdAt: string; // ISO string
+    createdAt: any;
     dependentTaskIds?: string[];
     assigneeId?: string;
     dueDate?: string;
@@ -134,7 +134,7 @@ export type ProjectFile = {
     url: string;
     size: number;
     type: string;
-    uploadedAt: string;
+    uploadedAt: any;
     uploaderId: string;
 }
 
@@ -150,7 +150,7 @@ export type Contract = {
     endDate: string;
     fileUrl: string;
     uploaderId: string;
-    uploadedAt: string;
+    uploadedAt: any;
 }
 
 export type Notification = {
@@ -159,7 +159,7 @@ export type Notification = {
   message: string;
   link: string;
   isRead: boolean;
-  createdAt: string; // ISO string
+  createdAt: any;
 };
 
 export type Product = {
@@ -234,7 +234,7 @@ export type Reimbursement = {
     description: string;
     amount: number;
     status: 'Pendente' | 'Aprovado' | 'Recusado';
-    requestDate: string;
+    requestDate: any;
     decisionDate?: string;
     approverId?: string;
     receiptUrl?: string;

@@ -34,7 +34,7 @@ import { Calendar } from "../ui/calendar";
 import type { CostCenter, Reimbursement } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
-import { collection } from "firebase/firestore";
+import { collection, serverTimestamp } from "firebase/firestore";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 
 type ReembolsoFormDialogProps = {
@@ -100,7 +100,7 @@ export function ReembolsoFormDialog({ isOpen, onOpenChange, onSave, reimbursemen
     setIsSubmitting(true);
     const dataToSave = {
       ...values,
-      requestDate: values.requestDate.toISOString(),
+      requestDate: values.requestDate,
       // Esses campos serão definidos no backend ou na função de salvamento principal
       status: 'Pendente' as const,
     };
