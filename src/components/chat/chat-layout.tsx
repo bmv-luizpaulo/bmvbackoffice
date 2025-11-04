@@ -32,7 +32,6 @@ export function ChatLayout({ chatType }: ChatLayoutProps) {
 
   const conversationsQuery = useMemoFirebase(() => {
     if (!firestore || !currentUser?.uid) return null;
-    // This is the correct query that matches the security rule.
     return query(
       collection(firestore, collectionName),
       where('userIds', 'array-contains', currentUser.uid)
