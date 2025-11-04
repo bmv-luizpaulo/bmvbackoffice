@@ -69,8 +69,8 @@ export default function ChecklistReportPage() {
       const canvasHeight = canvas.height;
       
       const ratio = canvasWidth / canvasHeight;
-      const imgWidth = pdfWidth - 20; // 10mm margin on each side
-      const imgHeight = imgWidth / ratio;
+      let imgWidth = pdfWidth - 20; // 10mm margin on each side
+      let imgHeight = imgWidth / ratio;
       
       let heightLeft = imgHeight;
       let position = 10; // 10mm margin from top
