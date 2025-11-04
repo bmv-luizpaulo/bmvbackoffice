@@ -35,6 +35,14 @@ export default function ChecklistReportPage() {
 
   const [generationDate] = React.useState(new Date());
 
+  React.useEffect(() => {
+    if (!isLoading && checklist && items) {
+      setTimeout(() => {
+        window.print();
+      }, 500); // Small delay to ensure everything is rendered
+    }
+  }, [isLoading, checklist, items]);
+
 
   if (isLoading) {
     return (
@@ -63,12 +71,6 @@ export default function ChecklistReportPage() {
 
   return (
     <div className="min-h-screen bg-gray-100 p-4 sm:p-8 print:bg-white print:p-0">
-        <div className="fixed top-4 right-4 print:hidden">
-            <Button onClick={() => window.print()}>
-                <Printer className="mr-2 h-4 w-4" />
-                Imprimir / Salvar PDF
-            </Button>
-        </div>
       <div className="mx-auto max-w-4xl bg-white p-12 shadow-lg print:shadow-none">
         <header className="flex items-start justify-between border-b pb-4">
             <div className="flex items-center gap-4">
