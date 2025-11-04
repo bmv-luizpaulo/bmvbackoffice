@@ -50,14 +50,13 @@ service cloud.firestore {
     }
 
     match /chats/{chatId} {
-      // Allow a user to list chats they are a member of, or global forums
-      allow list: if request.auth != null && 
-                   ((request.query.where.userIds[1] == 'array-contains' && request.query.where.userIds[2] == request.auth.uid) || 
-                   (request.query.where.isGlobal == true));
-      
-      // Allow a user to get/create/update a chat document if they are a participant.
-      allow get, update: if request.auth.uid in resource.data.userIds;
+      // Allow a user to list chats ONLY if they are querying for their own chats.
+      allow list: if request.auth.uid in request.query.where.userIds;
+
+      // Allow get/create/update if the user is a participant.
+      allow get: if request.auth.uid in resource.data.userIds;
       allow create: if request.auth.uid in request.resource.data.userIds;
+      allow update: if request.auth.uid in resource.data.userIds;
       
       match /messages/{messageId} {
         // Allow read/write to messages only if the user is part of the parent chat document.
