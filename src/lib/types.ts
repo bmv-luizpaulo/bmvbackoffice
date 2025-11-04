@@ -235,7 +235,7 @@ export type Reimbursement = {
     amount: number;
     status: 'Pendente' | 'Aprovado' | 'Recusado';
     requestDate: any;
-    decisionDate?: string;
+    decisionDate?: any;
     approverId?: string;
     receiptUrl?: string;
     notes?: string;
@@ -249,4 +249,31 @@ export type CostCenter = {
     code?: string;
     description?: string;
     responsibleId?: string;
+}
+
+export type Conversation = {
+    id: string;
+    type: 'direct' | 'group';
+    name?: string; // For group conversations
+    isGlobal?: boolean; // For the global "Geral" forum
+    userIds: string[];
+    lastMessage: {
+        text: string;
+        timestamp: any;
+        senderId: string;
+    } | null;
+    users: Record<string, {
+        name: string;
+        avatarUrl: string;
+        email: string;
+    }>;
+}
+
+export type Message = {
+    id: string;
+    conversationId: string;
+    senderId: string;
+    text: string;
+    timestamp: any;
+    read: boolean;
 }
