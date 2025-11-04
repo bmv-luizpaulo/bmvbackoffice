@@ -154,7 +154,7 @@ export default function ChecklistsPage() {
                     <Tooltip>
                         <TooltipTrigger asChild>
                              <Button variant="outline" size="icon" onClick={() => setIsEditMode(!isEditMode)}>
-                                <Eye className="h-4 w-4" />
+                                {isEditMode ? <Eye className="h-4 w-4" /> : <Edit className="h-4 w-4 text-primary" />}
                             </Button>
                         </TooltipTrigger>
                         <TooltipContent>
