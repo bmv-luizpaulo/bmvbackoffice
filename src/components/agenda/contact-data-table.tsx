@@ -20,7 +20,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { MoreHorizontal, Pencil, Trash2 } from "lucide-react"
+import { MoreHorizontal, Pencil, Trash2, FileSpreadsheet } from "lucide-react"
 import dynamic from "next/dynamic";
 
 import {
@@ -49,6 +49,7 @@ import {
 import { updateDocumentNonBlocking, deleteDocumentNonBlocking, addDocumentNonBlocking } from "@/firebase";
 
 const ContactFormDialog = dynamic(() => import('./contact-form-dialog').then(m => m.ContactFormDialog), { ssr: false });
+const ContactImportExportDialog = dynamic(() => import('../contacts/contact-import-export').then(m => m.ContactImportExportDialog), { ssr: false });
 
 interface ContactDataTableProps {
     type: 'cliente' | 'fornecedor' | 'parceiro';
@@ -77,6 +78,7 @@ export function ContactDataTable({ type }: ContactDataTableProps) {
   
   const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [isAlertOpen, setIsAlertOpen] = React.useState(false);
+  const [isImportExportOpen, setIsImportExportOpen] = React.useState(false);
   const [selectedContact, setSelectedContact] = React.useState<Contact | null>(null);
 
   const handleEditClick = React.useCallback((contact: Contact) => {
@@ -223,7 +225,13 @@ export function ContactDataTable({ type }: ContactDataTableProps) {
           onChange={(event) => setNameFilter(event.target.value)}
           className="max-w-sm"
         />
-        <Button onClick={handleAddNewClick}>Adicionar {typeLabel}</Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setIsImportExportOpen(true)}>
+            <FileSpreadsheet className="h-4 w-4 mr-2" />
+            Import/Export
+          </Button>
+          <Button onClick={handleAddNewClick}>Adicionar {typeLabel}</Button>
+        </div>
       </div>
       <div className="rounded-md border">
         <Table>
@@ -288,18 +296,21 @@ export function ContactDataTable({ type }: ContactDataTableProps) {
         </Button>
       </div>
 
-      {isFormOpen && (
-        <ContactFormDialog 
-          isOpen={isFormOpen}
-          onOpenChange={setIsFormOpen}
-          onSave={handleSaveContact}
-          contact={selectedContact}
-          type={type}
-        />
-      )}
+      <ContactFormDialog 
+        isOpen={isFormOpen}
+        onOpenChange={setIsFormOpen}
+        onSave={handleSaveContact}
+        contact={selectedContact}
+        type={type}
+      />
+
+      <ContactImportExportDialog
+        isOpen={isImportExportOpen}
+        onOpenChange={setIsImportExportOpen}
+        contacts={data}
+      />
       
-      {isAlertOpen && (
-        <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
+      <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
               <AlertDialogContent>
                 <AlertDialogHeader>
                   <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
@@ -313,7 +324,6 @@ export function ContactDataTable({ type }: ContactDataTableProps) {
                 </AlertDialogFooter>
               </AlertDialogContent>
         </AlertDialog>
-      )}
     </div>
   )
 }

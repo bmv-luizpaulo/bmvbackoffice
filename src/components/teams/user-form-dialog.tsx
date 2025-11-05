@@ -59,6 +59,7 @@ const formSchema = z.object({
     zipCode: z.string().optional(),
   }).optional(),
   teamIds: z.array(z.string()).optional(),
+  status: z.enum(['active', 'inactive', 'suspended']).optional(),
 });
 
 
@@ -79,6 +80,7 @@ const defaultValues = {
         zipCode: '',
     },
     teamIds: [],
+    status: 'active' as const,
 };
 
 export function UserFormDialog({ isOpen, onOpenChange, onSave, user }: UserFormDialogProps) {
@@ -114,6 +116,7 @@ export function UserFormDialog({ isOpen, onOpenChange, onSave, user }: UserFormD
             zipCode: user.address?.zipCode || '',
           },
           teamIds: user.teamIds || [],
+          status: user.status || 'active',
         });
       } else {
         form.reset(defaultValues);
@@ -390,6 +393,28 @@ export function UserFormDialog({ isOpen, onOpenChange, onSave, user }: UserFormD
                                         onChange={field.onChange}
                                         placeholder="Selecione as equipes..."
                                     />
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={form.control}
+                            name="status"
+                            render={({ field }) => (
+                                <FormItem>
+                                <FormLabel>Status</FormLabel>
+                                <Select onValueChange={field.onChange} value={field.value}>
+                                    <FormControl>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Selecione o status" />
+                                    </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                        <SelectItem value="active">Ativo</SelectItem>
+                                        <SelectItem value="inactive">Inativo</SelectItem>
+                                        <SelectItem value="suspended">Suspenso</SelectItem>
+                                    </SelectContent>
+                                </Select>
                                 <FormMessage />
                                 </FormItem>
                             )}

@@ -20,6 +20,22 @@ export type User = {
   };
   personalDocument?: string;
   teamIds?: string[];
+  status?: 'active' | 'inactive' | 'suspended';
+  createdAt?: any;
+  lastLoginAt?: any;
+  lastActivityAt?: any;
+  loginCount?: number;
+};
+
+export type UserActivityLog = {
+  id: string;
+  userId: string;
+  action: 'login' | 'logout' | 'profile_update' | 'password_change' | 'status_change' | 'role_change';
+  description: string;
+  timestamp: any;
+  ipAddress?: string;
+  userAgent?: string;
+  performedBy?: string; // ID do usuário que executou a ação (para mudanças administrativas)
 };
 
 export type Contact = {
@@ -35,10 +51,20 @@ export type Contact = {
   tradeName?: string;
   cnpj?: string;
   stateRegistration?: string;
+  municipalRegistration?: string;
+  contactPerson?: string;
   // Comum
-  email: string;
+  email?: string;
   phone?: string;
+  phone2?: string;
+  landline?: string;
+  landline2?: string;
+  website?: string;
   linkedinUrl?: string;
+  position?: string;
+  birthDate?: string;
+  salesperson?: string;
+  manager?: string;
   address?: {
     street?: string;
     number?: string;
@@ -47,7 +73,13 @@ export type Contact = {
     city?: string;
     state?: string;
     zipCode?: string;
+    country?: string;
   };
+  // Campos de negócio
+  customerSince?: any;
+  creditLimit?: number;
+  paymentTerms?: string;
+  observations?: string;
 };
 
 export type Opportunity = {
@@ -286,6 +318,7 @@ export type Conversation = {
     type: 'direct' | 'group';
     name?: string; // For group conversations
     isGlobal?: boolean; // For the global "Geral" forum
+    archived?: boolean;
     teamId?: string;
     userIds: string[];
     lastMessage: {

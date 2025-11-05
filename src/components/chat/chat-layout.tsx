@@ -6,7 +6,7 @@ import type { User, Message, Conversation } from '@/lib/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Paperclip, Send, Hash } from 'lucide-react';
+import { Paperclip, Send, Hash, PlusCircle, Archive } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { useUser, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
@@ -152,6 +152,36 @@ export function ChatLayout({ conversationType }: ChatLayoutProps) {
       await setDoc(newChatRef, newChatData);
       setSelectedConversation({ id: newChatRef.id, ...newChatData } as Conversation);
   }, [currentUser, firestore, conversations, allUsers]);
+
+  const handleCreateForum = useCallback(async () => {
+    if (!firestore || !allUsers) return;
+    const name = window.prompt('Nome do fórum');
+    if (!name) return;
+    const usersData = allUsers.reduce((acc, u) => {
+      acc[u.id] = { name: u.name, avatarUrl: u.avatarUrl, email: u.email };
+      return acc;
+    }, {} as Record<string, any>);
+    const newForum = {
+      type: 'group' as const,
+      name,
+      userIds: allUsers.map(u => u.id),
+      lastMessage: null,
+      users: usersData,
+      archived: false,
+    };
+    const ref = doc(collection(firestore, 'conversations'));
+    await setDoc(ref, newForum);
+    setSelectedConversation({ id: ref.id, ...newForum });
+  }, [firestore, allUsers]);
+
+  const handleArchiveConversation = useCallback(async () => {
+    if (!firestore || !selectedConversation) return;
+    const confirmArchive = window.confirm('Arquivar este fórum?');
+    if (!confirmArchive) return;
+    const chatRef = doc(firestore, 'conversations', selectedConversation.id);
+    await updateDoc(chatRef, { archived: true });
+    setSelectedConversation(null);
+  }, [firestore, selectedConversation]);
   
   const conversationDisplayInfo = useMemo(() => {
     if (!selectedConversation || !currentUser) return { avatar: null, name: 'Selecione uma conversa' };
@@ -181,7 +211,7 @@ export function ChatLayout({ conversationType }: ChatLayoutProps) {
     }
 
     if (conversationType === 'group') {
-        return conversations?.map(conv => (
+        return conversations?.filter(conv => !conv.archived).map(conv => (
             <button
                 key={conv.id}
                 className={cn(
@@ -230,8 +260,13 @@ export function ChatLayout({ conversationType }: ChatLayoutProps) {
   return (
     <div className="flex h-full">
       <div className="w-1/3 border-r">
-        <div className="p-4 border-b">
+        <div className="p-4 border-b flex items-center justify-between gap-2">
             <h2 className="text-xl font-semibold">{conversationType === 'direct' ? 'Conversas' : 'Fóruns'}</h2>
+            {conversationType === 'group' && (
+              <Button size="sm" onClick={handleCreateForum}>
+                <PlusCircle className="h-4 w-4 mr-2" /> Novo fórum
+              </Button>
+            )}
         </div>
         <ScrollArea className="h-[calc(100%-65px)]">
           <div className="p-2">
@@ -247,6 +282,13 @@ export function ChatLayout({ conversationType }: ChatLayoutProps) {
                     <div>
                         <p className="font-semibold">{conversationDisplayInfo.name}</p>
                     </div>
+                    {selectedConversation.type === 'group' && !selectedConversation.archived && (
+                      <div className="ml-auto">
+                        <Button variant="outline" size="sm" onClick={handleArchiveConversation}>
+                          <Archive className="h-4 w-4 mr-2" /> Arquivar
+                        </Button>
+                      </div>
+                    )}
                 </div>
                 <ScrollArea className="flex-1 p-4">
                     <div className="space-y-4">
