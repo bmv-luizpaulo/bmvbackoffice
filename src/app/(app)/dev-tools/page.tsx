@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Hammer, BellPlus, Send, Bot, Loader2, Bug } from "lucide-react";
+import { Bug, BellPlus, Send, Bot, Loader2 } from "lucide-react";
 import { useNotifications } from '@/components/notifications/notifications-provider';
 import { useUser } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
@@ -15,6 +15,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { getSuggestedFollowUps } from '@/ai/flows/ai-suggested-follow-ups';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { ErrorLogViewer } from '@/components/dev-tools/error-log-viewer';
 
 const notificationSchema = z.object({
     title: z.string().min(1, "O título é obrigatório."),
@@ -91,13 +92,25 @@ export default function DevToolsPage() {
     <div className="space-y-6">
       <header>
         <h1 className="font-headline text-3xl font-bold tracking-tight flex items-center gap-2">
-          <Hammer className="h-8 w-8 text-primary" />
+          <Bug className="h-8 w-8 text-primary" />
           Ferramentas de Desenvolvimento
         </h1>
         <p className="text-muted-foreground">
           Recursos e utilitários exclusivos para desenvolvedores.
         </p>
       </header>
+        
+       <Card>
+        <CardHeader>
+          <CardTitle>Monitor de Erros</CardTitle>
+          <CardDescription>
+            Visualize os erros de cliente que foram capturados e registrados no sistema.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ErrorLogViewer />
+        </CardContent>
+      </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <Card>

@@ -246,7 +246,7 @@ export type AssetHistory = {
     event: string;
     details?: Record<string, any>;
     actorId: string;
-    timestamp: string;
+    timestamp: any;
 }
 
 export type AssetMaintenance = {
@@ -328,4 +328,17 @@ export type DeveloperTool = {
     description: string;
     componentName: string;
     requiresDevRole: boolean;
+}
+
+export type ErrorLog = {
+    id: string;
+    userId: string;
+    errorCode: string;
+    errorMessage: string;
+    errorStack: string;
+    componentStack: string;
+    pageUrl: string;
+    userAgent: string;
+    timestamp: any;
+    isResolved: boolean;
 }

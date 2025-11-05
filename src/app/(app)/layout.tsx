@@ -34,6 +34,7 @@ import {
   LifeBuoy,
   Hammer,
   UserSquare,
+  Bug,
 } from 'lucide-react';
 import Image from 'next/image';
 import React, { useEffect } from 'react';
@@ -175,7 +176,7 @@ const navSections = [
       name: 'Suporte & Ferramentas',
       items: [
         { href: '/suporte', icon: LifeBuoy, label: 'Suporte' },
-        { href: '/dev-tools', icon: Hammer, label: 'Ferramentas de Dev', devOnly: true },
+        { href: '/dev-tools', icon: Bug, label: 'Ferramentas de Dev', devOnly: true },
       ]
     }
 ]
