@@ -61,9 +61,11 @@ export function ProjectDataTable({ statusFilter, userFilter }: ProjectDataTableP
   const projectsQuery = useMemoFirebase(() => {
     if (!firestore || !authUser) return null;
     
+    const baseQuery = collection(firestore, 'projects');
+
     if (userFilter === 'me') {
         return query(
-            collection(firestore, 'projects'), 
+            baseQuery,
             where('status', '==', statusFilter),
             or(
                 where('ownerId', '==', authUser.uid),
@@ -72,7 +74,7 @@ export function ProjectDataTable({ statusFilter, userFilter }: ProjectDataTableP
         );
     }
     
-    return query(collection(firestore, 'projects'), where('status', '==', statusFilter));
+    return query(baseQuery, where('status', '==', statusFilter));
   }, [firestore, statusFilter, userFilter, authUser]);
 
   const { data: projectsData, isLoading: isLoadingProjects } = useCollection<Project>(projectsQuery);
