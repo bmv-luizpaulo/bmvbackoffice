@@ -39,7 +39,7 @@ import { Switch } from "../ui/switch";
 type ChecklistFormDialogProps = {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
-  onSave: (checklist: Omit<Checklist, 'id' | 'creatorId' | 'createdAt'>, id?: string) => void;
+  onSave: (checklist: Omit<Checklist, 'id'>, id?: string) => void;
   checklist?: Checklist | null;
   teams: Team[];
 };
@@ -137,7 +137,8 @@ export function ChecklistFormDialog({ isOpen, onOpenChange, onSave, checklist, t
      if (!dataToSave.isRecurring) {
       delete (dataToSave as Partial<typeof dataToSave>).recurrenceFrequency;
     }
-    onSave(dataToSave, checklist?.id);
+    // This is where we ensure creatorId and createdAt are handled outside, not in the form
+    onSave(dataToSave as any, checklist?.id);
     onOpenChange(false);
   }
   
