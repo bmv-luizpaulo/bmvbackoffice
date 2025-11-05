@@ -80,10 +80,6 @@
           "type": "string",
           "description": "Description of the project."
         },
-        "budget": {
-            "type": "number",
-            "description": "The allocated budget for the project."
-        },
         "startDate": {
           "type": "string",
           "description": "Start date of the project.",
@@ -112,6 +108,11 @@
         "technicalDetails": {
             "type": "string",
             "description": "Technical specifications and details of the project."
+        },
+        "status": {
+            "type": "string",
+            "enum": ["Em execução", "Arquivado"],
+            "description": "The current status of the project."
         }
       },
       "required": [
@@ -146,6 +147,16 @@
           "type": "boolean",
           "description": "Indicates whether the task is completed."
         },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when the task was created."
+        },
+        "completedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when the task was marked as completed."
+        },
         "dependentTaskIds": {
           "type": "array",
           "description": "References to other Tasks that must be completed before this task can be started. (Relationship: Task 1:N Task)",
@@ -156,6 +167,10 @@
         "assigneeId": {
             "type": "string",
             "description": "Reference to a User who is responsible for the task."
+        },
+        "teamId": {
+          "type": "string",
+          "description": "Reference to a Team that is responsible for the task."
         },
         "dueDate": {
             "type": "string",
@@ -182,7 +197,8 @@
         "description",
         "projectId",
         "stageId",
-        "isCompleted"
+        "isCompleted",
+        "createdAt"
       ]
     },
     "Stage": {
@@ -244,7 +260,7 @@
                 "description": "Key Performance Indicators for the team."
             }
         },
-        "required": ["name", "directorateId"]
+        "required": ["name"]
     },
     "Directorate": {
         "title": "Directorate",
@@ -336,27 +352,52 @@
       "type": "object",
       "description": "Represents a contact, which can be a client, a supplier, or a partner.",
       "properties": {
-        "name": {
-          "type": "string",
-          "description": "The contact's full name."
-        },
-        "email": {
-          "type": "string",
-          "format": "email",
-          "description": "The contact's email address."
-        },
-        "phone": {
-          "type": "string",
-          "description": "The contact's phone number."
-        },
-        "companyName": {
-            "type": "string",
-            "description": "The name of the company the contact works for."
-        },
         "type": {
           "type": "string",
           "description": "The type of contact.",
           "enum": ["cliente", "fornecedor", "parceiro"]
+        },
+        "personType": {
+          "type": "string",
+          "description": "The type of person, either individual or corporate.",
+          "enum": ["Pessoa Física", "Pessoa Jurídica"]
+        },
+        "fullName": {
+          "type": "string",
+          "description": "The contact's full name (for individuals)."
+        },
+        "cpf": {
+          "type": "string",
+          "description": "The contact's CPF document number (for individuals)."
+        },
+        "rg": {
+          "type": "string",
+          "description": "The contact's RG document number (for individuals)."
+        },
+        "legalName": {
+            "type": "string",
+            "description": "The legal name of the company (for corporate entities)."
+        },
+        "tradeName": {
+            "type": "string",
+            "description": "The trade name or 'nome fantasia' of the company (for corporate entities)."
+        },
+        "cnpj": {
+          "type": "string",
+          "description": "The company's CNPJ document number (for corporate entities)."
+        },
+        "stateRegistration": {
+          "type": "string",
+          "description": "The company's state registration number (Inscrição Estadual)."
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "The primary contact email address."
+        },
+        "phone": {
+          "type": "string",
+          "description": "The primary contact phone number."
         },
         "linkedinUrl": {
           "type": "string",
@@ -377,7 +418,7 @@
           }
         }
       },
-      "required": ["name", "email", "type"]
+      "required": ["type", "personType", "email"]
     },
     "ProjectFile": {
       "title": "ProjectFile",
@@ -571,9 +612,37 @@
       "properties": {
         "name": { "type": "string", "description": "The name of the checklist." },
         "description": { "type": "string", "description": "A brief description of the checklist's purpose." },
-        "teamId": { "type": "string", "description": "The ID of the team this checklist is for." }
+        "teamId": { "type": "string", "description": "The ID of the team this checklist is for." },
+        "status": {
+            "type": "string",
+            "enum": ["ativo", "arquivado"],
+            "description": "The status of the checklist."
+        },
+        "deadlineDate": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Optional deadline for checklist completion."
+        },
+        "isRecurring": {
+          "type": "boolean",
+          "description": "Indicates if the checklist is recurring."
+        },
+        "recurrenceFrequency": {
+          "type": "string",
+          "description": "Frequency of recurrence if isRecurring is true.",
+          "enum": ["diaria", "semanal", "mensal"]
+        },
+        "creatorId": {
+          "type": "string",
+          "description": "The ID of the user who created the checklist."
+        },
+        "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "The timestamp when the checklist was created."
+        }
       },
-      "required": ["name", "teamId"]
+      "required": ["name", "teamId", "creatorId", "createdAt"]
     },
     "ChecklistItem": {
       "title": "ChecklistItem",
@@ -581,11 +650,33 @@
       "description": "Represents a single step or item within a checklist.",
       "properties": {
         "checklistId": { "type": "string", "description": "The ID of the parent checklist." },
+        "type": { "type": "string", "enum": ["item", "header", "yes_no"], "description": "The type of the item."},
         "description": { "type": "string", "description": "The text of the checklist item/step." },
         "order": { "type": "number", "description": "The numerical order of the item in the list." },
-        "isCompleted": { "type": "boolean", "description": "Indicates if the checklist item is completed." }
+        "isCompleted": { "type": "boolean", "description": "Indicates if the checklist item is completed (only for type 'item')." },
+        "answer": { "type": "string", "enum": ["yes", "no", "unanswered"], "description": "The answer for a yes/no item." },
+        "comment": { "type": "string", "description": "A comment for a yes/no item." }
       },
-      "required": ["checklistId", "description", "order", "isCompleted"]
+      "required": ["checklistId", "description", "order", "type"]
+    },
+    "ChecklistExecution": {
+      "title": "ChecklistExecution",
+      "type": "object",
+      "description": "Represents a completed instance of a checklist.",
+      "properties": {
+        "checklistId": { "type": "string", "description": "The ID of the original checklist template." },
+        "checklistName": { "type": "string", "description": "Denormalized name of the checklist." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Denormalized creation date of the original checklist." },
+        "teamId": { "type": "string", "description": "Denormalized ID of the team responsible." },
+        "executedAt": { "type": "string", "format": "date-time", "description": "Timestamp when the checklist was completed." },
+        "executedBy": { "type": "string", "description": "The ID of the user who completed the checklist." },
+        "items": {
+          "type": "array",
+          "description": "A snapshot of all items and their state at the time of execution.",
+          "items": { "$ref": "#/entities/ChecklistItem" }
+        }
+      },
+      "required": ["checklistId", "checklistName", "teamId", "executedAt", "executedBy", "items"]
     },
     "Asset": {
       "title": "Asset",
@@ -694,6 +785,51 @@
         }
       },
       "required": ["name"]
+    },
+    "Ticket": {
+      "title": "Ticket",
+      "type": "object",
+      "description": "Represents a support ticket.",
+      "properties": {
+        "title": { "type": "string", "description": "The title of the ticket." },
+        "description": { "type": "string", "description": "A detailed description of the issue." },
+        "requesterId": { "type": "string", "description": "The ID of the user who created the ticket." },
+        "assigneeId": { "type": "string", "description": "The ID of the support agent assigned to the ticket." },
+        "status": { "type": "string", "enum": ["Aberto", "Em Andamento", "Fechado"], "description": "The current status of the ticket." },
+        "priority": { "type": "string", "enum": ["Baixa", "Média", "Alta"], "description": "The priority level of the ticket." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "The timestamp when the ticket was created." },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "The timestamp when the ticket was last updated." }
+      },
+      "required": ["title", "description", "requesterId", "status", "priority", "createdAt"]
+    },
+    "DeveloperTool": {
+      "title": "DeveloperTool",
+      "type": "object",
+      "description": "Represents a tool available on the developer tools page.",
+      "properties": {
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "componentName": { "type": "string" },
+        "requiresDevRole": { "type": "boolean" }
+      },
+      "required": ["name", "componentName"]
+    },
+    "ErrorLog": {
+        "title": "ErrorLog",
+        "type": "object",
+        "description": "Represents a client-side error log.",
+        "properties": {
+            "userId": { "type": "string", "description": "The ID of the user who experienced the error." },
+            "errorCode": { "type": "string", "description": "A user-friendly code to reference this error." },
+            "errorMessage": { "type": "string", "description": "The error message." },
+            "errorStack": { "type": "string", "description": "The full error stack trace." },
+            "componentStack": { "type": "string", "description": "The React component stack trace." },
+            "pageUrl": { "type": "string", "description": "The URL of the page where the error occurred." },
+            "userAgent": { "type": "string", "description": "The user's browser/OS information." },
+            "timestamp": { "type": "string", "format": "date-time", "description": "When the error occurred." },
+            "isResolved": { "type": "boolean", "description": "Flag for support to mark the error as resolved." }
+        },
+        "required": ["userId", "errorCode", "errorMessage", "timestamp"]
     }
   },
   "auth": {
@@ -775,6 +911,10 @@
       "schema": { "$ref": "#/entities/ChecklistItem" },
       "description": "Stores the items for a specific checklist."
     },
+     "/checklistExecutions/{executionId}": {
+      "schema": { "$ref": "#/entities/ChecklistExecution" },
+      "description": "Stores a record of a completed checklist execution."
+    },
     "/assets/{assetId}": {
       "schema": { "$ref": "#/entities/Asset" },
       "description": "Stores all company assets."
@@ -790,6 +930,18 @@
     "/costCenters/{costCenterId}": {
       "schema": { "$ref": "#/entities/CostCenter" },
       "description": "Stores all company cost centers for financial tracking."
+    },
+    "/tickets/{ticketId}": {
+      "schema": { "$ref": "#/entities/Ticket" },
+      "description": "Stores user support tickets."
+    },
+    "/developerTools/{toolId}": {
+      "schema": { "$ref": "#/entities/DeveloperTool" },
+      "description": "Stores metadata for developer tools."
+    },
+    "/errorLogs/{errorId}": {
+        "schema": { "$ref": "#/entities/ErrorLog" },
+        "description": "Stores logs of client-side errors."
     }
   }
 }

@@ -172,11 +172,6 @@ export function ProjectDataTable({ statusFilter, userFilter }: ProjectDataTableP
       cell: ({ row }) => row.original.endDate ? format(new Date(row.original.endDate), 'dd/MM/yyyy') : <span className="text-muted-foreground">N/A</span>
     },
     {
-        accessorKey: "budget",
-        header: "Orçamento",
-        cell: ({ row }) => (row.original.budget || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-    },
-    {
       id: "actions",
       cell: ({ row }) => {
         const project = row.original;

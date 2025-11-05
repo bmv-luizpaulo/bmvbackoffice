@@ -66,7 +66,6 @@ export type Project = {
     id: string;
     name: string;
     description: string;
-    budget?: number;
     startDate: string;
     endDate?: string;
     ownerId: string;

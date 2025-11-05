@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react';
 import { KpiCard } from "@/components/dashboard/kpi-card";
-import { CheckCircle, Target, FolderKanban, Award, DollarSign } from "lucide-react";
+import { CheckCircle, Target, FolderKanban, Award } from "lucide-react";
 import { PipelineChart } from "@/components/dashboard/pipeline-chart";
 import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { collection, collectionGroup } from "firebase/firestore";
@@ -32,9 +32,9 @@ function ManagerDashboard() {
   const { data: sealsData, isLoading: isLoadingSeals } = useCollection<Seal>(sealsQuery);
 
 
-  const { activeProjects, completedProjects, openTasks, tasksByStage, expiringSeals, totalBudgetValue } = useMemo(() => {
+  const { activeProjects, completedProjects, openTasks, tasksByStage, expiringSeals } = useMemo(() => {
     if (!projectsData || !tasksData || !stagesData || !sealsData) {
-      return { activeProjects: 0, completedProjects: 0, openTasks: 0, tasksByStage: [], totalBudgetValue: 0, expiringSeals: 0 };
+      return { activeProjects: 0, completedProjects: 0, openTasks: 0, tasksByStage: [], expiringSeals: 0 };
     }
 
     const tasksPerProject = tasksData.reduce((acc, task) => {
@@ -46,9 +46,7 @@ function ManagerDashboard() {
     }, {} as Record<string, Task[]>);
 
     let completedProjectsCount = 0;
-    let totalBudget = 0;
     projectsData.forEach(project => {
-      totalBudget += project.budget || 0;
       const projectTasks = tasksPerProject[project.id] || [];
       const allTasksCompleted = projectTasks.length > 0 && projectTasks.every(t => t.isCompleted);
       if (allTasksCompleted) {
@@ -81,7 +79,6 @@ function ManagerDashboard() {
       completedProjects: completedProjectsCount,
       openTasks: openTasksCount,
       tasksByStage: chartData,
-      totalBudgetValue: totalBudget,
       expiringSeals: expiringSealsCount,
     };
   }, [projectsData, tasksData, stagesData, sealsData]);
@@ -94,10 +91,9 @@ function ManagerDashboard() {
         <h1 className="font-headline text-3xl font-bold tracking-tight">Painel do Gestor</h1>
         <p className="text-muted-foreground">Visão geral completa das operações e vendas.</p>
       </header>
-       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {isLoading ? (
               <>
-                <Skeleton className="h-28" />
                 <Skeleton className="h-28" />
                 <Skeleton className="h-28" />
                 <Skeleton className="h-28" />
@@ -128,12 +124,6 @@ function ManagerDashboard() {
                   value={expiringSeals.toString()}
                   description="Selos vencidos ou vencendo em 30 dias"
                   icon={<Award className="text-red-500"/>}
-                />
-                 <KpiCard 
-                  title="Valor Total de Projetos" 
-                  value={totalBudgetValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL'})}
-                  description="Soma dos orçamentos de projetos ativos"
-                  icon={<DollarSign className="text-blue-500"/>}
                 />
               </>
             )}
