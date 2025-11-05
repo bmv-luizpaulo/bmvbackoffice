@@ -152,20 +152,20 @@ export function ErrorLogViewer({ filterResolved }: ErrorLogViewerProps) {
                     <ScrollArea className="max-h-[60vh] pr-4">
                         <div className="space-y-4 font-mono text-xs">
                              <div>
-                                <h4 className="font-bold mb-1">Mensagem</h4>
-                                <pre className="p-2 bg-muted rounded-md text-destructive">{row.original.errorMessage}</pre>
+                                <h4 className="font-bold mb-1 text-sm text-foreground">Mensagem de Erro</h4>
+                                <pre className="p-3 bg-muted rounded-md text-destructive whitespace-pre-wrap">{row.original.errorMessage}</pre>
                             </div>
                              <div>
-                                <h4 className="font-bold mb-1">Stack do Erro</h4>
-                                <pre className="p-2 bg-muted rounded-md max-h-48 overflow-y-auto">{row.original.errorStack}</pre>
+                                <h4 className="font-bold mb-1 text-sm text-foreground">Stack do Erro</h4>
+                                <pre className="p-3 bg-muted rounded-md max-h-48 overflow-y-auto">{row.original.errorStack}</pre>
                             </div>
                             <div>
-                                <h4 className="font-bold mb-1">Stack de Componentes</h4>
-                                <pre className="p-2 bg-muted rounded-md max-h-48 overflow-y-auto">{row.original.componentStack}</pre>
+                                <h4 className="font-bold mb-1 text-sm text-foreground">Stack de Componentes</h4>
+                                <pre className="p-3 bg-muted rounded-md max-h-48 overflow-y-auto">{row.original.componentStack}</pre>
                             </div>
                              <div>
-                                <h4 className="font-bold mb-1">Contexto</h4>
-                                <pre className="p-2 bg-muted rounded-md whitespace-pre-wrap">{JSON.stringify({ user: usersMap.get(row.original.userId) || row.original.userId, url: row.original.pageUrl, userAgent: row.original.userAgent }, null, 2)}</pre>
+                                <h4 className="font-bold mb-1 text-sm text-foreground">Contexto</h4>
+                                <pre className="p-3 bg-muted rounded-md whitespace-pre-wrap">{JSON.stringify({ user: usersMap.get(row.original.userId) || row.original.userId, url: row.original.pageUrl, userAgent: row.original.userAgent }, null, 2)}</pre>
                             </div>
                         </div>
                     </ScrollArea>
