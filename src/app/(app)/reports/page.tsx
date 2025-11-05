@@ -18,28 +18,48 @@ export default function ReportsPage() {
   const [selectedReportType, setSelectedReportType] = React.useState<string | null>(null);
   const [selectedAssetId, setSelectedAssetId] = React.useState<string | null>(null);
   
-  const assignedAssetsQuery = useMemoFirebase(() => 
-    firestore 
-      ? query(collection(firestore, 'assets'), where('assigneeId', '!=', null)) 
-      : null, 
-  [firestore]);
+  const assignedAssetsQuery = useMemoFirebase(
+    () => (firestore && !!selectedReportType)
+      ? query(collection(firestore, 'assets'), where('assigneeId', '!=', null))
+      : null,
+    [firestore, selectedReportType]
+  );
 
   const { data: assets, isLoading: isLoadingAssets } = useCollection<Asset>(assignedAssetsQuery);
 
-  const usersQuery = useMemoFirebase(() => firestore ? collection(firestore, 'users') : null, [firestore]);
+  const usersQuery = useMemoFirebase(
+    () => (firestore && !!selectedReportType)
+      ? collection(firestore, 'users')
+      : null,
+    [firestore, selectedReportType]
+  );
   const { data: users, isLoading: isLoadingUsers } = useCollection<User>(usersQuery);
 
   const usersMap = React.useMemo(() => new Map(users?.map(u => [u.id, u.name])), [users]);
+  
+  React.useEffect(() => {
+    setSelectedAssetId(null);
+  }, [selectedReportType]);
+  
+  React.useEffect(() => {
+    if (selectedReportType === 'asset-delivery' && assets && assets.length === 1) {
+      setSelectedAssetId(assets[0].id);
+    }
+  }, [selectedReportType, assets]);
   
   const handleGenerateReport = () => {
     if (!selectedReportType || !selectedAssetId) return;
 
     if (selectedReportType === 'asset-delivery') {
       window.open(`/reports/asset-delivery/${selectedAssetId}`, '_blank');
+    } else if (selectedReportType === 'asset-return') {
+      window.open(`/reports/asset-return/${selectedAssetId}`, '_blank');
+    } else if (selectedReportType === 'promissory-note') {
+      window.open(`/reports/promissory-note/${selectedAssetId}`, '_blank');
     }
   };
 
-  const isLoading = isLoadingAssets || isLoadingUsers;
+  const isLoading = !!selectedReportType && (isLoadingAssets || isLoadingUsers);
 
   return (
     <div className="space-y-6">
@@ -68,8 +88,8 @@ export default function ReportsPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="asset-delivery">Termo de Entrega de Ativo</SelectItem>
-                <SelectItem value="asset-return" disabled>Termo de Devolução de Ativo (Em breve)</SelectItem>
-                <SelectItem value="promissory-note" disabled>Nota Promissória (Em breve)</SelectItem>
+                <SelectItem value="asset-return">Termo de Devolução de Ativo</SelectItem>
+                <SelectItem value="promissory-note">Nota Promissória</SelectItem>
               </SelectContent>
             </Select>
           </div>

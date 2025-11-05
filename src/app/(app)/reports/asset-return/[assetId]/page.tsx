@@ -10,7 +10,7 @@ import { Loader2, Download } from 'lucide-react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 
-function AssetDeliveryReportContent() {
+function AssetReturnReportContent() {
   const params = useParams();
   const firestore = useFirestore();
   const assetId = params.assetId as string;
@@ -54,7 +54,7 @@ function AssetDeliveryReportContent() {
         pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
         heightLeft -= (pdfHeight - 20);
       }
-      pdf.save(`Termo_Entrega_${asset?.name || assetId}.pdf`);
+      pdf.save(`Termo_Devolucao_${asset?.name || assetId}.pdf`);
     } finally {
       setIsGeneratingPdf(false);
     }
@@ -93,7 +93,7 @@ function AssetDeliveryReportContent() {
           <header className="flex items-start justify-between border-b pb-4">
             <img src="/image/BMV.png" alt="BMV Logo" style={{ width: '150px', height: 'auto' }} />
             <div className="text-right">
-              <h1 className="text-2xl font-bold text-gray-800">Termo de Entrega de Ativo</h1>
+              <h1 className="text-2xl font-bold text-gray-800">Termo de Devolução de Ativo</h1>
               <p className="text-sm text-gray-500">Data de Emissão: {generationDate.toLocaleDateString('pt-BR')}</p>
             </div>
           </header>
@@ -120,9 +120,9 @@ function AssetDeliveryReportContent() {
             </section>
 
             <section>
-              <h2 className="font-semibold">Termos</h2>
+              <h2 className="font-semibold">Declaração</h2>
               <p className="mt-2 text-sm leading-relaxed">
-                Declaro que recebi o ativo acima especificado e me responsabilizo por sua guarda e bom uso, comprometendo-me a devolvê-lo nas mesmas condições, salvo desgaste natural pelo uso adequado.
+                Declaro que estou devolvendo o ativo acima especificado nas mesmas condições em que foi entregue, salvo desgaste natural decorrente do uso adequado.
               </p>
             </section>
 
@@ -143,10 +143,10 @@ function AssetDeliveryReportContent() {
   );
 }
 
-export default function AssetDeliveryReportPage() {
+export default function AssetReturnReportPage() {
   return (
     <FirebaseClientProvider>
-      <AssetDeliveryReportContent />
+      <AssetReturnReportContent />
     </FirebaseClientProvider>
   );
 }

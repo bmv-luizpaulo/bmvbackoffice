@@ -10,7 +10,7 @@ import { Loader2, Download } from 'lucide-react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 
-function AssetDeliveryReportContent() {
+function PromissoryNoteReportContent() {
   const params = useParams();
   const firestore = useFirestore();
   const assetId = params.assetId as string;
@@ -54,7 +54,7 @@ function AssetDeliveryReportContent() {
         pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
         heightLeft -= (pdfHeight - 20);
       }
-      pdf.save(`Termo_Entrega_${asset?.name || assetId}.pdf`);
+      pdf.save(`Nota_Promissoria_${assignee?.name || 'responsavel'}.pdf`);
     } finally {
       setIsGeneratingPdf(false);
     }
@@ -72,7 +72,7 @@ function AssetDeliveryReportContent() {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-white p-8">
         <div className="text-center">
-          <h1 className="text-xl font-bold">Ativo não encontrado</h1>
+          <h1 className="text-xl font-bold">Dados não encontrados</h1>
           <Button onClick={() => window.history.back()} className="mt-4">Voltar</Button>
         </div>
       </div>
@@ -93,25 +93,14 @@ function AssetDeliveryReportContent() {
           <header className="flex items-start justify-between border-b pb-4">
             <img src="/image/BMV.png" alt="BMV Logo" style={{ width: '150px', height: 'auto' }} />
             <div className="text-right">
-              <h1 className="text-2xl font-bold text-gray-800">Termo de Entrega de Ativo</h1>
+              <h1 className="text-2xl font-bold text-gray-800">Nota Promissória</h1>
               <p className="text-sm text-gray-500">Data de Emissão: {generationDate.toLocaleDateString('pt-BR')}</p>
             </div>
           </header>
 
           <main className="mt-8 space-y-6 text-gray-800">
             <section>
-              <h2 className="font-semibold">Dados do Ativo</h2>
-              <div className="mt-2 text-sm">
-                <p><strong>Nome:</strong> {asset.name}</p>
-                <p><strong>Nº de Série:</strong> {asset.serialNumber || 'N/D'}</p>
-                <p><strong>Tipo:</strong> {asset.type}</p>
-                <p><strong>Status:</strong> {asset.status}</p>
-                <p><strong>Localização:</strong> {asset.location || 'N/D'}</p>
-              </div>
-            </section>
-
-            <section>
-              <h2 className="font-semibold">Responsável</h2>
+              <h2 className="font-semibold">Devedor</h2>
               <div className="mt-2 text-sm">
                 <p><strong>Nome:</strong> {assignee?.name || 'N/D'}</p>
                 <p><strong>Email:</strong> {assignee?.email || 'N/D'}</p>
@@ -120,16 +109,24 @@ function AssetDeliveryReportContent() {
             </section>
 
             <section>
-              <h2 className="font-semibold">Termos</h2>
+              <h2 className="font-semibold">Detalhes</h2>
+              <div className="mt-2 text-sm">
+                <p><strong>Valor:</strong> R$ ____________</p>
+                <p><strong>Vencimento:</strong> ____/____/______</p>
+                <p><strong>Referente a:</strong> {asset?.name || 'Ativo'}</p>
+              </div>
+            </section>
+
+            <section>
               <p className="mt-2 text-sm leading-relaxed">
-                Declaro que recebi o ativo acima especificado e me responsabilizo por sua guarda e bom uso, comprometendo-me a devolvê-lo nas mesmas condições, salvo desgaste natural pelo uso adequado.
+                Pelo presente, prometo pagar a quantia acima especificada, na data de vencimento indicada, ao favorecido, livre de quaisquer impostos e encargos.
               </p>
             </section>
 
             <section className="grid grid-cols-2 gap-12 mt-12">
               <div>
                 <div className="h-12 border-b" />
-                <p className="text-center text-sm mt-2">Assinatura do Responsável</p>
+                <p className="text-center text-sm mt-2">Assinatura do Devedor</p>
               </div>
               <div>
                 <div className="h-12 border-b" />
@@ -143,10 +140,10 @@ function AssetDeliveryReportContent() {
   );
 }
 
-export default function AssetDeliveryReportPage() {
+export default function PromissoryNoteReportPage() {
   return (
     <FirebaseClientProvider>
-      <AssetDeliveryReportContent />
+      <PromissoryNoteReportContent />
     </FirebaseClientProvider>
   );
 }

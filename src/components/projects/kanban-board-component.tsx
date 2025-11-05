@@ -108,7 +108,15 @@ export function KanbanBoard({ openNewProjectDialog }: { openNewProjectDialog?: b
     if (stagesData) setStages(stagesData.sort((a, b) => a.order - b.order));
     if (tasksData) setTasks(tasksData);
 
-    const anyLoading = isLoadingProjects || isLoadingUsers || isLoadingTeams || (!selectedProjectId && !!projectsData) || (selectedProjectId && (isLoadingStages || isLoadingTasks));
+    // Só considere "carregando" enquanto ainda estamos buscando dados
+    // ou enquanto há projetos carregados e ainda não escolhemos um.
+    const waitingProjectsSelection = !selectedProjectId && !!projectsData && projectsData.length > 0;
+    const anyLoading =
+      isLoadingProjects ||
+      isLoadingUsers ||
+      isLoadingTeams ||
+      waitingProjectsSelection ||
+      (selectedProjectId && (isLoadingStages || isLoadingTasks));
     setIsLoading(!!anyLoading);
 
   }, [projectsData, usersData, teamsData, stagesData, tasksData, isLoadingProjects, isLoadingUsers, isLoadingTeams, isLoadingStages, isLoadingTasks, selectedProjectId]);
