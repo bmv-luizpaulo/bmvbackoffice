@@ -108,7 +108,7 @@ export function ErrorLogViewer() {
     {
       accessorKey: "timestamp",
       header: "Data",
-      cell: ({ row }) => row.original.timestamp ? format(new Date(row.original.timestamp.toDate()), 'dd/MM/yy HH:mm', { locale: ptBR }) : 'N/A'
+      cell: ({ row }) => row.original.timestamp ? format(new Date(row.original.timestamp), 'dd/MM/yy HH:mm', { locale: ptBR }) : 'N/A'
     },
     {
       id: "actions",
