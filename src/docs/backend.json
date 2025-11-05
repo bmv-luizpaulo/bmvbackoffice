@@ -151,6 +151,16 @@
           "type": "boolean",
           "description": "Indicates whether the task is completed."
         },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when the task was created."
+        },
+        "completedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when the task was marked as completed."
+        },
         "dependentTaskIds": {
           "type": "array",
           "description": "References to other Tasks that must be completed before this task can be started. (Relationship: Task 1:N Task)",
@@ -191,7 +201,8 @@
         "description",
         "projectId",
         "stageId",
-        "isCompleted"
+        "isCompleted",
+        "createdAt"
       ]
     },
     "Stage": {

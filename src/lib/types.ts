@@ -91,6 +91,7 @@ export type Task = {
     stageId: string;
     isCompleted: boolean;
     createdAt: any;
+    completedAt?: any;
     dependentTaskIds?: string[];
     assigneeId?: string;
     teamId?: string;

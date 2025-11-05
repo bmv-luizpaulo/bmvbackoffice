@@ -26,8 +26,11 @@ import type { Task, Project, User } from "@/lib/types";
 import { useFirestore, useCollection, useMemoFirebase, useUser as useAuthUser } from "@/firebase";
 import { collection, collectionGroup, query, where } from "firebase/firestore";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { CheckCircle2 } from "lucide-react";
-import { format } from "date-fns";
+import { CheckCircle2, Clock } from "lucide-react";
+import { format, formatDistanceStrict } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 
 export default function CompletedTasksPage() {
   const firestore = useFirestore();
@@ -73,10 +76,38 @@ export default function CompletedTasksPage() {
        cell: ({ row }) => usersMap.get(row.original.assigneeId || '') || 'N/D',
     },
     {
-      accessorKey: "dueDate",
+      accessorKey: "completedAt",
       header: "Data de Conclusão",
-      cell: ({ row }) => row.original.dueDate ? format(new Date(row.original.dueDate), 'dd/MM/yyyy') : 'N/D',
+      cell: ({ row }) => row.original.completedAt ? format(new Date(row.original.completedAt.toDate()), 'dd/MM/yyyy HH:mm') : 'N/D',
     },
+    {
+        id: "executionTime",
+        header: "Tempo de Execução",
+        cell: ({ row }) => {
+            const task = row.original;
+            if (!task.createdAt || !task.completedAt) return <span className="text-muted-foreground">N/D</span>;
+            const startTime = new Date(task.createdAt);
+            const endTime = new Date(task.completedAt.toDate());
+            return <span className="font-medium">{formatDistanceStrict(endTime, startTime, { locale: ptBR, unit: 'day' })}</span>
+        }
+    },
+    {
+        id: "deliveryStatus",
+        header: "Entrega",
+        cell: ({ row }) => {
+            const task = row.original;
+            if (!task.completedAt || !task.dueDate) return <Badge variant="secondary">Sem Prazo</Badge>;
+            
+            const completedDate = new Date(task.completedAt.toDate());
+            const dueDate = new Date(task.dueDate);
+
+            if (completedDate <= dueDate) {
+                return <Badge className="bg-green-600 hover:bg-green-600">No Prazo</Badge>
+            } else {
+                return <Badge variant="destructive">Atrasada</Badge>
+            }
+        }
+    }
   ], [projectsMap, usersMap]);
 
   const table = useReactTable({

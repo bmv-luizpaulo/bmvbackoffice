@@ -26,7 +26,7 @@ import { memo } from 'react';
 import { useUser as useAuthUser, useDoc, useFirestore } from '@/firebase';
 import type { Role } from '@/lib/types';
 import React from 'react';
-import { doc } from 'firebase/firestore';
+import { doc, serverTimestamp } from 'firebase/firestore';
 
 
 type KanbanCardProps = {
@@ -58,7 +58,13 @@ function KanbanCardComponent({ task, onUpdateTask, onDeleteTask, onEditTask, onA
   };
 
   const handleCheckedChange = (checked: boolean) => {
-    onUpdateTask(task.id, { isCompleted: checked });
+    const updates: Partial<Task> = { isCompleted: checked };
+    if (checked) {
+        updates.completedAt = serverTimestamp();
+    } else {
+        updates.completedAt = null; // Or delete the field
+    }
+    onUpdateTask(task.id, updates);
   };
   
   const getDueDateInfo = (dueDate: string) => {
