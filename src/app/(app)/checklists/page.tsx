@@ -57,15 +57,21 @@ export default function ChecklistsPage() {
 
   const checklistsQuery = useMemoFirebase(() => {
     if (!firestore || !authUser || !role || !userProfile) return null;
-
-    let q = query(collection(firestore, 'checklists'), orderBy('name'));
-
-    // Apply team filter only if user is NOT a manager AND filter=me is active
-    if (!isManager && filterParam === 'me' && userProfile.teamIds && userProfile.teamIds.length > 0) {
-      q = query(q, where('teamId', 'in', userProfile.teamIds));
+  
+    const baseQuery = query(collection(firestore, 'checklists'), orderBy('name'));
+  
+    if (isManager) {
+      // Managers see all checklists regardless of the filter
+      return baseQuery;
     }
-    
-    return q;
+  
+    if (filterParam === 'me' && userProfile.teamIds && userProfile.teamIds.length > 0) {
+      // Non-managers with the 'me' filter see checklists for their teams
+      return query(baseQuery, where('teamId', 'in', userProfile.teamIds));
+    }
+  
+    // Non-managers without the 'me' filter see all checklists
+    return baseQuery;
   }, [firestore, authUser, filterParam, userProfile, role, isManager]);
 
 
@@ -212,52 +218,52 @@ export default function ChecklistsPage() {
 
   return (
     <div className="space-y-6">
-        <div className="space-y-4">
-            <header className="flex justify-between items-start">
-                <div>
-                <h1 className="font-headline text-3xl font-bold tracking-tight flex items-center gap-2">
-                    <ListChecks className="h-8 w-8 text-primary" />
-                    {filterParam === 'me' ? 'Meus Checklists' : 'Checklists'}
-                </h1>
-                <p className="text-muted-foreground">
-                    {filterParam === 'me'
-                    ? 'Execute os checklists relevantes para suas equipes.'
-                    : isManager
-                        ? 'Crie e gerencie checklists padronizados para suas equipes.'
-                        : 'Execute os checklists para seus processos.'
-                    }
-                </p>
-                </div>
-                <div className="flex items-center gap-2">
-                    {isManager && (
-                        <TooltipProvider>
-                            <Tooltip>
-                                <TooltipTrigger asChild>
-                                    <Button variant="outline" size="icon" onClick={() => setIsEditMode(!isEditMode)}>
-                                        {isEditMode ? <Eye className="h-4 w-4" /> : <Edit className="h-4 w-4 text-primary" />}
-                                    </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                    <p>Alternar para modo de {isEditMode ? 'visualização' : 'edição'}</p>
-                                </TooltipContent>
-                            </Tooltip>
-                        </TooltipProvider>
-                    )}
-                    {canEdit && (
-                        <Button onClick={() => { setChecklistToEdit(null); setIsFormOpen(true); }}>
-                            <Plus className="mr-2 h-4 w-4" /> Criar Checklist
-                        </Button>
-                    )}
-                </div>
-            </header>
-            
-            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="w-full">
-                <TabsList>
-                    <TabsTrigger value="ativo">Ativos</TabsTrigger>
-                    <TabsTrigger value="arquivado">Arquivados</TabsTrigger>
-                </TabsList>
-            </Tabs>
+       <header className="space-y-4">
+        <div className="flex justify-between items-start">
+            <div>
+            <h1 className="font-headline text-3xl font-bold tracking-tight flex items-center gap-2">
+                <ListChecks className="h-8 w-8 text-primary" />
+                {filterParam === 'me' ? 'Meus Checklists' : 'Checklists'}
+            </h1>
+            <p className="text-muted-foreground">
+                {filterParam === 'me'
+                ? 'Execute os checklists relevantes para suas equipes.'
+                : isManager
+                    ? 'Crie e gerencie checklists padronizados para suas equipes.'
+                    : 'Execute os checklists para seus processos.'
+                }
+            </p>
+            </div>
+            <div className="flex items-center gap-2">
+                {isManager && (
+                    <TooltipProvider>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button variant="outline" size="icon" onClick={() => setIsEditMode(!isEditMode)}>
+                                    {isEditMode ? <Eye className="h-4 w-4" /> : <Edit className="h-4 w-4 text-primary" />}
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                                <p>Alternar para modo de {isEditMode ? 'visualização' : 'edição'}</p>
+                            </TooltipContent>
+                        </Tooltip>
+                    </TooltipProvider>
+                )}
+                {canEdit && (
+                    <Button onClick={() => { setChecklistToEdit(null); setIsFormOpen(true); }}>
+                        <Plus className="mr-2 h-4 w-4" /> Criar Checklist
+                    </Button>
+                )}
+            </div>
         </div>
+        
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="w-full">
+            <TabsList>
+                <TabsTrigger value="ativo">Ativos</TabsTrigger>
+                <TabsTrigger value="arquivado">Arquivados</TabsTrigger>
+            </TabsList>
+        </Tabs>
+    </header>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card className="md:col-span-1">
