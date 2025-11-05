@@ -34,7 +34,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import type { Project, User, Role } from "@/lib/types";
 import { useFirestore, useCollection, useDoc, useMemoFirebase, useUser as useAuthUser } from "@/firebase";
-import { collection, doc, query, where, writeBatch, or } from "firebase/firestore";
+import { collection, doc, query, where, writeBatch, or, and } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { addDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase";
 import { format } from "date-fns";
@@ -60,19 +60,22 @@ export function ProjectDataTable({ statusFilter, userFilter }: ProjectDataTableP
 
   const projectsQuery = useMemoFirebase(() => {
     if (!firestore || !authUser || !role) return null;
+    const projectsCollection = collection(firestore, 'projects');
 
     if (userFilter === 'me' && !isManager) {
         return query(
-            collection(firestore, 'projects'),
-            where('status', '==', statusFilter),
-            or(
-                where('ownerId', '==', authUser.uid),
-                where('teamMembers', 'array-contains', authUser.uid)
+            projectsCollection,
+            and(
+                where('status', '==', statusFilter),
+                or(
+                    where('ownerId', '==', authUser.uid),
+                    where('teamMembers', 'array-contains', authUser.uid)
+                )
             )
         );
     }
     
-    return query(collection(firestore, 'projects'), where('status', '==', statusFilter));
+    return query(projectsCollection, where('status', '==', statusFilter));
   }, [firestore, authUser, role, statusFilter, userFilter, isManager]);
 
   const { data: projectsData, isLoading: isLoadingProjects } = useCollection<Project>(projectsQuery);

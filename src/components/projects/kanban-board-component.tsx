@@ -20,7 +20,7 @@ import {
   addDocumentNonBlocking,
   deleteDocumentNonBlocking,
 } from '@/firebase';
-import { collection, doc, query, where, writeBatch, serverTimestamp, or } from 'firebase/firestore';
+import { collection, doc, query, where, writeBatch, serverTimestamp, or, and } from 'firebase/firestore';
 import type { Project, Stage, Task, User, Role, Team } from '@/lib/types';
 import { KanbanColumn } from './kanban-column';
 import { AddProjectDialog } from './add-project-dialog';
@@ -65,7 +65,7 @@ export function KanbanBoard({ openNewProjectDialog }: { openNewProjectDialog?: b
 
   const projectsQuery = useMemoFirebase(() => {
     if (!firestore || !authUser || !role) return null;
-
+    
     const projectsCollection = collection(firestore, 'projects');
     
     if (isPrivilegedUser) {
@@ -74,10 +74,12 @@ export function KanbanBoard({ openNewProjectDialog }: { openNewProjectDialog?: b
     
     return query(
         projectsCollection,
-        where('status', '==', 'Em execução'),
-        or(
-            where('ownerId', '==', authUser.uid),
-            where('teamMembers', 'array-contains', authUser.uid)
+        and(
+          where('status', '==', 'Em execução'),
+          or(
+              where('ownerId', '==', authUser.uid),
+              where('teamMembers', 'array-contains', authUser.uid)
+          )
         )
     );
   }, [firestore, authUser, role, isPrivilegedUser]);
