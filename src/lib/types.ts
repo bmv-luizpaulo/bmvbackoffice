@@ -217,6 +217,7 @@ export type ChecklistExecution = {
     id: string;
     checklistId: string;
     checklistName: string;
+    createdAt: any;
     teamId: string;
     executedAt: any;
     executedBy: string;

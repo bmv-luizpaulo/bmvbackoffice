@@ -659,6 +659,7 @@
       "properties": {
         "checklistId": { "type": "string", "description": "The ID of the original checklist template." },
         "checklistName": { "type": "string", "description": "Denormalized name of the checklist." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Denormalized creation date of the original checklist." },
         "teamId": { "type": "string", "description": "Denormalized ID of the team responsible." },
         "executedAt": { "type": "string", "format": "date-time", "description": "Timestamp when the checklist was completed." },
         "executedBy": { "type": "string", "description": "The ID of the user who completed the checklist." },

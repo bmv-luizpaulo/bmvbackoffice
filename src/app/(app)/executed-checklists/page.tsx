@@ -3,9 +3,9 @@
 import * as React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { History, FileText, Check, X, MessageSquare, CheckSquare, Loader2, User, Calendar } from "lucide-react";
+import { History, Check, X, MessageSquare, CheckSquare, Loader2, AlertTriangle, Clock } from "lucide-react";
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, doc, query, orderBy } from 'firebase/firestore';
+import { collection, query, orderBy } from 'firebase/firestore';
 import type { ChecklistExecution, Team, User as UserType } from '@/lib/types';
 import {
   Table,
@@ -28,9 +28,10 @@ import {
   getExpandedRowModel,
   ExpandedState,
 } from "@tanstack/react-table"
-import { format } from "date-fns";
+import { format, formatDistanceStrict } from "date-fns";
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
+import { Progress } from '@/components/ui/progress';
 
 
 export default function ExecutedChecklistsPage() {
@@ -87,6 +88,32 @@ export default function ExecutedChecklistsPage() {
       header: 'Data da Execução',
       cell: ({ row }) => format(new Date(row.original.executedAt.toDate()), 'dd/MM/yyyy HH:mm', { locale: ptBR })
     },
+     {
+      id: 'progress',
+      header: 'Progresso',
+      cell: ({ row }) => {
+        const items = row.original.items;
+        const completableItems = items.filter(i => i.type === 'item' || i.type === 'yes_no');
+        const completedItems = completableItems.filter(i => (i.type === 'item' && i.isCompleted) || (i.type === 'yes_no' && i.answer !== 'unanswered')).length;
+        const progress = completableItems.length > 0 ? (completedItems / completableItems.length) * 100 : 0;
+        return (
+          <div className="flex items-center gap-2">
+            <Progress value={progress} className="w-24" />
+            <span className="text-xs text-muted-foreground">{Math.round(progress)}%</span>
+          </div>
+        )
+      }
+    },
+    {
+      id: 'executionTime',
+      header: 'Tempo de Execução',
+      cell: ({ row }) => {
+        if (!row.original.createdAt) return <span className="text-muted-foreground text-xs">N/A</span>;
+        const startTime = new Date(row.original.createdAt.toDate());
+        const endTime = new Date(row.original.executedAt.toDate());
+        return <span className="text-sm font-medium">{formatDistanceStrict(endTime, startTime, { locale: ptBR, unit: 'minute' })}</span>
+      }
+    }
   ], [teamsMap, usersMap]);
 
 
@@ -130,6 +157,7 @@ export default function ExecutedChecklistsPage() {
                                 <div className="flex items-center gap-2">
                                     {item.answer === 'yes' && <Check className='h-4 w-4 text-green-600'/>}
                                     {item.answer === 'no' && <X className='h-4 w-4 text-red-600'/>}
+                                    {item.answer === 'unanswered' && <AlertTriangle className='h-4 w-4 text-amber-500'/>}
                                     <span>{item.description}</span>
                                 </div>
                                 {item.comment && (

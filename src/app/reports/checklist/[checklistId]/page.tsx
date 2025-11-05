@@ -6,7 +6,7 @@ import { useFirestore, useDoc, useCollection, useMemoFirebase, useUser, addDocum
 import { doc, collection, query, orderBy, writeBatch, serverTimestamp } from 'firebase/firestore';
 import type { Checklist, ChecklistItem, Team, User as UserType } from '@/lib/types';
 import { Button } from '@/components/ui/button';
-import { Loader2, Check, X, MessageSquare, CheckSquare, ShieldAlert, Download } from 'lucide-react';
+import { Loader2, Check, X, MessageSquare, CheckSquare, ShieldAlert, Download, AlertTriangle } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import jsPDF from 'jspdf';
@@ -69,6 +69,7 @@ function ChecklistReportPageContent() {
       const executionData = {
         checklistId: checklist.id,
         checklistName: checklist.name,
+        createdAt: checklist.createdAt,
         teamId: checklist.teamId,
         executedAt: serverTimestamp(),
         executedBy: authUser.uid,
@@ -227,7 +228,7 @@ function ChecklistReportPageContent() {
                                     <div className='w-24 flex justify-center pt-0.5'>
                                         {item.answer === 'yes' && <Check className='h-5 w-5 text-green-600'/>}
                                         {item.answer === 'no' && <X className='h-5 w-5 text-red-600'/>}
-                                        {item.answer === 'unanswered' && <div className="h-4 w-4 mt-0.5 border-2 rounded-sm border-gray-300" />}
+                                        {item.answer === 'unanswered' && <AlertTriangle className="h-5 w-5 text-amber-500" />}
                                     </div>
                                     </div>
                                 )
