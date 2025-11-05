@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { History, Check, X, MessageSquare, CheckSquare, Loader2, AlertTriangle, Clock } from "lucide-react";
+import { History, Check, X, MessageSquare, CheckSquare, Loader2, AlertTriangle, Eye } from "lucide-react";
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy } from 'firebase/firestore';
 import type { ChecklistExecution, Team, User as UserType } from '@/lib/types';
@@ -25,20 +25,27 @@ import {
   getSortedRowModel,
   ColumnFiltersState,
   getFilteredRowModel,
-  getExpandedRowModel,
-  ExpandedState,
 } from "@tanstack/react-table"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuLabel,
+} from "@/components/ui/dropdown-menu"
 import { format, formatDistanceStrict } from "date-fns";
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { Progress } from '@/components/ui/progress';
+import { MoreHorizontal } from 'lucide-react';
+import { ExecutionDetailsDialog } from '@/components/checklists/execution-details-dialog';
 
 
 export default function ExecutedChecklistsPage() {
   const firestore = useFirestore();
   const [sorting, setSorting] = React.useState<SortingState>([{ id: 'executedAt', desc: true }]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
-  const [expanded, setExpanded] = React.useState<ExpandedState>({});
+  const [selectedExecution, setSelectedExecution] = React.useState<ChecklistExecution | null>(null);
   
   const executionsQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'checklistExecutions'), orderBy('executedAt', 'desc')) : null, [firestore]);
   const { data: executions, isLoading: isLoadingExecutions } = useCollection<ChecklistExecution>(executionsQuery);
@@ -54,21 +61,6 @@ export default function ExecutedChecklistsPage() {
   const data = React.useMemo(() => executions || [], [executions]);
 
   const columns: ColumnDef<ChecklistExecution>[] = React.useMemo(() => [
-    {
-        id: 'expander',
-        header: () => null,
-        cell: ({ row }) => {
-            return row.getCanExpand() ? (
-            <Button
-                variant="ghost" size="icon"
-                onClick={row.getToggleExpandedHandler()}
-                className='h-6 w-6'
-            >
-                {row.getIsExpanded() ? '−' : '+'}
-            </Button>
-            ) : null
-        },
-    },
     {
       accessorKey: 'checklistName',
       header: 'Nome do Checklist',
@@ -113,6 +105,31 @@ export default function ExecutedChecklistsPage() {
         const endTime = new Date(row.original.executedAt.toDate());
         return <span className="text-sm font-medium">{formatDistanceStrict(endTime, startTime, { locale: ptBR, unit: 'minute' })}</span>
       }
+    },
+    {
+        id: 'actions',
+        cell: ({ row }) => {
+            const execution = row.original;
+            return (
+                <div className="text-right">
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="h-8 w-8 p-0">
+                                <span className="sr-only">Abrir menu</span>
+                                <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>Ações</DropdownMenuLabel>
+                            <DropdownMenuItem onClick={() => setSelectedExecution(execution)}>
+                                <Eye className="mr-2 h-4 w-4" />
+                                Ver Detalhes
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                </div>
+            )
+        }
     }
   ], [teamsMap, usersMap]);
 
@@ -120,63 +137,17 @@ export default function ExecutedChecklistsPage() {
   const table = useReactTable({
     data,
     columns,
-    state: { sorting, columnFilters, expanded },
+    state: { sorting, columnFilters },
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
-    onExpandedChange: setExpanded,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
-    getExpandedRowModel: getExpandedRowModel(),
   });
 
-  const renderSubComponent = ({ row }: { row: any }) => {
-    const items = row.original.items.sort((a: any, b: any) => a.order - b.order);
-    return (
-        <div className="p-4 bg-muted/50">
-             <h4 className="font-bold mb-2">Detalhes da Execução</h4>
-             <div className="space-y-3">
-                 {items.map((item: any) => {
-                      if (item.type === 'header') {
-                        return (
-                            <div key={item.id} className="font-semibold text-sm bg-background p-2 rounded-md mt-2">{item.description}</div>
-                        )
-                      }
-                      if (item.type === 'item') {
-                         return (
-                            <div key={item.id} className="flex items-center gap-2 p-2 bg-background rounded-md text-sm">
-                               <CheckSquare className={cn("h-4 w-4", item.isCompleted ? 'text-green-600' : 'text-gray-300')} />
-                               <span className={cn(item.isCompleted && "line-through text-muted-foreground")}>{item.description}</span>
-                            </div>
-                         )
-                      }
-                      if (item.type === 'yes_no') {
-                        return (
-                             <div key={item.id} className="flex flex-col gap-1 p-2 bg-background rounded-md text-sm">
-                                <div className="flex items-center gap-2">
-                                    {item.answer === 'yes' && <Check className='h-4 w-4 text-green-600'/>}
-                                    {item.answer === 'no' && <X className='h-4 w-4 text-red-600'/>}
-                                    {item.answer === 'unanswered' && <AlertTriangle className='h-4 w-4 text-amber-500'/>}
-                                    <span>{item.description}</span>
-                                </div>
-                                {item.comment && (
-                                     <div className='flex items-start gap-2 text-gray-600 pl-6'>
-                                        <MessageSquare className="h-4 w-4 mt-0.5 shrink-0" />
-                                        <p className='italic text-xs'>"{item.comment}"</p>
-                                    </div>
-                                )}
-                            </div>
-                        )
-                      }
-                      return null;
-                 })}
-             </div>
-        </div>
-    )
-}
-
   return (
+    <>
     <div className="space-y-6">
       <header>
         <h1 className="font-headline text-3xl font-bold tracking-tight flex items-center gap-2">
@@ -191,7 +162,7 @@ export default function ExecutedChecklistsPage() {
       <Card>
         <CardHeader>
             <CardTitle>Histórico de Execuções</CardTitle>
-            <CardDescription>Clique em uma linha para ver os detalhes de cada checklist preenchido.</CardDescription>
+            <CardDescription>Clique em uma linha para ver os detalhes e métricas de cada checklist preenchido.</CardDescription>
         </CardHeader>
         <CardContent>
             <div className="rounded-md border">
@@ -212,22 +183,18 @@ export default function ExecutedChecklistsPage() {
                         <TableRow><TableCell colSpan={columns.length} className="h-24 text-center"><Loader2 className="animate-spin mx-auto"/></TableCell></TableRow>
                     ) : table.getRowModel().rows?.length ? (
                     table.getRowModel().rows.map((row) => (
-                        <React.Fragment key={row.id}>
-                            <TableRow data-state={row.getIsSelected() && "selected"}>
-                                {row.getVisibleCells().map((cell) => (
-                                <TableCell key={cell.id}>
-                                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                                </TableCell>
-                                ))}
-                            </TableRow>
-                             {row.getIsExpanded() && (
-                                <TableRow>
-                                    <TableCell colSpan={columns.length}>
-                                        {renderSubComponent({ row })}
-                                    </TableCell>
-                                </TableRow>
-                            )}
-                        </React.Fragment>
+                        <TableRow 
+                            key={row.id} 
+                            data-state={row.getIsSelected() && "selected"}
+                            onClick={() => setSelectedExecution(row.original)}
+                            className="cursor-pointer"
+                        >
+                            {row.getVisibleCells().map((cell) => (
+                            <TableCell key={cell.id}>
+                                {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                            </TableCell>
+                            ))}
+                        </TableRow>
                     ))
                     ) : (
                     <TableRow>
@@ -244,5 +211,15 @@ export default function ExecutedChecklistsPage() {
         </CardContent>
       </Card>
     </div>
+    {selectedExecution && (
+        <ExecutionDetailsDialog
+            isOpen={!!selectedExecution}
+            onOpenChange={(open) => { if (!open) setSelectedExecution(null) }}
+            execution={selectedExecution}
+            teamName={teamsMap.get(selectedExecution.teamId) || 'N/A'}
+            userName={usersMap.get(selectedExecution.executedBy) || 'N/A'}
+        />
+    )}
+    </>
   );
 }
