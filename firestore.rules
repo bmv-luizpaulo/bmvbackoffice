@@ -128,10 +128,10 @@ service cloud.firestore {
     }
     
     match /conversations/{conversationId} {
-      // Allow a user to list conversations if they are authenticated.
-      // The client-side query will filter for conversations they are part of.
-      allow list: if request.auth != null;
-      
+      // Allow a user to list conversations only if they are querying for their own conversations.
+      // This is a secure and efficient way to handle list operations.
+      allow list: if isDev() || (request.auth.uid in request.query.where.userIds.value);
+
       // Allow read, update, delete only if the user is part of the conversation.
       allow read, update, delete: if isDev() || (request.auth.uid in resource.data.userIds);
       
