@@ -34,7 +34,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import type { Project, User, Role } from "@/lib/types";
 import { useFirestore, useCollection, useDoc, useMemoFirebase, useUser as useAuthUser } from "@/firebase";
-import { collection, doc, query, where, writeBatch } from "firebase/firestore";
+import { collection, doc, query, where, writeBatch, or } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { addDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase";
 import { format } from "date-fns";
@@ -58,51 +58,25 @@ export function ProjectDataTable({ statusFilter, userFilter }: ProjectDataTableP
   const { data: role } = useDoc<Role>(roleQuery);
   const isManager = role?.isManager || role?.isDev;
 
-  const baseProjectsQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return collection(firestore, 'projects');
-  }, [firestore]);
+  const projectsQuery = useMemoFirebase(() => {
+    if (!firestore || !authUser) return null;
+    let constraints = [where('status', '==', statusFilter)];
+    if (userFilter === 'me' && !isManager) {
+        constraints.push(or(
+            where('ownerId', '==', authUser.uid),
+            where('teamMembers', 'array-contains', authUser.uid)
+        ));
+    }
+    return query(collection(firestore, 'projects'), ...constraints);
+  }, [firestore, authUser, statusFilter, userFilter, isManager]);
 
-  const ownedProjectsQuery = useMemoFirebase(() => {
-    if (!firestore || !authUser || userFilter !== 'me') return null;
-    return query(
-      collection(firestore, 'projects'),
-      where('status', '==', statusFilter),
-      where('ownerId', '==', authUser.uid)
-    );
-  }, [firestore, authUser, statusFilter, userFilter]);
-
-  const memberProjectsQuery = useMemoFirebase(() => {
-    if (!firestore || !authUser || userFilter !== 'me') return null;
-    return query(
-      collection(firestore, 'projects'),
-      where('status', '==', statusFilter),
-      where('teamMembers', 'array-contains', authUser.uid)
-    );
-  }, [firestore, authUser, statusFilter, userFilter]);
-
-  const allProjectsQuery = useMemoFirebase(() => {
-    if (!firestore || userFilter === 'me') return null;
-    return query(collection(firestore, 'projects'), where('status', '==', statusFilter));
-  }, [firestore, statusFilter, userFilter]);
-
-  const { data: ownedProjects, isLoading: isLoadingOwned } = useCollection<Project>(ownedProjectsQuery);
-  const { data: memberProjects, isLoading: isLoadingMember } = useCollection<Project>(memberProjectsQuery);
-  const { data: allProjects, isLoading: isLoadingAll } = useCollection<Project>(allProjectsQuery);
+  const { data: projectsData, isLoading: isLoadingProjects } = useCollection<Project>(projectsQuery);
 
   const usersQuery = useMemoFirebase(() => firestore ? collection(firestore, 'users') : null, [firestore]);
   const { data: usersData, isLoading: isLoadingUsers } = useCollection<User>(usersQuery);
 
   const usersMap = React.useMemo(() => new Map(usersData?.map(u => [u.id, u.name])), [usersData]);
-  const data = React.useMemo(() => {
-    if (userFilter === 'me') {
-      const merged = new Map<string, Project>();
-      (ownedProjects ?? []).forEach(p => merged.set(p.id, p));
-      (memberProjects ?? []).forEach(p => merged.set(p.id, p));
-      return Array.from(merged.values());
-    }
-    return allProjects ?? [];
-  }, [userFilter, ownedProjects, memberProjects, allProjects]);
+  const data = React.useMemo(() => projectsData ?? [], [projectsData]);
 
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
@@ -110,9 +84,7 @@ export function ProjectDataTable({ statusFilter, userFilter }: ProjectDataTableP
   const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [selectedProject, setSelectedProject] = React.useState<Project | null>(null);
 
-  const isLoading = (userFilter === 'me')
-    ? (isLoadingOwned || isLoadingMember || isLoadingUsers)
-    : (isLoadingAll || isLoadingUsers);
+  const isLoading = isLoadingProjects || isLoadingUsers;
 
   const handleEditClick = (project: Project) => {
     setSelectedProject(project);
