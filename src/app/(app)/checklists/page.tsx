@@ -55,27 +55,27 @@ export default function ChecklistsPage() {
 
   const isManager = role?.isManager || role?.isDev;
 
+  // Simplified query to fetch all checklists. Filtering will happen on the client.
   const checklistsQuery = useMemoFirebase(() => {
-    if (!firestore || !authUser || !role || !userProfile) return null;
-  
-    const baseQuery = query(collection(firestore, 'checklists'), orderBy('name'));
-  
-    if (isManager) {
-      // Managers see all checklists regardless of the filter
-      return baseQuery;
-    }
-  
-    if (filterParam === 'me' && userProfile.teamIds && userProfile.teamIds.length > 0) {
-      // Non-managers with the 'me' filter see checklists for their teams
-      return query(baseQuery, where('teamId', 'in', userProfile.teamIds));
-    }
-  
-    // Non-managers without the 'me' filter see all checklists
-    return baseQuery;
-  }, [firestore, authUser, filterParam, userProfile, role, isManager]);
+    if (!firestore) return null;
+    return query(collection(firestore, 'checklists'), orderBy('name'));
+  }, [firestore]);
 
+  const { data: allChecklists, isLoading: isLoadingChecklists } = useCollection<Checklist>(checklistsQuery);
 
-  const { data: checklists, isLoading: isLoadingChecklists } = useCollection<Checklist>(checklistsQuery);
+  const filteredChecklists = React.useMemo(() => {
+    if (!allChecklists) return [];
+    if (isManager || !filterParam) {
+      return allChecklists;
+    }
+    // Client-side filtering for non-managers on the 'me' view
+    if (filterParam === 'me') {
+      const userTeamIds = userProfile?.teamIds || [];
+      return allChecklists.filter(c => userTeamIds.includes(c.teamId));
+    }
+    return allChecklists;
+  }, [allChecklists, isManager, filterParam, userProfile]);
+
   
   const teamsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'teams') : null, [firestore]);
   const { data: teams } = useCollection<Team>(teamsQuery);
@@ -85,10 +85,10 @@ export default function ChecklistsPage() {
   const { data: checklistItems, isLoading: isLoadingItems } = useCollection<ChecklistItem>(itemsQuery);
   
   const { activeChecklists, archivedChecklists } = React.useMemo(() => {
-    const active = checklists?.filter(c => c.status !== 'arquivado') || [];
-    const archived = checklists?.filter(c => c.status === 'arquivado') || [];
+    const active = filteredChecklists?.filter(c => c.status !== 'arquivado') || [];
+    const archived = filteredChecklists?.filter(c => c.status === 'arquivado') || [];
     return { activeChecklists: active, archivedChecklists: archived };
-  }, [checklists]);
+  }, [filteredChecklists]);
   
   const currentChecklistList = activeTab === 'ativo' ? activeChecklists : archivedChecklists;
   
