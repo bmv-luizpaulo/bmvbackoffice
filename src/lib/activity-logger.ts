@@ -1,3 +1,4 @@
+'use client';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import type { UserActivityLog } from './types';
 
