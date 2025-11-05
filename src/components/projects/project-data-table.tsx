@@ -59,16 +59,21 @@ export function ProjectDataTable({ statusFilter, userFilter }: ProjectDataTableP
   const isManager = role?.isManager || role?.isDev;
 
   const projectsQuery = useMemoFirebase(() => {
-    if (!firestore || !authUser) return null;
-    let constraints = [where('status', '==', statusFilter)];
+    if (!firestore || !authUser || !role) return null;
+
     if (userFilter === 'me' && !isManager) {
-        constraints.push(or(
-            where('ownerId', '==', authUser.uid),
-            where('teamMembers', 'array-contains', authUser.uid)
-        ));
+        return query(
+            collection(firestore, 'projects'),
+            where('status', '==', statusFilter),
+            or(
+                where('ownerId', '==', authUser.uid),
+                where('teamMembers', 'array-contains', authUser.uid)
+            )
+        );
     }
-    return query(collection(firestore, 'projects'), ...constraints);
-  }, [firestore, authUser, statusFilter, userFilter, isManager]);
+    
+    return query(collection(firestore, 'projects'), where('status', '==', statusFilter));
+  }, [firestore, authUser, role, statusFilter, userFilter, isManager]);
 
   const { data: projectsData, isLoading: isLoadingProjects } = useCollection<Project>(projectsQuery);
 

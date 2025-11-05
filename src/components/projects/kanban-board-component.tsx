@@ -65,18 +65,21 @@ export function KanbanBoard({ openNewProjectDialog }: { openNewProjectDialog?: b
 
   const projectsQuery = useMemoFirebase(() => {
     if (!firestore || !authUser || !role) return null;
-    
+
     const projectsCollection = collection(firestore, 'projects');
-    const constraints = [where('status', '==', 'Em execução')];
     
-    if (!isPrivilegedUser) {
-        constraints.push(or(
-            where('ownerId', '==', authUser.uid),
-            where('teamMembers', 'array-contains', authUser.uid)
-        ));
+    if (isPrivilegedUser) {
+        return query(projectsCollection, where('status', '==', 'Em execução'));
     }
     
-    return query(projectsCollection, ...constraints);
+    return query(
+        projectsCollection,
+        where('status', '==', 'Em execução'),
+        or(
+            where('ownerId', '==', authUser.uid),
+            where('teamMembers', 'array-contains', authUser.uid)
+        )
+    );
   }, [firestore, authUser, role, isPrivilegedUser]);
 
   const { data: projectsData, isLoading: isLoadingProjects } = useCollection<Project>(projectsQuery);
