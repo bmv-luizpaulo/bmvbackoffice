@@ -76,11 +76,15 @@ export function DirectorateFormDialog({ isOpen, onOpenChange, onSave, directorat
 
 
   function onSubmit(values: z.infer<typeof formSchema>) {
-    const dataToSave = {
+    const dataToSave: Partial<Omit<Directorate, 'id'>> = {
       ...values,
-      directorId: values.directorId === 'unassigned' ? undefined : values.directorId,
     };
-    onSave(dataToSave, directorate?.id);
+
+    if (dataToSave.directorId === 'unassigned' || !dataToSave.directorId) {
+      delete dataToSave.directorId;
+    }
+    
+    onSave(dataToSave as Omit<Directorate, 'id'>, directorate?.id);
     onOpenChange(false);
   }
   
