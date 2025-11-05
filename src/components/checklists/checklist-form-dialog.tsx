@@ -30,7 +30,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { CalendarIcon, RefreshCcw } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { format } from "date-fns";
+import { format, addDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Calendar } from "../ui/calendar";
 import { Separator } from "../ui/separator";
@@ -101,6 +101,10 @@ export function ChecklistFormDialog({ isOpen, onOpenChange, onSave, checklist, t
       }
     }
   }, [checklist, form, isOpen]);
+
+  const setDeadline = (days: number) => {
+    form.setValue('deadlineDate', addDays(new Date(), days), { shouldValidate: true });
+  };
 
 
   function onSubmit(values: z.infer<typeof formSchema>) {
@@ -212,6 +216,12 @@ export function ChecklistFormDialog({ isOpen, onOpenChange, onSave, checklist, t
                                 />
                                 </PopoverContent>
                             </Popover>
+                            <div className="flex gap-2 pt-2">
+                                <Button type="button" size="sm" variant="outline" onClick={() => setDeadline(1)}>1 Dia</Button>
+                                <Button type="button" size="sm" variant="outline" onClick={() => setDeadline(5)}>5 Dias</Button>
+                                <Button type="button" size="sm" variant="outline" onClick={() => setDeadline(15)}>15 Dias</Button>
+                                <Button type="button" size="sm" variant="outline" onClick={() => setDeadline(30)}>30 Dias</Button>
+                            </div>
                             <FormMessage />
                             </FormItem>
                         )}
