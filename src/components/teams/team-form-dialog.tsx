@@ -81,7 +81,7 @@ export function TeamFormDialog({ isOpen, onOpenChange, onSave, team, users, user
           name: team.name, 
           description: team.description || '', 
           leaderId: team.leaderId || undefined,
-          directorateId: team.directorateId,
+          directorateId: team.directorateId || undefined,
           teamType: team.teamType,
           responsibilities: team.responsibilities || '',
           kpis: team.kpis || '',
@@ -95,17 +95,25 @@ export function TeamFormDialog({ isOpen, onOpenChange, onSave, team, users, user
 
 
   function onSubmit(values: z.infer<typeof formSchema>) {
-    const teamData = {
+    const teamData: Partial<Omit<Team, 'id'>> = {
       name: values.name,
       description: values.description,
-      leaderId: values.leaderId === 'unassigned' ? undefined : values.leaderId,
-      directorateId: values.directorateId === 'unassigned' ? undefined : values.directorateId,
+      leaderId: values.leaderId,
+      directorateId: values.directorateId,
       teamType: values.teamType,
       responsibilities: values.responsibilities,
       kpis: values.kpis,
     };
+
+    if (!teamData.leaderId || teamData.leaderId === 'unassigned') {
+      delete teamData.leaderId;
+    }
+    if (!teamData.directorateId || teamData.directorateId === 'unassigned') {
+        delete teamData.directorateId;
+    }
+
     const memberIds = values.memberIds || [];
-    onSave(teamData, memberIds, team?.id);
+    onSave(teamData as Omit<Team, 'id'>, memberIds, team?.id);
     onOpenChange(false);
   }
   
