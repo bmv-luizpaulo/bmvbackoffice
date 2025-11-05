@@ -42,11 +42,20 @@ import { ptBR } from "date-fns/locale"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "../ui/dialog"
 import { ScrollArea } from "../ui/scroll-area"
 
-export function ErrorLogViewer() {
+interface ErrorLogViewerProps {
+    filterResolved: boolean;
+}
+
+export function ErrorLogViewer({ filterResolved }: ErrorLogViewerProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
   
-  const errorLogsQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'errorLogs')) : null, [firestore]);
+  const errorLogsQuery = useMemoFirebase(() => 
+    firestore 
+    ? query(collection(firestore, 'errorLogs'), where('isResolved', '==', filterResolved)) 
+    : null, 
+  [firestore, filterResolved]);
+
   const { data: errorLogsData, isLoading: isLoadingLogs } = useCollection<ErrorLog>(errorLogsQuery);
 
   const usersQuery = useMemoFirebase(() => firestore ? collection(firestore, 'users') : null, [firestore]);
@@ -57,7 +66,6 @@ export function ErrorLogViewer() {
 
   const [sorting, setSorting] = React.useState<SortingState>([{ id: 'timestamp', desc: true }]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
-  const [selectedError, setSelectedError] = React.useState<ErrorLog | null>(null);
 
   const isLoading = isLoadingLogs || isLoadingUsers;
 

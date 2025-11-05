@@ -16,6 +16,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { getSuggestedFollowUps } from '@/ai/flows/ai-suggested-follow-ups';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { ErrorLogViewer } from '@/components/dev-tools/error-log-viewer';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const notificationSchema = z.object({
     title: z.string().min(1, "O título é obrigatório."),
@@ -108,7 +109,18 @@ export default function DevToolsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <ErrorLogViewer />
+            <Tabs defaultValue="unresolved">
+                <TabsList>
+                    <TabsTrigger value="unresolved">Não Resolvidos</TabsTrigger>
+                    <TabsTrigger value="resolved">Resolvidos</TabsTrigger>
+                </TabsList>
+                <TabsContent value="unresolved">
+                    <ErrorLogViewer filterResolved={false} />
+                </TabsContent>
+                <TabsContent value="resolved">
+                    <ErrorLogViewer filterResolved={true} />
+                </TabsContent>
+            </Tabs>
         </CardContent>
       </Card>
 
