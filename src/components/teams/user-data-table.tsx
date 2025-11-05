@@ -66,7 +66,7 @@ const UserImportExportDialog = dynamic(() => import('./user-import-export').then
 
 export function UserDataTable() {
   const firestore = useFirestore();
-  const { user: currentUser } = useAuthUser();
+  const { user: currentUser, isUserLoading: isAuthUserLoading } = useAuthUser();
   const { toast } = useToast();
   
   const usersQuery = useMemoFirebase(() => firestore ? collection(firestore, 'users') : null, [firestore]);
@@ -88,7 +88,7 @@ export function UserDataTable() {
   const [generatedLink, setGeneratedLink] = React.useState<string | null>(null);
   const [selectedUser, setSelectedUser] = React.useState<User | null>(null);
 
-  const isLoading = isLoadingUsers || isLoadingRoles;
+  const isLoading = isLoadingUsers || isLoadingRoles || isAuthUserLoading;
 
   const handleEditClick = React.useCallback((user: User) => {
     setSelectedUser(user);
@@ -148,6 +148,7 @@ export function UserDataTable() {
     if (!firestore || !currentUser) return;
     const userRef = doc(firestore, 'users', user.id);
     await updateDocumentNonBlocking(userRef, { roleId: newRoleId });
+    currentUser.getIdToken(true); // Force token refresh to get new claims
     const newRole = rolesMap.get(newRoleId);
     
     // Log activity

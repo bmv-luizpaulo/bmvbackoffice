@@ -2,15 +2,13 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    
+
     function isDev() {
-      return exists(/databases/$(database)/documents/roles/$(get(/databases/$(database)/documents/users/$(request.auth.uid)).data.roleId)) &&
-             get(/databases/$(database)/documents/roles/$(get(/databases/$(database)/documents/users/$(request.auth.uid)).data.roleId)).data.isDev == true;
+      return request.auth.token.isDev == true;
     }
 
     function isManager() {
-      return exists(/databases/$(database)/documents/roles/$(get(/databases/$(database)/documents/users/$(request.auth.uid)).data.roleId)) &&
-             get(/databases/$(database)/documents/roles/$(get(/databases/$(database)/documents/users/$(request.auth.uid)).data.roleId)).data.isManager == true;
+      return request.auth.token.isManager == true;
     }
     
     function isProjectMember(projectId) {
@@ -50,12 +48,14 @@ service cloud.firestore {
     }
 
     match /teams/{teamId} {
-      allow list, read, create: if request.auth != null;
+      allow list, read: if request.auth != null;
+      allow create: if request.auth != null;
       allow update, delete: if isDev() || isManager();
     }
     
     match /directorates/{directorateId} {
-      allow list, read, create: if request.auth != null;
+      allow list, read: if request.auth != null;
+      allow create: if request.auth != null;
       allow update, delete: if isDev() || isManager();
     }
 
@@ -70,8 +70,7 @@ service cloud.firestore {
     }
     
     match /contracts/{contractId} {
-      allow list: if request.auth != null;
-      allow read: if isDev() || isManager() || request.auth != null;
+      allow list, read: if request.auth != null;
       allow write: if isDev() || isManager();
     }
 
@@ -90,9 +89,7 @@ service cloud.firestore {
         allow write: if isDev() || isManager();
 
         match /items/{itemId} {
-            // Allow reading/updating items for any authenticated user
             allow list, read, update: if request.auth != null;
-            // Restrict create/delete to privileged users
             allow create, delete: if isDev() || isManager();
         }
     }
@@ -108,8 +105,7 @@ service cloud.firestore {
     }
     
     match /maintenances/{maintenanceId} {
-        allow list: if request.auth != null;
-        allow read: if isDev() || isManager() || request.auth != null;
+        allow list, read: if request.auth != null;
         allow write: if isDev() || isManager();
     }
 
@@ -149,6 +145,11 @@ service cloud.firestore {
         allow create: if request.auth != null;
         allow list, read: if isDev() || isManager();
         allow update, delete: if isDev() || isManager();
+    }
+
+    match /userActivityLogs/{logId} {
+      allow read: if isDev() || isManager();
+      allow create: if request.auth != null;
     }
   }
 }

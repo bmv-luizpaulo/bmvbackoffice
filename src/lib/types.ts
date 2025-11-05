@@ -25,6 +25,7 @@ export type User = {
   lastLoginAt?: any;
   lastActivityAt?: any;
   loginCount?: number;
+  _tokenRefreshed?: any;
 };
 
 export type UserActivityLog = {

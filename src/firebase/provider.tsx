@@ -93,7 +93,7 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
       const unsubscribe = onSnapshot(userDocRef, (doc) => {
         const data = doc.data() as UserProfile;
         // The Cloud Function updates `_tokenRefreshed`. When it changes, force a token refresh.
-        if (data && (data as any)._tokenRefreshed) {
+        if (data && data._tokenRefreshed) {
             console.log("Detected role change, forcing token refresh...");
             userAuthState.user?.getIdToken(true); // true forces a refresh
         }

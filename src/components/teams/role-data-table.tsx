@@ -34,7 +34,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import type { Role, User } from "@/lib/types";
 import dynamic from "next/dynamic";
-import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
+import { useFirestore, useCollection, useMemoFirebase, useUser as useAuthUser } from "@/firebase";
 import { collection, doc, query, where, getDocs } from "firebase/firestore";
 import {
   AlertDialog,
@@ -54,6 +54,7 @@ const RoleFormDialog = dynamic(() => import('./role-form-dialog').then(m => m.Ro
 
 export function RoleDataTable() {
   const firestore = useFirestore();
+  const { user: currentUser } = useAuthUser();
   const { toast } = useToast();
   
   const rolesQuery = useMemoFirebase(() => firestore ? collection(firestore, 'roles') : null, [firestore]);
@@ -87,13 +88,16 @@ export function RoleDataTable() {
     if (roleId) {
         const roleRef = doc(firestore, 'roles', roleId);
         await updateDocumentNonBlocking(roleRef, roleData);
+        if (currentUser) {
+          currentUser.getIdToken(true);
+        }
         toast({ title: "Cargo Atualizado", description: `O cargo "${roleData.name}" foi atualizado.` });
     } else {
         await addDocumentNonBlocking(collection(firestore, 'roles'), roleData);
         toast({ title: "Cargo Criado", description: `O cargo "${roleData.name}" foi criado com sucesso.` });
     }
     setIsFormOpen(false);
-  }, [firestore, toast]);
+  }, [firestore, toast, currentUser]);
 
 
   const handleDeleteRole = React.useCallback(async () => {
