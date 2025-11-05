@@ -21,7 +21,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { MoreHorizontal, Pencil, ShieldCheck, ShieldOff, Trash2, UserCheck, UserX, UserMinus, Eye, FileSpreadsheet } from "lucide-react"
+import { MoreHorizontal, Pencil, ShieldCheck, ShieldOff, Trash2, UserCheck, UserX, UserMinus, Eye, FileSpreadsheet, Copy, Link } from "lucide-react"
 
 import {
   Table,
@@ -48,6 +48,12 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
 } from "@/components/ui/alert-dialog"
 import { useToast } from "@/hooks/use-toast"
 import { createUserAction } from "@/lib/actions";
@@ -79,6 +85,7 @@ export function UserDataTable() {
   const [isAlertOpen, setIsAlertOpen] = React.useState(false);
   const [isProfileOpen, setIsProfileOpen] = React.useState(false);
   const [isImportExportOpen, setIsImportExportOpen] = React.useState(false);
+  const [generatedLink, setGeneratedLink] = React.useState<string | null>(null);
   const [selectedUser, setSelectedUser] = React.useState<User | null>(null);
 
   const isLoading = isLoadingUsers || isLoadingRoles;
@@ -116,8 +123,9 @@ export function UserDataTable() {
     } else {
         // Create new user
         const result = await createUserAction(userData);
-        if (result.success) {
-            toast({ title: "Usuário Criado e Convite Enviado", description: `${userData.name} foi adicionado. Um e-mail foi enviado para que o usuário defina sua senha.` });
+        if (result.success && result.data) {
+            toast({ title: "Usuário Criado com Sucesso", description: `Um link para definição de senha foi gerado para ${userData.name}.` });
+            setGeneratedLink(result.data.setupLink);
         } else {
             toast({ variant: 'destructive', title: "Erro ao Criar Usuário", description: result.error });
         }
@@ -506,6 +514,50 @@ export function UserDataTable() {
         users={data}
         roles={rolesData || []}
       />
+
+       <Dialog open={!!generatedLink} onOpenChange={() => setGeneratedLink(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Link de Configuração de Senha</DialogTitle>
+            <DialogDescription>
+              Copie e envie este link para o novo usuário configurar sua senha e acessar a plataforma.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex items-center space-x-2">
+            <div className="grid flex-1 gap-2">
+              <Label htmlFor="link" className="sr-only">
+                Link
+              </Label>
+              <Input
+                id="link"
+                defaultValue={generatedLink || ''}
+                readOnly
+              />
+            </div>
+            <Button type="submit" size="sm" className="px-3" onClick={() => {
+                navigator.clipboard.writeText(generatedLink || '');
+                toast({ title: 'Link copiado!' });
+            }}>
+              <span className="sr-only">Copy</span>
+              <Copy className="h-4 w-4" />
+            </Button>
+          </div>
+           <DialogFooter className="sm:justify-start">
+             <a
+                href={`https://wa.me/?text=Olá! Para configurar sua senha de acesso ao nosso sistema, por favor, use o seguinte link: ${encodeURIComponent(generatedLink || '')}`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+              <Button type="button" variant="secondary">
+                Enviar por WhatsApp
+              </Button>
+            </a>
+            <Button type="button" variant="outline" onClick={() => setGeneratedLink(null)}>
+              Fechar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
           <AlertDialogContent>

@@ -46,6 +46,7 @@ export async function createUserAction(userData: Omit<User, 'id' | 'avatarUrl'>)
 
         // Verify the calling user is an admin/manager
         const headersList = await headers();
+        const origin = headersList.get('origin');
         const idToken = headersList.get('Authorization')?.split('Bearer ')[1];
         if (!idToken) {
             return { success: false, error: 'Usuário não autenticado.' };
@@ -68,7 +69,7 @@ export async function createUserAction(userData: Omit<User, 'id' | 'avatarUrl'>)
         const tempPassword = Math.random().toString(36).slice(-16);
         const userRecord = await auth.createUser({
             email: userData.email,
-            emailVerified: false,
+            emailVerified: true, // E-mail é verificado pelo gestor
             password: tempPassword,
             displayName: userData.name,
             disabled: false,
@@ -77,14 +78,19 @@ export async function createUserAction(userData: Omit<User, 'id' | 'avatarUrl'>)
         // Create user profile in Firestore
         const newUserProfile: Omit<User, 'id'> = {
             ...userData,
-            avatarUrl: `https://picsum.photos/seed/${userRecord.uid}/200`
+            avatarUrl: `https://picsum.photos/seed/${userRecord.uid}/200`,
+            createdAt: serverTimestamp()
         };
         await firestore.collection("users").doc(userRecord.uid).set(newUserProfile);
 
-        // Send password reset email
-        await auth.generatePasswordResetLink(userData.email);
+        // Generate custom password reset link
+        const actionCodeSettings = {
+            url: `${origin}/set-password`,
+            handleCodeInApp: true,
+        };
+        const link = await auth.generatePasswordResetLink(userData.email, actionCodeSettings);
 
-        return { success: true, data: { uid: userRecord.uid } };
+        return { success: true, data: { uid: userRecord.uid, setupLink: link } };
     } catch (error: any) {
         console.error("Erro ao criar usuário:", error);
         let errorMessage = 'Ocorreu um erro ao criar o usuário.';
