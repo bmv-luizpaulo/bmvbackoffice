@@ -20,7 +20,7 @@ import {
   addDocumentNonBlocking,
   deleteDocumentNonBlocking,
 } from '@/firebase';
-import { collection, doc, query, where, writeBatch, serverTimestamp } from 'firebase/firestore';
+import { collection, doc, query, where, writeBatch, serverTimestamp, or } from 'firebase/firestore';
 import type { Project, Stage, Task, User, Role, Team } from '@/lib/types';
 import { KanbanColumn } from './kanban-column';
 import { AddProjectDialog } from './add-project-dialog';
@@ -44,7 +44,7 @@ export function KanbanBoard({ openNewProjectDialog }: { openNewProjectDialog?: b
 
   const userProfileQuery = useMemoFirebase(() => (firestore && authUser?.uid ? doc(firestore, 'users', authUser.uid) : null), [firestore, authUser]);
   const { data: userProfile } = useDoc<User>(userProfileQuery);
-  const roleQuery = useMemoFirebase(() => (firestore && userProfile?.roleId ? doc(firestore, 'roles', userProfile.roleId) : null), [firestore, userProfile]);
+  const roleQuery = useMemoFirebase(() => (firestore && userProfile?.roleId ? doc(firestore, 'roles', userProfile.roleId) : null), [firestore, userProfile?.roleId]);
   const { data: role } = useDoc<Role>(roleQuery);
   const isPrivilegedUser = role?.isManager || role?.isDev;
 
@@ -65,12 +65,20 @@ export function KanbanBoard({ openNewProjectDialog }: { openNewProjectDialog?: b
 
   const projectsQuery = useMemoFirebase(() => {
     if (!firestore || !authUser || !role) return null;
-    let q = query(collection(firestore, 'projects'), where('status', '==', 'Em execução'));
+    
+    const projectsCollection = collection(firestore, 'projects');
+    const constraints = [where('status', '==', 'Em execução')];
+    
     if (!isPrivilegedUser) {
-      q = query(q, where('teamMembers', 'array-contains', authUser.uid));
+        constraints.push(or(
+            where('ownerId', '==', authUser.uid),
+            where('teamMembers', 'array-contains', authUser.uid)
+        ));
     }
-    return q;
+    
+    return query(projectsCollection, ...constraints);
   }, [firestore, authUser, role, isPrivilegedUser]);
+
   const { data: projectsData, isLoading: isLoadingProjects } = useCollection<Project>(projectsQuery);
   
   const usersQuery = useMemoFirebase(() => firestore ? collection(firestore, 'users') : null, [firestore]);

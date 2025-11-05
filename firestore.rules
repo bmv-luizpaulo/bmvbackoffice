@@ -34,6 +34,7 @@ service cloud.firestore {
     match /projects/{projectId} {
       allow create: if isDev() || isManager();
       allow read: if isDev() || isManager() || isProjectMember(projectId);
+      allow list: if isDev() || isManager();
       allow update: if isDev() || isManager() || isProjectMember(projectId);
       allow delete: if isDev() || isManager();
 
