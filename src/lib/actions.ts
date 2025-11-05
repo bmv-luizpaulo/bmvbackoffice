@@ -45,7 +45,7 @@ export async function createUserAction(userData: Omit<User, 'id' | 'avatarUrl'>)
         const firestore = admin.firestore(adminApp);
 
         // Verify the calling user is an admin/manager
-        const headersList = headers();
+        const headersList = await headers();
         const idToken = headersList.get('Authorization')?.split('Bearer ')[1];
         if (!idToken) {
             return { success: false, error: 'Usuário não autenticado.' };
