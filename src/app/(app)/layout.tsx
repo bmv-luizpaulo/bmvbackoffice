@@ -23,7 +23,6 @@ import {
   CheckCircle2,
   Package,
   Building,
-  ListTodo,
   ListPlus,
   HandCoins,
   Wallet,
@@ -130,7 +129,7 @@ const navSections = [
             { 
               href: '#', 
               icon: ListChecks, 
-              label: 'Checklists',
+              label: 'Gestão de Checklists',
               subItems: [
                 { href: '/checklists', icon: ListPlus, label: 'Gerenciar Checklists' },
                 { href: '/executed-checklists', icon: History, label: 'Checklists Realizados' },
