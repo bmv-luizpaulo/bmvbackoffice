@@ -57,18 +57,16 @@ export default function ChecklistsPage() {
 
   const checklistsQuery = useMemoFirebase(() => {
     if (!firestore || !authUser || !role || !userProfile) return null;
-    
-    const canSeeAll = role.isManager || role.isDev;
-    const isFiltered = filterParam === 'me';
+
     let q = query(collection(firestore, 'checklists'), orderBy('name'));
-    
-    // If user is not a manager and filter is active, filter by their teams
-    if (!canSeeAll && isFiltered && userProfile.teamIds && userProfile.teamIds.length > 0) {
+
+    // Apply team filter only if user is NOT a manager AND filter=me is active
+    if (!isManager && filterParam === 'me' && userProfile.teamIds && userProfile.teamIds.length > 0) {
       q = query(q, where('teamId', 'in', userProfile.teamIds));
     }
     
     return q;
-  }, [firestore, authUser, filterParam, userProfile, role]);
+  }, [firestore, authUser, filterParam, userProfile, role, isManager]);
 
 
   const { data: checklists, isLoading: isLoadingChecklists } = useCollection<Checklist>(checklistsQuery);
