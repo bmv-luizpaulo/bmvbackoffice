@@ -92,36 +92,17 @@ const Sidebar = React.forwardRef<
         data-side={side}
       >
         {/* This is what handles the sidebar gap on desktop */}
-        <div
+         <div
           className={cn(
-            "duration-200 relative h-svh w-[16rem] bg-transparent transition-[width] ease-linear",
-            "group-data-[collapsible=offcanvas]:w-0",
-            "group-data-[side=right]:rotate-180",
-            variant === "floating" || variant === "inset"
-              ? "group-data-[collapsible=icon]:w-[calc(3rem_-_theme(spacing.4))]"
-              : "group-data-[collapsible=icon]:w-[3rem]"
-          )}
-        />
-        <div
-          className={cn(
-            "duration-200 fixed inset-y-0 z-10 hidden h-svh w-[16rem] transition-[left,right,width] ease-linear md:flex",
-            side === "left"
-              ? "left-0 group-data-[collapsible=offcanvas]:left-[calc(16rem*-1)]"
-              : "right-0 group-data-[collapsible=offcanvas]:right-[calc(16rem*-1)]",
-            // Adjust the padding for floating and inset variants.
-            variant === "floating" || variant === "inset"
-              ? "p-2 group-data-[collapsible=icon]:w-[calc(3rem_+_theme(spacing.4)_+2px)]"
-              : "group-data-[collapsible=icon]:w-[3rem] group-data-[side=left]:border-r group-data-[side=right]:border-l",
+            "fixed inset-y-0 z-10 flex h-full flex-col",
+            side === "left" ? "left-0 border-r" : "right-0 border-l",
+            "bg-sidebar text-sidebar-foreground transition-[width] duration-300 ease-in-out",
+            state === 'expanded' ? "w-[var(--sidebar-width)]" : "w-[var(--sidebar-width-icon)]",
             className
           )}
           {...props}
         >
-          <div
-            data-sidebar="sidebar"
-            className="flex h-full w-full flex-col bg-sidebar group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:border group-data-[variant=floating]:border-sidebar-border group-data-[variant=floating]:shadow"
-          >
             {children}
-          </div>
         </div>
       </div>
     )
@@ -188,13 +169,13 @@ const SidebarInset = React.forwardRef<
   HTMLDivElement,
   React.ComponentProps<"main">
 >(({ className, ...props }, ref) => {
+    const { state } = useSidebar();
   return (
     <main
       ref={ref}
       className={cn(
-        "relative flex min-h-svh flex-1 flex-col bg-background transition-all duration-200 ease-linear",
-        "peer-data-[variant=inset]:min-h-[calc(100svh-theme(spacing.4))] md:peer-data-[variant=inset]:m-2 md:peer-data-[state=collapsed]:peer-data-[variant=inset]:ml-2 md:peer-data-[variant=inset]:ml-0 md:peer-data-[variant=inset]:rounded-xl md:peer-data-[variant=inset]:shadow",
-        "md:peer-data-[state=expanded]:ml-64 md:peer-data-[state=collapsed]:ml-12",
+        "relative flex min-h-svh flex-1 flex-col bg-background transition-all duration-300 ease-in-out",
+        "md:peer-data-[state=expanded]:ml-[var(--sidebar-width)] md:peer-data-[state=collapsed]:ml-[var(--sidebar-width-icon)]",
         className
       )}
       {...props}

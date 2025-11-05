@@ -10,9 +10,9 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        body: ['"PT Sans"', 'sans-serif'],
+        sans: ['"PT Sans"', 'sans-serif'],
         headline: ['"Cormorant Garamond"', 'serif'],
-        code: ['monospace'],
+        mono: ['monospace'],
       },
       colors: {
         background: 'hsl(var(--background))',
