@@ -39,7 +39,7 @@ import { Switch } from "../ui/switch";
 type ChecklistFormDialogProps = {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
-  onSave: (checklist: Omit<Checklist, 'id'>, id?: string) => void;
+  onSave: (checklist: Omit<Checklist, 'id' | 'creatorId' | 'createdAt'>, id?: string) => void;
   checklist?: Checklist | null;
   teams: Team[];
 };
@@ -271,5 +271,3 @@ export function ChecklistFormDialog({ isOpen, onOpenChange, onSave, checklist, t
     </Dialog>
   );
 }
-
-    

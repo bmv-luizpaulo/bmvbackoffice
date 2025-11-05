@@ -198,6 +198,8 @@ export type Checklist = {
   deadlineDate?: string;
   isRecurring?: boolean;
   recurrenceFrequency?: 'diaria' | 'semanal' | 'mensal';
+  creatorId: string;
+  createdAt: any;
 };
 
 export type ChecklistItem = {
@@ -325,5 +327,3 @@ export type DeveloperTool = {
     componentName: string;
     requiresDevRole: boolean;
 }
-
-    

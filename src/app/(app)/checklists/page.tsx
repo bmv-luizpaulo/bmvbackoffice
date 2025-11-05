@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Plus, ListChecks, Trash2, Edit, Eye, CheckSquare, Heading2, Check, X, ThumbsUp, FileText, Archive, ArchiveRestore, MoreHorizontal } from "lucide-react";
 import { useCollection, useFirestore, useMemoFirebase, useUser, useDoc } from '@/firebase';
-import { collection, doc, orderBy, query, where } from 'firebase/firestore';
+import { collection, doc, orderBy, query, where, serverTimestamp } from 'firebase/firestore';
 import type { Checklist, ChecklistItem, Team, User as UserType, Role } from '@/lib/types';
 import { addDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
@@ -57,17 +57,19 @@ export default function ChecklistsPage() {
 
   const checklistsQuery = useMemoFirebase(() => {
     if (!firestore || !authUser || !role || !userProfile) return null;
+    
+    const canSeeAll = role.isManager || role.isDev;
+    const isFiltered = filterParam === 'me';
     let q = query(collection(firestore, 'checklists'), orderBy('name'));
     
-    const isFiltered = filterParam === 'me';
-    const canSeeAll = role.isManager || role.isDev;
-
-    if (isFiltered && !canSeeAll && userProfile.teamIds && userProfile.teamIds.length > 0) {
+    // If user is not a manager and filter is active, filter by their teams
+    if (!canSeeAll && isFiltered && userProfile.teamIds && userProfile.teamIds.length > 0) {
       q = query(q, where('teamId', 'in', userProfile.teamIds));
     }
     
     return q;
   }, [firestore, authUser, filterParam, userProfile, role]);
+
 
   const { data: checklists, isLoading: isLoadingChecklists } = useCollection<Checklist>(checklistsQuery);
   
@@ -111,20 +113,25 @@ export default function ChecklistsPage() {
   }, [currentChecklistList, selectedChecklist]);
 
   const handleSaveChecklist = React.useCallback(async (data: Omit<Checklist, 'id'>, id?: string) => {
-    if (!firestore) return;
+    if (!firestore || !authUser) return;
     
-    const dataToSave = { ...data, status: data.status || 'ativo' };
-
     if (id) {
+      const dataToSave = { ...data };
       await updateDocumentNonBlocking(doc(firestore, 'checklists', id), dataToSave);
       toast({ title: "Checklist Atualizado", description: "As alterações foram salvas." });
     } else {
+       const dataToSave = { 
+        ...data, 
+        status: 'ativo',
+        creatorId: authUser.uid,
+        createdAt: serverTimestamp(),
+      };
       await addDocumentNonBlocking(collection(firestore, 'checklists'), dataToSave);
       toast({ title: "Checklist Criado", description: "O novo checklist está pronto." });
     }
     setIsFormOpen(false);
     setChecklistToEdit(null);
-  }, [firestore, toast]);
+  }, [firestore, toast, authUser]);
   
   const confirmDelete = React.useCallback(() => {
     if (!firestore || !checklistToDelete) return;

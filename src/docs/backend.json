@@ -624,9 +624,18 @@
           "type": "string",
           "description": "Frequency of recurrence if isRecurring is true.",
           "enum": ["diaria", "semanal", "mensal"]
+        },
+        "creatorId": {
+          "type": "string",
+          "description": "The ID of the user who created the checklist."
+        },
+        "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "The timestamp when the checklist was created."
         }
       },
-      "required": ["name", "teamId"]
+      "required": ["name", "teamId", "creatorId", "createdAt"]
     },
     "ChecklistItem": {
       "title": "ChecklistItem",
