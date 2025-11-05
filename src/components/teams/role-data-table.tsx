@@ -57,10 +57,10 @@ export function RoleDataTable() {
   const { toast } = useToast();
   
   const rolesQuery = useMemoFirebase(() => firestore ? collection(firestore, 'roles') : null, [firestore]);
-  const { data: rolesData, isLoading: isLoadingRoles } = useCollection<Role>(rolesQuery);
+  const { data: allRoles, isLoading: isLoadingRoles } = useCollection<Role>(rolesQuery);
   const { data: usersData, isLoading: isLoadingUsers } = useCollection<User>(useMemoFirebase(() => firestore ? collection(firestore, 'users') : null, [firestore]));
   
-  const data = React.useMemo(() => rolesData ?? [], [rolesData]);
+  const data = React.useMemo(() => allRoles ?? [], [allRoles]);
 
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
@@ -109,12 +109,13 @@ export function RoleDataTable() {
     }
 
     // Check if this role is a supervisor for another role
-    const subordinateRolesQuery = query(collection(firestore, 'roles'), where('supervisorRoleId', '==', selectedRole.id));
-    const subordinateRolesSnap = await getDocs(subordinateRolesQuery);
-     if (!subordinateRolesSnap.empty) {
-        toast({ title: "Exclusão Falhou", description: `Não é possível excluir o cargo "${selectedRole.name}" pois ele é o supervisor de outros ${subordinateRolesSnap.size} cargo(s).`, variant: 'destructive' });
-        setIsAlertOpen(false);
-        return;
+    if (allRoles && allRoles.length > 0) {
+        const subordinateRoles = allRoles.filter(r => r.supervisorRoleId === selectedRole.id);
+        if (subordinateRoles.length > 0) {
+            toast({ title: "Exclusão Falhou", description: `Não é possível excluir o cargo "${selectedRole.name}" pois ele é o supervisor de outros ${subordinateRoles.length} cargo(s).`, variant: 'destructive' });
+            setIsAlertOpen(false);
+            return;
+        }
     }
 
     const roleRef = doc(firestore, 'roles', selectedRole.id);
@@ -123,7 +124,7 @@ export function RoleDataTable() {
     toast({ title: "Cargo Excluído", description: `O cargo "${selectedRole.name}" foi removido.`, variant: 'destructive' });
     setIsAlertOpen(false);
     setSelectedRole(null);
-  }, [firestore, selectedRole, toast]);
+  }, [firestore, selectedRole, toast, allRoles]);
 
   const columns: ColumnDef<Role>[] = React.useMemo(() => [
     {
@@ -284,7 +285,7 @@ export function RoleDataTable() {
           onOpenChange={setIsFormOpen}
           onSave={handleSaveRole}
           role={selectedRole}
-          allRoles={rolesData || []}
+          allRoles={allRoles || []}
         />
       )}
 

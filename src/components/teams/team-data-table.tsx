@@ -153,12 +153,14 @@ export function TeamDataTable() {
     // First, remove the teamId from all users that are members
     const batch = writeBatch(firestore);
     const members = users.filter(u => u.teamIds?.includes(selectedTeam.id));
-    members.forEach(member => {
-        const userRef = doc(firestore, 'users', member.id);
-        const newTeamIds = member.teamIds?.filter(id => id !== selectedTeam.id);
-        batch.update(userRef, { teamIds: newTeamIds });
-    });
-    await batch.commit();
+    if (members.length > 0) {
+        members.forEach(member => {
+            const userRef = doc(firestore, 'users', member.id);
+            const newTeamIds = member.teamIds?.filter(id => id !== selectedTeam.id);
+            batch.update(userRef, { teamIds: newTeamIds });
+        });
+        await batch.commit();
+    }
 
     // Then, delete the team document
     const teamRef = doc(firestore, 'teams', selectedTeam.id);
