@@ -28,33 +28,6 @@ const aiFollowUpSchema = z.object({
   pastFollowUpActions: z.string().min(1, "As ações são obrigatórias."),
 });
 
-function TestErrorGenerator() {
-    const [shouldThrow, setShouldThrow] = React.useState(false);
-
-    if (shouldThrow) {
-        throw new Error("Este é um erro de teste gerado intencionalmente para verificar o Error Boundary.");
-    }
-    
-    return (
-        <Card>
-            <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-destructive">
-                    <Bug className="h-5 w-5" />
-                    Gerador de Erro de Teste
-                </CardTitle>
-                <CardDescription>
-                    Clique no botão para disparar um erro de renderização e testar o Error Boundary global.
-                </CardDescription>
-            </CardHeader>
-            <CardContent>
-                <Button variant="destructive" onClick={() => setShouldThrow(true)}>
-                    Disparar Erro de Teste
-                </Button>
-            </CardContent>
-        </Card>
-    );
-}
-
 
 export default function DevToolsPage() {
     const { createNotification } = useNotifications();
@@ -204,7 +177,6 @@ export default function DevToolsPage() {
                     </CardContent>
                 </Card>
 
-                <TestErrorGenerator />
            </div>
       </div>
     </div>
