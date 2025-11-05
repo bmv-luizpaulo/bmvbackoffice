@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { useFirestore, useDoc, useCollection, useMemoFirebase, useUser, addDocumentNonBlocking } from '@/firebase';
+import { useFirestore, useDoc, useCollection, useMemoFirebase, useUser, addDocumentNonBlocking, FirebaseClientProvider } from '@/firebase';
 import { doc, collection, query, orderBy, writeBatch, serverTimestamp } from 'firebase/firestore';
 import type { Checklist, ChecklistItem, Team, User as UserType } from '@/lib/types';
 import { Button } from '@/components/ui/button';
@@ -13,7 +13,7 @@ import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { useToast } from '@/hooks/use-toast';
 
-export default function ChecklistReportPage() {
+function ChecklistReportPageContent() {
   const params = useParams();
   const router = useRouter();
   const firestore = useFirestore();
@@ -255,5 +255,13 @@ export default function ChecklistReportPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function ChecklistReportProviderPage() {
+  return (
+    <FirebaseClientProvider>
+      <ChecklistReportPageContent />
+    </FirebaseClientProvider>
   );
 }
