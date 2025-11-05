@@ -16,6 +16,11 @@ const RecentTasksCard = dynamic(() => import('@/components/dashboard/recent-task
   loading: () => <Skeleton className="h-[400px]" />,
 });
 
+const ActiveForumsCard = dynamic(() => import('@/components/dashboard/active-forums-card'), {
+    loading: () => <Skeleton className="h-[400px]" />,
+});
+
+
 function ManagerDashboard() {
   const firestore = useFirestore();
 
@@ -131,9 +136,10 @@ function ManagerDashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2 space-y-6">
                 <PipelineChart data={tasksByStage} isLoading={isLoading} />
+                 <RecentTasksCard />
             </div>
             <div className="lg:col-span-1 space-y-6">
-                <RecentTasksCard />
+                <ActiveForumsCard />
             </div>
         </div>
     </div>
