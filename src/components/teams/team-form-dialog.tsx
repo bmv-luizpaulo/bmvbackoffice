@@ -46,7 +46,7 @@ const formSchema = z.object({
   name: z.string().min(1, "O nome da equipe é obrigatório."),
   description: z.string().optional(),
   leaderId: z.string().optional(),
-  directorateId: z.string({ required_error: "A diretoria é obrigatória." }),
+  directorateId: z.string().optional(),
   teamType: z.enum(['Operacional', 'Técnica', 'Suporte', 'Projeto', 'Administrativa']).optional(),
   responsibilities: z.string().optional(),
   kpis: z.string().optional(),
@@ -98,8 +98,8 @@ export function TeamFormDialog({ isOpen, onOpenChange, onSave, team, users, user
     const teamData = {
       name: values.name,
       description: values.description,
-      leaderId: values.leaderId,
-      directorateId: values.directorateId,
+      leaderId: values.leaderId === 'unassigned' ? undefined : values.leaderId,
+      directorateId: values.directorateId === 'unassigned' ? undefined : values.directorateId,
       teamType: values.teamType,
       responsibilities: values.responsibilities,
       kpis: values.kpis,
@@ -161,6 +161,7 @@ export function TeamFormDialog({ isOpen, onOpenChange, onSave, team, users, user
                                 </SelectTrigger>
                             </FormControl>
                             <SelectContent>
+                                <SelectItem value="unassigned">Nenhum</SelectItem>
                                 {userOptions.map(option => (
                                     <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
                                 ))}
@@ -184,6 +185,7 @@ export function TeamFormDialog({ isOpen, onOpenChange, onSave, team, users, user
                                   </SelectTrigger>
                               </FormControl>
                               <SelectContent>
+                                <SelectItem value="unassigned">Nenhuma</SelectItem>
                                 {directoratesData?.map(dir => (
                                     <SelectItem key={dir.id} value={dir.id}>{dir.name}</SelectItem>
                                 ))}

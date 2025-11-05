@@ -253,7 +253,7 @@
                 "description": "Key Performance Indicators for the team."
             }
         },
-        "required": ["name", "directorateId"]
+        "required": ["name"]
     },
     "Directorate": {
         "title": "Directorate",
@@ -928,5 +928,3 @@
     }
   }
 }
-
-    
