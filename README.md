@@ -12,7 +12,7 @@ O **BMV Nexus** é uma plataforma integrada de gestão de projetos, tarefas, con
 
 ### Comercial
 
-*   **Agenda de Contatos:** Centraliza o gerenciamento de todos os contatos da empresa, organizados em abas: **Clientes**, **Fornecedores** e **Parceiros**. Oferece formulários completos para criar, editar e excluir contatos.
+*   **Agenda de Contatos:** Centraliza o gerenciamento de todos os contatos da empresa, organizados em abas: **Clientes**, **Fornecedores** e **Parceiros**. Oferece formulários completos para criar, editar e excluir contatos, além de funcionalidades de importação/exportação.
 *   **Gestão de Produtos:** Permite cadastrar e gerenciar os produtos e serviços oferecidos pela empresa, com status de "Ativo" ou "Inativo".
 *   **Gestão de Selos:** Sistema para emitir, monitorar e gerenciar a validade de selos de certificação para clientes e produtos específicos.
 
@@ -23,8 +23,21 @@ O **BMV Nexus** é uma plataforma integrada de gestão de projetos, tarefas, con
     *   **Criação Detalhada:** Permite criar projetos e tarefas com informações completas, incluindo responsável, datas, dependências e recorrência (diária, semanal, mensal).
     *   **Controle de Acesso por Papel:** "Gestores" têm uma visão completa de todas as tarefas, enquanto "Usuários" visualizam apenas as que lhes foram atribuídas.
 *   **Gestão de Arquivos:** Funcionalidade para anexar arquivos diretamente aos projetos (usando Firebase Storage).
-*   **Inventário de Ativos:** Gerenciamento de ativos físicos e digitais, com histórico de movimentações e agendamento de manutenções.
 *   **Checklists:** Crie e gerencie checklists padronizados para processos internos, associando-os a equipes específicas para garantir a consistência das operações.
+
+### Gestão de Ativos
+
+*   **Inventário de Ativos:** Gerenciamento de ativos físicos e digitais, com histórico de movimentações e agendamento de manutenções.
+*   **Contratos de Uso:** Crie, gerencie e gere relatórios de contratos de uso de ativos, vinculando-os a usuários e registrando termos de entrega e devolução.
+*   **Manutenções:** Agende e acompanhe o status das manutenções preventivas e corretivas dos ativos.
+*   **Modelos de Documentos:** Crie e gerencie templates reutilizáveis para contratos e termos.
+
+### Financeiro
+
+*   **Painel Financeiro:** Visão geral para gestores com KPIs de solicitações de reembolso, como valores pendentes, aprovados e recusados.
+*   **Gestão de Reembolsos:** Permite que usuários solicitem reembolsos com anexo de comprovantes e que gestores aprovem ou recusem as solicitações.
+*   **Centro de Custos:** Crie e organize os centros de custo da empresa para um melhor rastreamento financeiro.
+*   **Gestão de Contratos:** Centralize o armazenamento e a gestão de contratos de serviços, garantias e outros documentos importantes.
 
 ### Equipe e Colaboração
 
@@ -34,14 +47,20 @@ O **BMV Nexus** é uma plataforma integrada de gestão de projetos, tarefas, con
     *   Visão diferenciada para "Gestores" (que podem filtrar por usuário) e "Usuários" (que veem apenas suas próprias tarefas).
 *   **Chat Interno:** Sistema de mensagens em tempo real para colaboração entre os membros da equipe.
 *   **Usuários & Equipes:**
-    *   **Gerenciamento de Usuários:** Formulário completo para cadastrar e editar usuários com informações detalhadas.
+    *   **Gerenciamento de Usuários:** Formulário completo para cadastrar e editar usuários com informações detalhadas. Inclui gestão de status (ativo, inativo, suspenso) e log de atividades.
     *   **Gerenciamento de Equipes:** Permite criar, editar e organizar equipes, associando usuários a uma ou mais equipes.
-    *   **Gerenciamento de Cargos:** Defina cargos, níveis hierárquicos, responsabilidades e permissões (Gestor/Dev).
+    *   **Gerenciamento de Cargos & Diretorias:** Defina cargos, níveis hierárquicos, responsabilidades e permissões (Gestor/Dev), vinculando equipes a diretorias.
+
+### Suporte & Ferramentas
+
+*   **Central de Suporte:** Sistema de abertura e acompanhamento de tickets de suporte técnico e operacional com níveis de prioridade.
+*   **Ferramentas de Desenvolvedor:** Página exclusiva para desenvolvedores com utilitários para testes, como simulador de notificações, monitor de erros, testador de IA e gerenciador de feature flags.
 
 ### Autenticação e Segurança
 
 *   Sistema de login com e-mail e senha, integrado ao Firebase Authentication.
-*   Permissões de acesso baseadas em cargos para garantir a segurança dos dados.
+*   Mecanismo de definição de senha via link seguro para novos usuários.
+*   Permissões de acesso baseadas em cargos (claims), atualizadas dinamicamente via Cloud Functions, para garantir a segurança dos dados.
 
 ## Como Começar
 

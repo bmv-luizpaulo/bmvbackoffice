@@ -942,6 +942,61 @@
     "/errorLogs/{errorId}": {
         "schema": { "$ref": "#/entities/ErrorLog" },
         "description": "Stores logs of client-side errors."
+    },
+    "/assetUsageContracts/{contractId}": {
+        "schema": {
+            "title": "AssetUsageContract",
+            "type": "object",
+            "description": "Represents a contract for assigning an asset to a user.",
+            "properties": {
+                "assetId": { "type": "string" },
+                "assetName": { "type": "string" },
+                "userId": { "type": "string" },
+                "startDate": { "type": "string", "format": "date-time" },
+                "endDate": { "type": "string", "format": "date-time" },
+                "clauses": { "type": "string" },
+                "checklistEntrega": { "type": "array", "items": { "type": "string" } },
+                "checklistDevolucao": { "type": "array", "items": { "type": "string" } },
+                "observations": { "type": "string" },
+                "status": { "type": "string", "enum": ["Ativo", "Encerrado"] },
+                "createdAt": { "type": "string", "format": "date-time" }
+            }
+        },
+        "description": "Stores contracts for asset usage."
+    },
+    "/assetUsageContracts/{contractId}/annexes/{annexId}": {
+        "schema": {
+            "title": "ContractAnnex",
+            "type": "object",
+            "description": "Represents an annex to an asset usage contract, like delivery or return terms.",
+            "properties": {
+                "type": { "type": "string", "enum": ["delivery_term", "return_term"] },
+                "content": { "type": "string" },
+                "checklist": { "type": "array", "items": { "type": "string" } },
+                "createdAt": { "type": "string", "format": "date-time" }
+            }
+        },
+        "description": "Stores annexes for asset usage contracts."
+    },
+    "/documentTemplates/{templateId}": {
+        "schema": {
+            "title": "DocumentTemplate",
+            "type": "object",
+            "description": "Represents a reusable template for documents like contracts or terms.",
+            "properties": {
+                "name": { "type": "string" },
+                "type": { "type": "string", "enum": ["usage_contract", "delivery_term", "return_term", "promissory_note"] },
+                "content": { "type": "string" },
+                "checklist": { "type": "array", "items": { "type": "string" } },
+                "createdAt": { "type": "string", "format": "date-time" },
+                "updatedAt": { "type": "string", "format": "date-time" }
+            }
+        },
+        "description": "Stores reusable document templates."
+    },
+    "/userActivityLogs/{logId}": {
+        "schema": { "$ref": "#/entities/UserActivityLog" },
+        "description": "Stores a log of user activities for auditing purposes."
     }
   }
 }
