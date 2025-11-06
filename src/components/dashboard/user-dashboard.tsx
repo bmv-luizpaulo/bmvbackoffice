@@ -71,12 +71,14 @@ function UserDashboard({ user }: UserDashboardProps) {
                   value={openTasks.toString()}
                   description="Total de tarefas atribuídas a você"
                   icon={<Target className="text-amber-500"/>}
+                  href="/agenda/tarefas"
                 />
                 <KpiCard 
                   title="Meus Projetos Ativos" 
                   value={activeProjects.toString()}
                   description="Projetos em que você está participando"
                   icon={<FolderKanban className="text-primary"/>}
+                  href="/projetos?filter=me"
                 />
               </>
             )}

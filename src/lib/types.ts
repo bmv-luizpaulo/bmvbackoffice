@@ -103,6 +103,7 @@ export type Project = {
     endDate?: string;
     ownerId: string;
     teamMembers?: string[];
+    teamIds?: string[];
     contactPhone?: string;
     technicalDetails?: string;
     status: 'Em execução' | 'Arquivado';

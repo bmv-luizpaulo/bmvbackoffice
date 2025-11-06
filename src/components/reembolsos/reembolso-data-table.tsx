@@ -54,7 +54,7 @@ import { uploadReimbursementReceiptAction } from "@/lib/actions";
 
 const ReembolsoFormDialog = dynamic(() => import('./reembolso-form-dialog').then(m => m.ReembolsoFormDialog), { ssr: false });
 
-export function ReembolsoDataTable() {
+export function ReembolsoDataTable({ filterUserId }: { filterUserId?: string }) {
   const firestore = useFirestore();
   const { toast } = useToast();
   const { user: authUser } = useAuthUser();
@@ -70,24 +70,48 @@ export function ReembolsoDataTable() {
   const reembolsosQuery = useMemoFirebase(() => {
     if (!firestore || !authUser) return null;
     let q = collection(firestore, 'reimbursements');
+    if (filterUserId) {
+        return query(q, where('requesterId', '==', filterUserId));
+    }
     if (!isManager) {
         return query(q, where('requesterId', '==', authUser.uid));
     }
     return q;
-  }, [firestore, authUser, isManager]);
+  }, [firestore, authUser, isManager, filterUserId]);
 
   const { data: reembolsosData, isLoading } = useCollection<Reimbursement>(reembolsosQuery);
   const usersQuery = useMemoFirebase(() => firestore ? collection(firestore, 'users') : null, [firestore]);
   const { data: usersData } = useCollection<User>(usersQuery);
   
   const usersMap = React.useMemo(() => new Map(usersData?.map(u => [u.id, u.name])), [usersData]);
-  const data = React.useMemo(() => reembolsosData ?? [], [reembolsosData]);
+  const [statusFilter, setStatusFilter] = React.useState<'Todos' | 'Pendente' | 'Aprovado' | 'Recusado'>('Todos');
+  const [dateFrom, setDateFrom] = React.useState<string>('');
+  const [dateTo, setDateTo] = React.useState<string>('');
+
+  const filteredData = React.useMemo(() => {
+    const items = reembolsosData ?? [];
+    return items.filter(r => {
+      const statusOk = statusFilter === 'Todos' ? true : r.status === statusFilter;
+      let dateOk = true;
+      const reqDate = r.requestDate?.toDate ? r.requestDate.toDate() : (r.requestDate ? new Date(r.requestDate) : null);
+      if (dateFrom && reqDate) {
+        dateOk = dateOk && reqDate >= new Date(dateFrom + 'T00:00:00');
+      }
+      if (dateTo && reqDate) {
+        dateOk = dateOk && reqDate <= new Date(dateTo + 'T23:59:59');
+      }
+      return statusOk && dateOk;
+    });
+  }, [reembolsosData, statusFilter, dateFrom, dateTo]);
 
   const [sorting, setSorting] = React.useState<SortingState>([{ id: 'requestDate', desc: true }]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
   
   const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [selectedReimbursement, setSelectedReimbursement] = React.useState<Reimbursement | null>(null);
+  const [isRejectOpen, setIsRejectOpen] = React.useState(false);
+  const [rejectComment, setRejectComment] = React.useState('');
+  const [reimbursementToReject, setReimbursementToReject] = React.useState<Reimbursement | null>(null);
 
   const handleEditClick = (reimbursement: Reimbursement) => {
     setSelectedReimbursement(reimbursement);
@@ -122,12 +146,13 @@ export function ReembolsoDataTable() {
       setIsFormOpen(false);
   };
 
-  const handleStatusChange = async (reimbursement: Reimbursement, newStatus: 'Aprovado' | 'Recusado') => {
+  const handleStatusChange = async (reimbursement: Reimbursement, newStatus: 'Aprovado' | 'Recusado', comment?: string) => {
       if (!firestore || !authUser) return;
       const dataToUpdate = {
           status: newStatus,
           approverId: authUser.uid,
-          decisionDate: serverTimestamp()
+          decisionDate: serverTimestamp(),
+          notes: newStatus === 'Recusado' ? (comment || '') : (reimbursement.notes || '')
       };
       await updateDocumentNonBlocking(doc(firestore, 'reimbursements', reimbursement.id), dataToUpdate);
       toast({ title: "Status Alterado", description: `A solicitação foi marcada como ${newStatus.toLowerCase()}.` });
@@ -165,6 +190,19 @@ export function ReembolsoDataTable() {
       }
     },
     {
+      accessorKey: "notes",
+      header: "Motivo",
+      cell: ({ row }) => {
+        const n = row.original.notes;
+        const show = row.original.status === 'Recusado' && n && n.trim().length > 0;
+        return show ? (
+          <span className="text-sm" title={n}>{n.length > 30 ? n.slice(0, 30) + '…' : n}</span>
+        ) : (
+          <span className="text-muted-foreground">—</span>
+        );
+      }
+    },
+    {
       id: "actions",
       cell: ({ row }) => {
         const reimbursement = row.original;
@@ -172,20 +210,32 @@ export function ReembolsoDataTable() {
         const canApprove = isManager && reimbursement.status === 'Pendente';
 
         return (
-          <div className="text-right">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild><Button variant="ghost" className="h-8 w-8 p-0"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuLabel>Ações</DropdownMenuLabel>
-                {reimbursement.receiptUrl && <a href={reimbursement.receiptUrl} target="_blank" rel="noopener noreferrer"><DropdownMenuItem><LinkIcon className="mr-2 h-4 w-4"/>Ver Comprovante</DropdownMenuItem></a>}
-                {canEdit && <DropdownMenuItem onClick={() => handleEditClick(reimbursement)}><Pencil className="mr-2 h-4 w-4" />Editar</DropdownMenuItem>}
-                {canApprove && <>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => handleStatusChange(reimbursement, 'Aprovado')}><CheckCircle2 className="mr-2 h-4 w-4 text-green-500"/>Aprovar</DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleStatusChange(reimbursement, 'Recusado')}><XCircle className="mr-2 h-4 w-4 text-red-500"/>Recusar</DropdownMenuItem>
-                </>}
-              </DropdownMenuContent>
-            </DropdownMenu>
+          <div className="flex items-center justify-end gap-2">
+            {reimbursement.receiptUrl && (
+              <a href={reimbursement.receiptUrl} target="_blank" rel="noopener noreferrer" aria-label="Ver comprovante">
+                <Button variant="ghost" size="icon"><LinkIcon className="h-4 w-4"/></Button>
+              </a>
+            )}
+            {canEdit && (
+              <Button variant="ghost" size="icon" onClick={() => handleEditClick(reimbursement)} aria-label="Editar">
+                <Pencil className="h-4 w-4" />
+              </Button>
+            )}
+            {canApprove && (
+              <>
+                <Button variant="ghost" size="icon" onClick={() => handleStatusChange(reimbursement, 'Aprovado')} aria-label="Aprovar">
+                  <CheckCircle2 className="h-4 w-4 text-green-500"/>
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => { setReimbursementToReject(reimbursement); setRejectComment(''); setIsRejectOpen(true); }}
+                  aria-label="Recusar"
+                >
+                  <XCircle className="h-4 w-4 text-red-500"/>
+                </Button>
+              </>
+            )}
           </div>
         )
       },
@@ -193,7 +243,7 @@ export function ReembolsoDataTable() {
   ], [isManager, usersMap, authUser?.uid, handleStatusChange, handleEditClick]);
 
   const table = useReactTable({
-    data,
+    data: filteredData,
     columns,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
@@ -205,19 +255,57 @@ export function ReembolsoDataTable() {
     state: { sorting, columnFilters },
   });
 
+  const handleExportCsv = () => {
+    const rows = table.getRowModel().rows;
+    const header = ['Descrição','Solicitante','Valor','Data da Solicitação','Status'];
+    const lines = rows.map(r => {
+      const it = r.original as Reimbursement;
+      const desc = '"' + (it.description || '').replace(/"/g, '""') + '"';
+      const requester = usersMap.get(it.requesterId) || '';
+      const amount = (it.amount ?? 0).toFixed(2).replace('.', ',');
+      const date = it.requestDate ? format(new Date(it.requestDate.toDate()), 'dd/MM/yyyy') : '';
+      const status = it.status;
+      return [desc, requester, amount, date, status].join(';');
+    });
+    const content = [header.join(';'), ...lines].join('\n');
+    const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'reembolsos.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   return (
     <div>
-       <div className="flex items-center justify-between py-4">
-        <Input
-          placeholder="Filtrar por descrição..."
-          value={(table.getColumn("description")?.getFilterValue() as string) ?? ""}
-          onChange={(event) => table.getColumn("description")?.setFilterValue(event.target.value)}
-          className="max-w-sm"
-        />
-        <Button onClick={() => {setSelectedReimbursement(null); setIsFormOpen(true)}}>
-          <HandCoins className="mr-2 h-4 w-4"/>
-          Nova Solicitação
-        </Button>
+       <div className="flex flex-col gap-3 py-4 md:flex-row md:items-center md:justify-between">
+        <div className="flex flex-1 flex-col gap-2 sm:flex-row sm:items-center">
+          <Input
+            placeholder="Filtrar por descrição..."
+            value={(table.getColumn("description")?.getFilterValue() as string) ?? ""}
+            onChange={(event) => table.getColumn("description")?.setFilterValue(event.target.value)}
+            className="max-w-sm"
+          />
+          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as any)} className="h-9 rounded-md border bg-background px-2 text-sm">
+            <option value="Todos">Todos</option>
+            <option value="Pendente">Pendente</option>
+            <option value="Aprovado">Aprovado</option>
+            <option value="Recusado">Recusado</option>
+          </select>
+          <div className="flex items-center gap-2">
+            <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="h-9 rounded-md border bg-background px-2 text-sm"/>
+            <span className="text-muted-foreground text-sm">até</span>
+            <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="h-9 rounded-md border bg-background px-2 text-sm"/>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={handleExportCsv}>Exportar CSV</Button>
+          <Button onClick={() => {setSelectedReimbursement(null); setIsFormOpen(true)}}>
+            <HandCoins className="mr-2 h-4 w-4"/>
+            Nova Solicitação
+          </Button>
+        </div>
       </div>
       <div className="rounded-md border">
         <Table>
@@ -262,6 +350,40 @@ export function ReembolsoDataTable() {
           reimbursement={selectedReimbursement}
         />
       )}
+
+      <AlertDialog open={isRejectOpen} onOpenChange={setIsRejectOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Recusar Reembolso</AlertDialogTitle>
+            <AlertDialogDescription>
+              Por favor, informe o motivo da recusa. Esta informação ficará registrada na solicitação.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Motivo</label>
+            <textarea
+              className="w-full rounded-md border bg-background p-2 text-sm min-h-[100px]"
+              value={rejectComment}
+              onChange={(e) => setRejectComment(e.target.value)}
+              placeholder="Descreva o motivo da recusa..."
+            />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={!rejectComment.trim() || !reimbursementToReject}
+              onClick={() => {
+                if (reimbursementToReject && rejectComment.trim()) {
+                  handleStatusChange(reimbursementToReject, 'Recusado', rejectComment.trim());
+                }
+                setIsRejectOpen(false);
+              }}
+            >
+              Confirmar Recusa
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

@@ -69,7 +69,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { useUser, useAuth, FirebaseClientProvider, useDoc, useMemoFirebase } from '@/firebase';
+import { useUser, useAuth, FirebaseClientProvider, useDoc, useMemoFirebase, useCollection } from '@/firebase';
 import { signOut } from 'firebase/auth';
 import {
   NotificationsProvider,
@@ -97,6 +97,7 @@ const navSections = [
             { href: '/projetos?filter=me', icon: FolderKanban, label: 'Meus Projetos' },
             { href: '/assets?owner=me', icon: UserSquare, label: 'Meus Ativos' },
             { href: '/checklists?filter=me', icon: ListChecks, label: 'Meus Checklists' },
+            { href: '/meus-reembolsos', icon: HandCoins, label: 'Meus Reembolsos' },
         ]
     },
     {
@@ -144,6 +145,7 @@ const navSections = [
             { href: '/assets', icon: ClipboardList, label: 'Todos os Ativos' },
             { href: '/maintenance', icon: Wrench, label: 'Manutenções' },
             { href: '/reports', icon: FileText, label: 'Relatórios' },
+            { href: '/asset-contracts', icon: FileText, label: 'Contratos' },
         ]
     },
     {
@@ -152,13 +154,12 @@ const navSections = [
             { href: '/reembolsos', icon: HandCoins, label: 'Reembolsos' },
             { href: '/cost-centers', icon: Wallet, label: 'Centro de Custos' },
             { href: '/contracts', icon: Archive, label: 'Contratos' },
+            { href: '/financeiro', icon: BarChart2, label: 'Painel Financeiro', managerOnly: true },
         ]
     },
     {
         name: 'Equipe',
         items: [
-            { href: '/chat', icon: MessageSquare, label: 'Chat Direto' },
-            { href: '/forum', icon: MessagesSquare, label: 'Fóruns de Equipe' },
             { 
               href: '#', 
               icon: Group, 
@@ -284,6 +285,34 @@ function InnerLayout({ children }: { children: React.ReactNode }) {
   const auth = useAuth();
   const { user, isUserLoading } = useUser();
   const router = useRouter();
+  const firestore = useFirestore();
+
+  // Resolve user's role and manager flag to control navigation visibility
+  const userDocQuery = useMemoFirebase(() => (firestore && user?.uid) ? doc(firestore, 'users', user.uid) : null, [firestore, user?.uid]);
+  const { data: userProfile } = useCollection<UserType>(userDocQuery as any);
+  const roleId = userProfile?.[0]?.roleId;
+  const roleDocQuery = useMemoFirebase(() => (firestore && roleId) ? doc(firestore, 'roles', roleId) : null, [firestore, roleId]);
+  const { data: roleData } = useCollection<Role>(roleDocQuery as any);
+  const roleIsManager = !!roleData?.[0]?.isManager;
+  const roleIsDev = !!roleData?.[0]?.isDev;
+
+  const [claimIsManager, setClaimIsManager] = React.useState<boolean>(false);
+  const [claimIsDev, setClaimIsDev] = React.useState<boolean>(false);
+
+  useEffect(() => {
+    const fetchClaims = async () => {
+      try {
+        if (!auth?.currentUser) return;
+        const token = await auth.currentUser.getIdTokenResult(true);
+        setClaimIsManager(!!(token?.claims as any)?.isManager);
+        setClaimIsDev(!!(token?.claims as any)?.isDev);
+      } catch (_) {}
+    };
+    fetchClaims();
+  }, [auth?.currentUser]);
+
+  const isManager = roleIsManager || claimIsManager;
+  const isDev = roleIsDev || claimIsDev;
 
   useEffect(() => {
     if (!isUserLoading && !user) {
@@ -340,15 +369,19 @@ function InnerLayout({ children }: { children: React.ReactNode }) {
           </SidebarHeader>
           <SidebarContent>
              <SidebarMenu>
-                 {navSections.map((section) => (
-                    <SidebarGroup key={section.name}>
+                 {navSections.map((section) => {
+                    const visibleItems = section.items.filter((item: any) => !item.managerOnly || isManager || isDev);
+                    if (!visibleItems.length) return null;
+                    return (
+                      <SidebarGroup key={section.name}>
                         <SidebarSeparator />
                         <SidebarGroupLabel>{section.name}</SidebarGroupLabel>
-                        {section.items.map((item) => (
-                           <NavItem key={item.label} item={item as any} pathname={pathname} />
+                        {visibleItems.map((item: any) => (
+                           <NavItem key={item.label} item={item} pathname={pathname} />
                         ))}
-                    </SidebarGroup>
-                ))}
+                      </SidebarGroup>
+                    );
+                 })}
             </SidebarMenu>
           </SidebarContent>
           <SidebarFooter>

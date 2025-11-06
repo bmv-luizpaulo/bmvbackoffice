@@ -10,15 +10,39 @@ import type { Project, Task, Stage, Seal } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { differenceInDays, isPast } from 'date-fns';
 import React from 'react';
+import Link from 'next/link';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import dynamic from 'next/dynamic';
 
 const RecentTasksCard = dynamic(() => import('@/components/dashboard/recent-tasks-card'), {
   loading: () => <Skeleton className="h-[400px]" />,
 });
 
-const ActiveForumsCard = dynamic(() => import('@/components/dashboard/active-forums-card'), {
-    loading: () => <Skeleton className="h-[400px]" />,
-});
+// Right-column quick actions replacing forum
+function QuickActionsCard() {
+  return (
+    <Card className="h-full">
+      <CardHeader>
+        <CardTitle className="font-headline">Ações Rápidas</CardTitle>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-2">
+        <Button asChild variant="outline">
+          <Link href="/projetos">Ver Projetos</Link>
+        </Button>
+        <Button asChild variant="outline">
+          <Link href="/checklists">Gerenciar Checklists</Link>
+        </Button>
+        <Button asChild variant="outline">
+          <Link href="/assets">Ver Ativos</Link>
+        </Button>
+        <Button asChild variant="outline">
+          <Link href="/maintenance">Manutenções</Link>
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
 
 
 function ManagerDashboard() {
@@ -111,24 +135,28 @@ function ManagerDashboard() {
                   value={activeProjects.toString()}
                   description="Total de projetos em andamento"
                   icon={<FolderKanban className="text-primary"/>}
+                  href="/projetos"
                 />
                 <KpiCard 
                   title="Projetos Concluídos" 
                   value={completedProjects.toString()}
                   description="Projetos com todas as tarefas finalizadas"
                   icon={<CheckCircle className="text-green-500"/>}
+                  href="/tasks/completed"
                 />
                 <KpiCard 
                   title="Tarefas Abertas" 
                   value={openTasks.toString()}
                   description="Total de tarefas não concluídas"
                   icon={<Target className="text-amber-500"/>}
+                  href="/agenda/tarefas"
                 />
                  <KpiCard 
                   title="Selos Expirando" 
                   value={expiringSeals.toString()}
                   description="Selos vencidos ou vencendo em 30 dias"
                   icon={<Award className="text-red-500"/>}
+                  href="/selos"
                 />
               </>
             )}
@@ -139,7 +167,7 @@ function ManagerDashboard() {
                  <RecentTasksCard />
             </div>
             <div className="lg:col-span-1 space-y-6">
-                <ActiveForumsCard />
+                <QuickActionsCard />
             </div>
         </div>
     </div>

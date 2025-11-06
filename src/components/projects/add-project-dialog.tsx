@@ -31,10 +31,10 @@ import { Textarea } from "../ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { Calendar } from "../ui/calendar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
-import type { Project, User as UserType } from "@/lib/types";
+import type { Project, User as UserType, Team } from "@/lib/types";
 import { MultiSelect } from "../ui/multi-select";
 import { useCollection, useFirestore } from "@/firebase";
-import { collection } from "firebase/firestore";
+import { collection, getDocs, query, where } from "firebase/firestore";
 import React from "react";
 import { formatPhone } from "@/lib/masks";
 
@@ -50,6 +50,7 @@ const formSchema = z.object({
   description: z.string().optional(),
   ownerId: z.string({ required_error: "O responsável é obrigatório." }),
   teamMembers: z.array(z.string()).optional(),
+  teamIds: z.array(z.string()).optional(),
   contactPhone: z.string().optional(),
   technicalDetails: z.string().optional(),
   status: z.enum(['Em execução', 'Arquivado']).default('Em execução'),
@@ -67,19 +68,26 @@ export function AddProjectDialog({ isOpen, onOpenChange, onAddProject, projectTo
   const firestore = useFirestore();
   const usersQuery = React.useMemo(() => firestore ? collection(firestore, 'users') : null, [firestore]);
   const { data: usersData } = useCollection<UserType>(usersQuery);
+  const teamsQuery = React.useMemo(() => firestore ? collection(firestore, 'teams') : null, [firestore]);
+  const { data: teamsData } = useCollection<Team>(teamsQuery);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
+    mode: 'onChange',
+    reValidateMode: 'onChange',
     defaultValues: {
       name: "",
       description: "",
       teamMembers: [],
+      teamIds: [],
       contactPhone: "",
       technicalDetails: "",
       status: 'Em execução',
       ownerId: undefined,
     },
   });
+
+  const [showAllUsersPicker, setShowAllUsersPicker] = React.useState(false);
 
   React.useEffect(() => {
     if (isOpen) {
@@ -89,6 +97,7 @@ export function AddProjectDialog({ isOpen, onOpenChange, onAddProject, projectTo
                 description: projectToEdit.description,
                 ownerId: projectToEdit.ownerId,
                 teamMembers: projectToEdit.teamMembers,
+                teamIds: projectToEdit.teamIds || [],
                 contactPhone: projectToEdit.contactPhone,
                 technicalDetails: projectToEdit.technicalDetails,
                 status: projectToEdit.status,
@@ -102,6 +111,7 @@ export function AddProjectDialog({ isOpen, onOpenChange, onAddProject, projectTo
                 name: "",
                 description: "",
                 teamMembers: [],
+                teamIds: [],
                 contactPhone: "",
                 technicalDetails: "",
                 status: 'Em execução',
@@ -112,14 +122,26 @@ export function AddProjectDialog({ isOpen, onOpenChange, onAddProject, projectTo
     }
   }, [isOpen, projectToEdit, form]);
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
+  async function onSubmit(values: z.infer<typeof formSchema>) {
+    // Denormaliza membros de equipes selecionadas
+    let mergedMembers = new Set<string>(values.teamMembers || []);
+    if (firestore && values.teamIds && values.teamIds.length) {
+      const usersByTeamsQuery = query(collection(firestore, 'users'), where('teamIds', 'array-contains-any', values.teamIds.slice(0, 10)));
+      const snap = await getDocs(usersByTeamsQuery);
+      snap.forEach(doc => {
+        const uid = doc.id;
+        mergedMembers.add(uid);
+      });
+    }
+
     const projectData = {
         name: values.name,
         description: values.description || '',
         startDate: values.dateRange.from.toISOString(),
         endDate: values.dateRange.to?.toISOString(),
         ownerId: values.ownerId,
-        teamMembers: values.teamMembers || [],
+        teamMembers: Array.from(mergedMembers),
+        teamIds: values.teamIds || [],
         contactPhone: values.contactPhone || '',
         technicalDetails: values.technicalDetails || '',
         status: values.status,
@@ -129,11 +151,45 @@ export function AddProjectDialog({ isOpen, onOpenChange, onAddProject, projectTo
     form.reset();
   }
 
-  const userOptions = usersData?.map(user => ({ value: user.id, label: user.name })) || [];
+  const userOptions = (usersData?.map(user => ({ value: user.id, label: user.name })) || []).sort((a,b) => a.label.localeCompare(b.label));
+  const teamOptions = teamsData?.map(team => ({ value: team.id, label: team.name })) || [];
+
+  const selectedTeamIds = form.watch('teamIds') || [];
+  const filteredUserOptions = React.useMemo(() => {
+    if (showAllUsersPicker) {
+      // Team-first sort when showing all users
+      const teamIdSet = new Set(selectedTeamIds);
+      return (usersData || [])
+        .map(u => ({ value: u.id, label: u.name, fromTeam: (u.teamIds || []).some(tid => teamIdSet.has(tid)) }))
+        .sort((a,b) => (a.fromTeam === b.fromTeam ? a.label.localeCompare(b.label) : (a.fromTeam ? -1 : 1)))
+        .map(({value,label}) => ({ value, label }));
+    }
+    if (!selectedTeamIds?.length) return [];
+    const setIds = new Set(selectedTeamIds);
+    return (usersData || [])
+      .filter(u => (u.teamIds || []).some(tid => setIds.has(tid)))
+      .map(u => ({ value: u.id, label: u.name }))
+      .sort((a,b) => a.label.localeCompare(b.label));
+  }, [showAllUsersPicker, selectedTeamIds, usersData, userOptions]);
+
+  // Helpers based on selected teams
+  const teamMembersFromTeams = React.useMemo(() => {
+    if (!selectedTeamIds?.length) return [] as { value: string; label: string }[];
+    const setIds = new Set(selectedTeamIds);
+    return (usersData || [])
+      .filter(u => (u.teamIds || []).some(tid => setIds.has(tid)))
+      .map(u => ({ value: u.id, label: u.name }));
+  }, [selectedTeamIds, usersData]);
+
+  const addAllTeamMembers = () => {
+    const current = new Set(form.getValues('teamMembers') || []);
+    teamMembersFromTeams.forEach(u => current.add(u.value));
+    form.setValue('teamMembers', Array.from(current));
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl">
+      <DialogContent className="max-w-5xl">
         <DialogHeader>
           <DialogTitle>{projectToEdit ? 'Editar Projeto' : 'Criar Novo Projeto'}</DialogTitle>
         </DialogHeader>
@@ -240,19 +296,71 @@ export function AddProjectDialog({ isOpen, onOpenChange, onAddProject, projectTo
                                 </FormItem>
                             )}
                         />
-                         <FormField
+                          <FormField
+                            control={form.control}
+                            name="teamIds"
+                            render={({ field }) => (
+                                <FormItem>
+                                <FormLabel className="flex items-center gap-2"><Users className="h-4 w-4" />Equipes</FormLabel>
+                                    <MultiSelect
+                                        options={teamOptions}
+                                        selected={field.value || []}
+                                        onChange={field.onChange}
+                                        placeholder="Selecione equipes..."
+                                    />
+                                    <div className="mt-2 flex items-center justify-between">
+                                      {!!(field.value || []).length ? (
+                                        <>
+                                          <div className="text-xs text-muted-foreground">
+                                            Membros nas equipes: <strong>{teamMembersFromTeams.length}</strong>
+                                          </div>
+                                          <Button type="button" variant="outline" size="sm" onClick={addAllTeamMembers}>Adicionar todos os membros</Button>
+                                        </>
+                                      ) : (
+                                        <div className="text-xs text-muted-foreground">Selecione uma ou mais equipes para listar membros.</div>
+                                      )}
+                                    </div>
+                                    {!!(field.value || []).length && (
+                                      <div className="mt-2 flex flex-wrap gap-1">
+                                        {(field.value || []).map((tid: string) => {
+                                          const label = teamOptions.find(t => t.value === tid)?.label || tid;
+                                          return (
+                                            <span key={tid} className="rounded-full bg-muted px-2 py-0.5 text-xs">{label}</span>
+                                          );
+                                        })}
+                                      </div>
+                                    )}
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <FormField
                             control={form.control}
                             name="teamMembers"
                             render={({ field }) => (
                                 <FormItem>
-                                <FormLabel className="flex items-center gap-2"><Users className="h-4 w-4" />Equipe Empenhada</FormLabel>
-                                    <MultiSelect
-                                        options={userOptions}
-                                        selected={field.value || []}
-                                        onChange={field.onChange}
-                                        placeholder="Selecione os membros da equipe..."
-                                    />
-                                <FormMessage />
+                                <div className="flex items-center justify-between">
+                                  <FormLabel className="flex items-center gap-2"><Users className="h-4 w-4" />Equipe Empenhada</FormLabel>
+                                  <div className="space-x-2 text-xs">
+                                    {!showAllUsersPicker ? (
+                                      <Button type="button" variant="outline" size="sm" onClick={() => setShowAllUsersPicker(true)}>
+                                        Adicionar usuário avulso ({Math.max((usersData?.length || 0) - (form.getValues('teamMembers')?.length || 0), 0)})
+                                      </Button>
+                                    ) : (
+                                      <Button type="button" variant="secondary" size="sm" onClick={() => setShowAllUsersPicker(false)}>Voltar p/ equipes</Button>
+                                    )}
+                                  </div>
+                                </div>
+                                  <MultiSelect
+                                      options={filteredUserOptions}
+                                      selected={field.value || []}
+                                      onChange={field.onChange}
+                                      placeholder={showAllUsersPicker ? "Selecione pessoas (todos os usuários)..." : (selectedTeamIds.length ? "Selecione pessoas da(s) equipe(s)..." : "Selecione equipes primeiro...")}
+                                  />
+                                  <div className="mt-2 text-xs text-muted-foreground">
+                                    Selecionados: <strong>{(field.value || []).length}</strong>
+                                  </div>
+                                  <FormMessage />
                                 </FormItem>
                             )}
                         />
@@ -312,11 +420,14 @@ export function AddProjectDialog({ isOpen, onOpenChange, onAddProject, projectTo
                     </div>
                 </div>
 
-                <DialogFooter className="pt-4">
+                <DialogFooter className="pt-4 gap-2">
+                    <div className="mr-auto text-xs text-muted-foreground">
+                      Equipes: <strong>{(form.watch('teamIds') || []).length}</strong> • Pessoas: <strong>{(form.watch('teamMembers') || []).length}</strong>
+                    </div>
                     <DialogClose asChild>
                         <Button type="button" variant="outline">Cancelar</Button>
                     </DialogClose>
-                    <Button type="submit">{projectToEdit ? 'Salvar Alterações' : 'Criar Projeto'}</Button>
+                    <Button type="submit" disabled={!form.formState.isValid}>{projectToEdit ? 'Salvar Alterações' : 'Criar Projeto'}</Button>
                 </DialogFooter>
             </form>
         </Form>

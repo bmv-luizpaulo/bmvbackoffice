@@ -23,7 +23,8 @@ export function PipelineChart({ data = [], isLoading }: PipelineChartProps) {
         { name: 'Em Progresso', total: data.find(d => d.name === 'Em Progresso')?.total || 0 },
         { name: 'Concluído', total: data.find(d => d.name === 'Concluído')?.total || 0 },
     ];
-    
+    const allZero = chartData.every(d => d.total === 0);
+
     return (
         <Card>
             <CardHeader>
@@ -34,6 +35,10 @@ export function PipelineChart({ data = [], isLoading }: PipelineChartProps) {
                 <div className="h-[300px] w-full">
                     {isLoading ? (
                         <Skeleton className="h-full w-full" />
+                    ) : allZero ? (
+                        <div className="flex h-full w-full items-center justify-center text-sm text-muted-foreground">
+                            Sem dados para exibir. Quando houver tarefas, o funil aparecerá aqui.
+                        </div>
                     ) : (
                         <ChartContainer config={chartConfig} className="min-h-[200px] w-full">
                             <BarChart data={chartData} accessibilityLayer>
@@ -68,5 +73,3 @@ export function PipelineChart({ data = [], isLoading }: PipelineChartProps) {
         </Card>
     )
 }
-
-    

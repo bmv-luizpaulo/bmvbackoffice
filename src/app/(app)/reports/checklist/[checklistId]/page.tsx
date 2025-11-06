@@ -10,7 +10,6 @@ import { Loader2, Check, X, MessageSquare, CheckSquare, ShieldAlert, Download, A
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
 import { useToast } from '@/hooks/use-toast';
 
 function ChecklistReportPageContent() {
@@ -77,7 +76,8 @@ function ChecklistReportPageContent() {
       };
       await addDocumentNonBlocking(collection(firestore, 'checklistExecutions'), executionData);
       
-      // 2. Gerar o PDF
+      // 2. Gerar o PDF (carregamento dinâmico para evitar SSR)
+      const html2canvas = (await import('html2canvas')).default;
       const canvas = await html2canvas(reportRef.current, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
       const imgData = canvas.toDataURL('image/png');
       const pdf = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });

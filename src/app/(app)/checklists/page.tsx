@@ -266,68 +266,13 @@ export default function ChecklistsPage() {
     </header>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="md:col-span-1">
-          <CardHeader>
-            <CardTitle>Todos os Checklists</CardTitle>
-          </CardHeader>
-          <CardContent className="p-2">
-            <div className="space-y-1 max-h-[60vh] overflow-y-auto">
-              {isLoadingChecklists ? (
-                Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-12 w-full" />)
-              ) : currentChecklistList.length > 0 ? (
-                currentChecklistList.map(checklist => (
-                    <div
-                        key={checklist.id}
-                        className={cn(
-                            "group flex w-full h-auto justify-between items-start p-2 rounded-md transition-colors",
-                            selectedChecklist?.id === checklist.id ? "bg-secondary" : "hover:bg-muted/50"
-                        )}
-                    >
-                        <button className="flex-1 flex flex-col items-start text-left" onClick={() => setSelectedChecklist(checklist)}>
-                            <span className="font-medium">{checklist.name}</span>
-                            <span className="text-xs text-muted-foreground">{teamsMap.get(checklist.teamId) || 'Equipe desconhecida'}</span>
-                        </button>
-                        <div className="flex items-center">
-                            <span className='font-mono text-xs text-muted-foreground/80 mr-2'>#{checklist.id.substring(0,6).toUpperCase()}</span>
-                            {isManager && (
-                                <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                        <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100 focus:opacity-100">
-                                            <MoreHorizontal className="h-4 w-4" />
-                                        </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end">
-                                        <DropdownMenuItem onClick={() => { setChecklistToEdit(checklist); setIsFormOpen(true); }}>
-                                            <Edit className="mr-2 h-4 w-4" /> Editar
-                                        </DropdownMenuItem>
-                                        <DropdownMenuItem onClick={() => handleToggleArchive(checklist)}>
-                                            {checklist.status === 'arquivado' ? <ArchiveRestore className="mr-2 h-4 w-4" /> : <Archive className="mr-2 h-4 w-4" />}
-                                            {checklist.status === 'arquivado' ? 'Restaurar' : 'Arquivar'}
-                                        </DropdownMenuItem>
-                                        <DropdownMenuSeparator />
-                                        <DropdownMenuItem className="text-destructive" onClick={() => setChecklistToDelete(checklist)}>
-                                            <Trash2 className="mr-2 h-4 w-4" /> Excluir
-                                        </DropdownMenuItem>
-                                    </DropdownMenuContent>
-                                </DropdownMenu>
-                            )}
-                        </div>
-                    </div>
-                ))
-              ) : (
-                <p className="text-sm text-muted-foreground p-4 text-center">Nenhum checklist encontrado.</p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="md:col-span-2">
+        <Card className="md:col-span-2 md:order-1 ring-1 ring-primary/10 shadow-md">
           {selectedChecklist ? (
             <>
               <CardHeader>
                 <div className="flex justify-between items-start">
                     <div>
-                        <CardTitle>{selectedChecklist.name}</CardTitle>
+                        <CardTitle className="text-2xl">{selectedChecklist.name}</CardTitle>
                         <CardDescription>
                             {selectedChecklist.description || `Checklist para a equipe ${teamsMap.get(selectedChecklist.teamId) || 'desconhecida'}`}
                         </CardDescription>
@@ -383,7 +328,7 @@ export default function ChecklistsPage() {
                 </div>
                 <div className="mt-4 space-y-2">
                     <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                        <Progress value={progress} className="w-full" />
+                        <Progress value={progress} className="w-full h-2" />
                         <span>{Math.round(progress)}%</span>
                     </div>
                 </div>
@@ -392,7 +337,7 @@ export default function ChecklistsPage() {
                 <div className="space-y-4">
                   <div>
                     <h3 className="text-lg font-medium mb-2">Passos do Checklist</h3>
-                    <div className="space-y-1 max-h-[45vh] overflow-y-auto pr-2">
+                    <div className="space-y-1 max-h-[55vh] overflow-y-auto pr-2">
                       {isLoadingItems ? (
                         Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-10 w-full" />)
                       ) : checklistItems && checklistItems.length > 0 ? (
@@ -411,7 +356,7 @@ export default function ChecklistsPage() {
                             }
                             if (item.type === 'yes_no') {
                                 return (
-                                     <div key={item.id} className="p-3 rounded-md border bg-background flex flex-col gap-3">
+                                     <div key={item.id} className="p-3 rounded-md border bg-background flex flex-col gap-3 border-l-2 border-l-primary/30">
                                         <div className="flex items-start justify-between">
                                             <label className="text-sm flex-1 pr-4">{item.description}</label>
                                             <div className="flex items-center gap-2">
@@ -434,7 +379,7 @@ export default function ChecklistsPage() {
                                 )
                             }
                             return (
-                                <div key={item.id} className="flex items-center gap-3 p-3 rounded-md">
+                                <div key={item.id} className="flex items-center gap-3 p-3 rounded-md hover:bg-muted/40 transition-colors">
                                     <Checkbox id={`item-${item.id}`} checked={item.isCompleted} onCheckedChange={() => handleToggleItem(item)} />
                                     <label htmlFor={`item-${item.id}`} className={cn("flex-1 text-sm cursor-pointer", item.isCompleted && "line-through text-muted-foreground")}>{item.description}</label>
                                     {canEdit && (
@@ -487,13 +432,41 @@ export default function ChecklistsPage() {
                         </form>
                    )}
                 </div>
-                 <div className="border-t pt-4 mt-4">
-                    <Button asChild className='w-full'>
-                      <Link href={`/reports/checklist/${selectedChecklist.id}`} target="_blank">
-                        <FileText className="mr-2 h-4 w-4" />
-                        Gerar Relatório e Finalizar
-                      </Link>
-                    </Button>
+                 <div className="border-t pt-6 mt-6">
+                    {isEditMode ? (
+                      <div className="flex justify-center">
+                        <Button
+                          variant="secondary"
+                          className="px-6"
+                          onClick={() => toast({ title: 'Checklist salvo', description: 'Alterações gravadas automaticamente.' })}
+                        >
+                          Salvar alterações
+                        </Button>
+                      </div>
+                    ) : (
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button className='w-full'>
+                            <FileText className="mr-2 h-4 w-4" />
+                            Gerar Relatório e Finalizar
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Finalizar checklist?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Isso salvará a execução e gerará o PDF do relatório. Deseja continuar?
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                            <AlertDialogAction asChild>
+                              <Link href={`/reports/checklist/${selectedChecklist.id}`} target="_blank">Continuar</Link>
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    )}
                   </div>
               </CardContent>
             </>
@@ -506,6 +479,61 @@ export default function ChecklistsPage() {
               </p>
             </div>
           )}
+        </Card>
+
+        <Card className="md:col-span-1 md:order-2">
+          <CardHeader>
+            <CardTitle>Todos os Checklists</CardTitle>
+          </CardHeader>
+          <CardContent className="p-2">
+            <div className="space-y-1 max-h-[60vh] overflow-y-auto">
+              {isLoadingChecklists ? (
+                Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-12 w-full" />)
+              ) : currentChecklistList.length > 0 ? (
+                currentChecklistList.map(checklist => (
+                    <div
+                        key={checklist.id}
+                        className={cn(
+                            "group flex w-full h-auto justify-between items-start p-2 rounded-md transition-colors",
+                            selectedChecklist?.id === checklist.id ? "bg-secondary" : "hover:bg-muted/50"
+                        )}
+                    >
+                        <button className="flex-1 flex flex-col items-start text-left" onClick={() => setSelectedChecklist(checklist)}>
+                            <span className="font-medium">{checklist.name}</span>
+                            <span className="text-xs text-muted-foreground">{teamsMap.get(checklist.teamId) || 'Equipe desconhecida'}</span>
+                        </button>
+                        <div className="flex items-center">
+                            <span className='font-mono text-xs text-muted-foreground/80 mr-2'>#{checklist.id.substring(0,6).toUpperCase()}</span>
+                            {isManager && (
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100 focus:opacity-100">
+                                            <MoreHorizontal className="h-4 w-4" />
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                        <DropdownMenuItem onClick={() => { setChecklistToEdit(checklist); setIsFormOpen(true); }}>
+                                            <Edit className="mr-2 h-4 w-4" /> Editar
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem onClick={() => handleToggleArchive(checklist)}>
+                                            {checklist.status === 'arquivado' ? <ArchiveRestore className="mr-2 h-4 w-4" /> : <Archive className="mr-2 h-4 w-4" />}
+                                            {checklist.status === 'arquivado' ? 'Restaurar' : 'Arquivar'}
+                                        </DropdownMenuItem>
+                                        <DropdownMenuSeparator />
+                                        <DropdownMenuItem className="text-destructive" onClick={() => setChecklistToDelete(checklist)}>
+                                            <Trash2 className="mr-2 h-4 w-4" /> Excluir
+                                        </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                            )}
+                        </div>
+                    </div>
+                ))
+              ) : (
+                <p className="text-sm text-muted-foreground p-4 text-center">Nenhum checklist encontrado.</p>
+              )}
+            </div>
+          </CardContent>
         </Card>
       </div>
 

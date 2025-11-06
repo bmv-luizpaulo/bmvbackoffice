@@ -28,6 +28,9 @@ export interface FirebaseContextState {
   user: User | null;
   isUserLoading: boolean; // True during initial auth check
   userError: Error | null; // Error from auth listener
+  // Claims (permissions) hydrated from ID token
+  claims: Record<string, any> | null;
+  areClaimsReady: boolean;
 }
 
 // Return type for useFirebase()
@@ -38,6 +41,8 @@ export interface FirebaseServicesAndUser {
   user: User | null;
   isUserLoading: boolean;
   userError: Error | null;
+  claims: Record<string, any> | null;
+  areClaimsReady: boolean;
 }
 
 // Return type for useUser() - specific to user auth state
@@ -64,6 +69,9 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
     userError: null,
   });
 
+  const [claims, setClaims] = useState<Record<string, any> | null>(null);
+  const [areClaimsReady, setAreClaimsReady] = useState<boolean>(false);
+
   // Effect to subscribe to Firebase auth state changes and manage user profile
   useEffect(() => {
     if (!auth || !firestore) {
@@ -76,10 +84,25 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
       async (firebaseUser) => {
         // Update auth state
         setUserAuthState({ user: firebaseUser, isUserLoading: false, userError: null });
+        if (firebaseUser) {
+          try {
+            const token = await firebaseUser.getIdTokenResult(true);
+            setClaims(token.claims || {});
+          } catch (e) {
+            setClaims(null);
+          } finally {
+            setAreClaimsReady(true);
+          }
+        } else {
+          setClaims(null);
+          setAreClaimsReady(true);
+        }
       },
       (error) => {
         console.error("FirebaseProvider: onAuthStateChanged error:", error);
         setUserAuthState({ user: null, isUserLoading: false, userError: error });
+        setClaims(null);
+        setAreClaimsReady(true);
       }
     );
 
@@ -95,7 +118,12 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
         // The Cloud Function updates `_tokenRefreshed`. When it changes, force a token refresh.
         if (data && data._tokenRefreshed) {
             console.log("Detected role change, forcing token refresh...");
-            userAuthState.user?.getIdToken(true); // true forces a refresh
+            userAuthState.user?.getIdToken(true).then(async () => {
+              try {
+                const token = await userAuthState.user!.getIdTokenResult();
+                setClaims(token.claims || {});
+              } catch (_) {}
+            }); // true forces a refresh
         }
       });
 
@@ -115,8 +143,10 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
       user: userAuthState.user,
       isUserLoading: userAuthState.isUserLoading,
       userError: userAuthState.userError,
+      claims,
+      areClaimsReady,
     };
-  }, [firebaseApp, firestore, auth, userAuthState]);
+  }, [firebaseApp, firestore, auth, userAuthState, claims, areClaimsReady]);
 
   return (
     <FirebaseContext.Provider value={contextValue}>
@@ -147,6 +177,8 @@ export const useFirebase = (): FirebaseServicesAndUser => {
     user: context.user,
     isUserLoading: context.isUserLoading,
     userError: context.userError,
+    claims: context.claims,
+    areClaimsReady: context.areClaimsReady,
   };
 };
 
@@ -176,4 +208,17 @@ export const useFirebaseApp = (): FirebaseApp => {
 export const useUser = (): UserHookResult => { // Renamed from useAuthUser
   const { user, isUserLoading, userError } = useFirebase(); // Leverages the main hook
   return { user, isUserLoading, userError };
+};
+
+// Permissions hook based on claims-only
+export const usePermissions = () => {
+  const { claims, areClaimsReady } = useFirebase();
+  const has = (key: string) => !!(claims && (claims as any)[key] === true);
+  return {
+    ready: areClaimsReady,
+    claims: claims || {},
+    isManager: has('isManager'),
+    isDev: has('isDev'),
+    has,
+  } as const;
 };

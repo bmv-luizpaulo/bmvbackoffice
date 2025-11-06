@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { useParams } from 'next/navigation';
 import { useFirestore, useDoc, useMemoFirebase, FirebaseClientProvider } from '@/firebase';
-import { doc } from 'firebase/firestore';
+import { collection, doc } from 'firebase/firestore';
 import type { Asset, User } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Loader2, Download } from 'lucide-react';
@@ -16,6 +16,7 @@ function AssetReturnReportContent() {
   const assetId = params.assetId as string;
   const reportRef = React.useRef<HTMLDivElement>(null);
   const [isGeneratingPdf, setIsGeneratingPdf] = React.useState(false);
+  const [selectedTemplateId, setSelectedTemplateId] = React.useState<string>('');
 
   const assetRef = useMemoFirebase(
     () => (firestore && assetId ? doc(firestore, 'assets', assetId) : null),
@@ -28,6 +29,15 @@ function AssetReturnReportContent() {
     [firestore, asset?.assigneeId]
   );
   const { data: assignee, isLoading: isLoadingAssignee } = useDoc<User>(assigneeRef);
+  const returnTemplates = React.useMemo(() => ([
+    {
+      id: 'default_return',
+      name: 'Termo de Devolução Padrão',
+      type: 'return_term',
+      content: 'Declaro a devolução do {{asset.name}} (SN {{asset.serialNumber}}) por {{user.name}} em {{today}}.',
+    },
+  ]), []);
+  const activeTemplate = React.useMemo(() => returnTemplates.find((t: any) => t.id === selectedTemplateId), [returnTemplates, selectedTemplateId]);
 
   const isLoading = isLoadingAsset || isLoadingAssignee;
   const [generationDate] = React.useState(new Date());
@@ -79,9 +89,34 @@ function AssetReturnReportContent() {
     );
   }
 
+  const merge = (content: string) => {
+    if (!content) return '';
+    return content
+      .replace(/\{\{asset.name\}\}/g, asset?.name || '')
+      .replace(/\{\{asset.serialNumber\}\}/g, asset?.serialNumber || '')
+      .replace(/\{\{asset.type\}\}/g, asset?.type || '')
+      .replace(/\{\{asset.status\}\}/g, asset?.status || '')
+      .replace(/\{\{asset.location\}\}/g, asset?.location || '')
+      .replace(/\{\{user.name\}\}/g, assignee?.name || '')
+      .replace(/\{\{user.email\}\}/g, assignee?.email || '')
+      .replace(/\{\{user.phone\}\}/g, assignee?.phone || '');
+  };
+
   return (
     <div className="min-h-screen bg-gray-100 print:bg-white">
-      <header className="bg-gray-100 p-4 print:hidden flex justify-end sticky top-0 z-20">
+      <header className="bg-gray-100 p-4 print:hidden flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sticky top-0 z-20">
+        <div className="flex items-center gap-2">
+          <select
+            className="h-9 rounded-md border bg-background px-2 text-sm"
+            value={selectedTemplateId}
+            onChange={(e) => setSelectedTemplateId(e.target.value)}
+          >
+            <option value="">Modelo padrão</option>
+            {returnTemplates.map((t: any) => (
+              <option key={t.id} value={t.id}>{t.name}</option>
+            ))}
+          </select>
+        </div>
         <Button onClick={handleGeneratePdf} disabled={isGeneratingPdf}>
           {isGeneratingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
           {isGeneratingPdf ? 'Gerando...' : 'Gerar PDF'}
@@ -121,9 +156,13 @@ function AssetReturnReportContent() {
 
             <section>
               <h2 className="font-semibold">Declaração</h2>
-              <p className="mt-2 text-sm leading-relaxed">
-                Declaro que estou devolvendo o ativo acima especificado nas mesmas condições em que foi entregue, salvo desgaste natural decorrente do uso adequado.
-              </p>
+              {activeTemplate?.content ? (
+                <div className="mt-2 text-sm leading-relaxed whitespace-pre-wrap">{merge(activeTemplate.content)}</div>
+              ) : (
+                <p className="mt-2 text-sm leading-relaxed">
+                  Declaro que estou devolvendo o ativo acima especificado nas mesmas condições em que foi entregue, salvo desgaste natural decorrente do uso adequado.
+                </p>
+              )}
             </section>
 
             <section className="grid grid-cols-2 gap-12 mt-12">
