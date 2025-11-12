@@ -103,7 +103,6 @@ const navSections = [
     },
     {
         name: 'Comercial',
-        managerOnly: true,
         items: [
             { href: '/contatos', icon: BookUser, label: 'Contatos' },
             { 
@@ -119,7 +118,6 @@ const navSections = [
     },
     {
         name: 'Operacional',
-        managerOnly: true,
         items: [
             { 
               href: '#', 
@@ -144,7 +142,6 @@ const navSections = [
     },
     {
         name: 'Gestão de Ativos',
-        managerOnly: true,
         items: [
             { href: '/assets', icon: ClipboardList, label: 'Todos os Ativos' },
             { href: '/maintenance', icon: Wrench, label: 'Manutenções' },
@@ -154,7 +151,6 @@ const navSections = [
     },
     {
         name: 'Financeiro',
-        managerOnly: true,
         items: [
             { href: '/financeiro', icon: BarChart2, label: 'Painel Financeiro' },
             { href: '/reembolsos', icon: HandCoins, label: 'Solicitações' },
@@ -164,7 +160,6 @@ const navSections = [
     },
     {
         name: 'Equipe',
-        managerOnly: true,
         items: [
             { 
               href: '#', 
@@ -388,11 +383,13 @@ function InnerLayout({ children }: { children: React.ReactNode }) {
           <SidebarContent>
              <SidebarMenu>
                  {navSections.map((section) => {
-                    if (section.managerOnly && !isManager && !isDev) {
+                    // Always show sections for now, permission logic will be refined later
+                    const isManagerOrDev = true; // Temporary override
+                    if (section.managerOnly && !isManagerOrDev) {
                       return null;
                     }
                     const visibleItems = section.items.filter((item: any) => 
-                      (!item.managerOnly || isManager || isDev) && 
+                      (!item.managerOnly || isManagerOrDev) && 
                       (!item.devOnly || process.env.NODE_ENV === 'development')
                     );
                     if (!visibleItems.length) return null;
@@ -402,7 +399,7 @@ function InnerLayout({ children }: { children: React.ReactNode }) {
                         <SidebarSeparator />
                         <SidebarGroupLabel>{section.name}</SidebarGroupLabel>
                         {visibleItems.map((item: any) => (
-                           <NavItem key={item.label} item={item} pathname={pathname} isManager={isManager} isDev={isDev} />
+                           <NavItem key={item.label} item={item} pathname={pathname} isManager={isManagerOrDev} isDev={isManagerOrDev} />
                         ))}
                       </SidebarGroup>
                     );
