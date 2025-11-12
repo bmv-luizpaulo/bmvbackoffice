@@ -382,12 +382,8 @@ function InnerLayout({ children }: { children: React.ReactNode }) {
           </SidebarHeader>
           <SidebarContent>
              <SidebarMenu>
-                 {navSections.map((section) => {
-                    // Always show sections for now, permission logic will be refined later
+                 {navSections.map((section, index) => {
                     const isManagerOrDev = true; // Temporary override
-                    if (section.managerOnly && !isManagerOrDev) {
-                      return null;
-                    }
                     const visibleItems = section.items.filter((item: any) => 
                       (!item.managerOnly || isManagerOrDev) && 
                       (!item.devOnly || process.env.NODE_ENV === 'development')
@@ -395,7 +391,7 @@ function InnerLayout({ children }: { children: React.ReactNode }) {
                     if (!visibleItems.length) return null;
                     
                     return (
-                      <SidebarGroup key={section.name}>
+                      <SidebarGroup key={section.name} className={cn(index === 0 && 'pt-0')}>
                         <SidebarSeparator />
                         <SidebarGroupLabel>{section.name}</SidebarGroupLabel>
                         {visibleItems.map((item: any) => (
