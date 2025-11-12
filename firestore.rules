@@ -4,22 +4,29 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     function isDev() {
+      // A verificação mais confiável é ler diretamente do documento do cargo.
       let roleId = request.auth.token.roleId;
-      // Checa o claim E a permissão no documento do cargo para redundância e segurança.
-      return request.auth.token.isDev == true || (roleId != null && get(/databases/$(database)/documents/roles/$(roleId)).data.permissions.isDev == true);
+      if (roleId == null) {
+        return false;
+      }
+      return get(/databases/$(database)/documents/roles/$(roleId)).data.permissions.isDev == true;
     }
     
     function hasPermission(permission) {
+      // Se for DEV, conceda acesso imediato.
+      if (isDev()) {
+        return true;
+      }
       let roleId = request.auth.token.roleId;
       if (roleId == null) {
         return false;
       }
       let rolePermissions = get(/databases/$(database)/documents/roles/$(roleId)).data.permissions;
-      return isDev() || rolePermissions[permission] == true;
+      return rolePermissions[permission] == true;
     }
 
     function isPrivileged() {
-      return isDev() || hasPermission('isManager');
+      return hasPermission('isManager');
     }
 
     function isOwner(userId) {
@@ -163,10 +170,8 @@ service cloud.firestore {
     }
 
     match /errorLogs/{errorId} {
-        allow create: if request.auth != null;
-        allow list, read, update, delete: if 
-          get(/databases/$(database)/documents/roles/$(request.auth.token.roleId)).data.permissions.isDev == true || 
-          hasPermission('canManageSupport');
+      allow create: if request.auth != null;
+      allow list, read, update, delete: if isDev() || hasPermission('canManageSupport');
     }
 
     match /assetUsageContracts/{contractId} {
