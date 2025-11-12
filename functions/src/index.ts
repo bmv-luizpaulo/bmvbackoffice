@@ -28,8 +28,9 @@ export const onUserRoleChange = functions.firestore
         const roleDoc = await db.collection("roles").doc(roleId).get();
         if (roleDoc.exists) {
           const roleData = roleDoc.data();
-          isManager = roleData?.isManager === true;
-          isDev = roleData?.isDev === true;
+          // Use a nova estrutura de permissões
+          isManager = roleData?.permissions?.isManager === true;
+          isDev = roleData?.permissions?.isDev === true;
         } else {
           functions.logger.warn(`Role document ${roleId} not found.`);
         }
@@ -44,10 +45,10 @@ export const onUserRoleChange = functions.firestore
 
     try {
       // Define os custom claims no Firebase Auth
-      await admin.auth().setCustomUserClaims(userId, { isManager, isDev });
+      await admin.auth().setCustomUserClaims(userId, { isManager, isDev, roleId });
       functions.logger.log(
         `Successfully set custom claims for user ${userId}:`,
-        { isManager, isDev }
+        { isManager, isDev, roleId }
       );
 
       // Dispara a atualização do token no cliente

@@ -4,135 +4,142 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     function isDev() {
-      // Use custom claims from the auth token. This is more efficient and reliable.
       return request.auth.token.isDev == true;
     }
 
     function isManager() {
-      // Use custom claims from the auth token.
       return request.auth.token.isManager == true;
     }
 
-    function isPrivileged() {
-      // A privileged user is either a developer or a manager.
-      return isDev() || isManager();
+    function hasPermission(permission) {
+      let roleId = request.auth.token.roleId;
+      if (roleId == null) {
+        return false;
+      }
+      let rolePermissions = get(/databases/$(database)/documents/roles/$(roleId)).data.permissions;
+      return isDev() || rolePermissions[permission] == true;
+    }
+
+    function isOwner(userId) {
+      return request.auth.uid == userId;
     }
     
     function isProjectMember(projectId) {
       let projectData = get(/databases/$(database)/documents/projects/$(projectId)).data;
-      return request.auth.uid == projectData.ownerId || request.auth.uid in projectData.teamMembers;
+      return isOwner(projectData.ownerId) || request.auth.uid in projectData.teamMembers;
     }
 
     match /users/{userId} {
-      allow list, read: if request.auth != null;
-      allow write: if isPrivileged() || request.auth.uid == userId;
+      allow read: if isDev() || hasPermission('canManageUsers') || isOwner(userId);
+      allow list: if hasPermission('canManageUsers');
+      allow write: if isDev() || hasPermission('canManageUsers') || isOwner(userId);
 
       match /notifications/{notificationId} {
-        allow read, write: if request.auth.uid == userId;
+        allow read, write: if isOwner(userId);
       }
     }
     
     match /projects/{projectId} {
-      allow list: if request.auth != null;
-      allow read: if isPrivileged() || isProjectMember(projectId);
-      allow create, update, delete: if isPrivileged() || isProjectMember(projectId);
+      allow list: if hasPermission('canViewAllProjects');
+      allow read: if hasPermission('canViewAllProjects') || isProjectMember(projectId);
+      allow create, update, delete: if hasPermission('canManageProjects');
 
       match /stages/{stageId} {
-        allow list, read: if isPrivileged() || isProjectMember(projectId);
-        allow create, update, delete: if isPrivileged() || isProjectMember(projectId);
+        allow list, read: if hasPermission('canViewAllProjects') || isProjectMember(projectId);
+        allow create, update, delete: if hasPermission('canManageProjects');
       }
 
       match /tasks/{taskId} {
-        allow list, read: if isPrivileged() || isProjectMember(projectId);
-        allow create, update, delete: if isPrivileged() || isProjectMember(projectId);
+        allow list, read: if hasPermission('canViewAllProjects') || isProjectMember(projectId);
+        allow create, update, delete: if hasPermission('canManageProjects') || isProjectMember(projectId);
       }
       
       match /files/{fileId} {
-        allow list, read: if isPrivileged() || isProjectMember(projectId);
-        allow create, delete: if isPrivileged() || isProjectMember(projectId);
+        allow list, read: if hasPermission('canViewAllProjects') || isProjectMember(projectId);
+        allow create, delete: if hasPermission('canManageProjects') || isProjectMember(projectId);
       }
     }
 
     match /teams/{teamId} {
       allow list, read: if request.auth != null;
-      allow create, update, delete: if isPrivileged();
+      allow create, update, delete: if hasPermission('canManageUsers');
     }
     
     match /directorates/{directorateId} {
       allow list, read: if request.auth != null;
-      allow create, update, delete: if isPrivileged();
+      allow create, update, delete: if hasPermission('canManageUsers');
     }
 
     match /roles/{roleId} {
       allow list, read: if request.auth != null;
-      allow create, update, delete: if isPrivileged();
+      allow create, update, delete: if hasPermission('canManageUsers');
     }
 
     match /contacts/{contactId} {
       allow list, read: if request.auth != null;
-      allow create, update, delete: if isPrivileged();
+      allow create, update, delete: if hasPermission('canManageContacts');
     }
     
     match /contracts/{contractId} {
       allow list, read: if request.auth != null;
-      allow create, update, delete: if isPrivileged();
+      allow create, update, delete: if hasPermission('canManageAssets');
     }
 
     match /products/{productId} {
       allow list, read: if request.auth != null;
-      allow create, update, delete: if isPrivileged();
+      allow create, update, delete: if hasPermission('canManageProductsAndSeals');
     }
 
     match /seals/{sealId} {
       allow list, read: if request.auth != null;
-      allow create, update, delete: if isPrivileged();
+      allow create, update, delete: if hasPermission('canManageProductsAndSeals');
     }
 
     match /checklists/{checklistId} {
       allow list, read: if request.auth != null;
-      allow create, update, delete: if isPrivileged();
+      allow create, update, delete: if hasPermission('canManageChecklists');
 
       match /items/{itemId} {
         allow list, read, update: if request.auth != null;
-        allow create, delete: if isPrivileged();
+        allow create, delete: if hasPermission('canManageChecklists');
       }
     }
 
     match /checklistExecutions/{executionId} {
       allow list, read, create: if request.auth != null;
-      allow update, delete: if isPrivileged();
+      allow update, delete: if hasPermission('canManageChecklists');
     }
     
     match /assets/{assetId} {
         allow list, read: if request.auth != null;
-        allow create, update, delete: if isPrivileged();
+        allow create, update, delete: if hasPermission('canManageAssets');
 
         match /history/{historyId} {
-            allow list, read: if isPrivileged();
+            allow list, read: if hasPermission('canManageAssets');
             allow create: if request.auth != null;
         }
     }
     
     match /maintenances/{maintenanceId} {
         allow list, read: if request.auth != null;
-        allow create, update, delete: if isPrivileged();
+        allow create, update, delete: if hasPermission('canManageAssets');
     }
 
     match /reimbursements/{reimbursementId} {
-      allow list: if request.auth != null;
-      allow read: if isPrivileged() || request.auth.uid == resource.data.requesterId;
+      allow list: if hasPermission('canAccessFinancial');
+      allow read: if hasPermission('canAccessFinancial') || isOwner(resource.data.requesterId);
       allow create: if request.auth != null;
-      allow update: if isPrivileged() || (request.auth.uid == resource.data.requesterId && resource.data.status == 'Pendente');
-      allow delete: if isPrivileged();
+      allow update: if hasPermission('canAccessFinancial') || (isOwner(resource.data.requesterId) && resource.data.status == 'Pendente');
+      allow delete: if hasPermission('canAccessFinancial');
     }
     
     match /costCenters/{costCenterId} {
       allow list, read: if request.auth != null;
-      allow create, update, delete: if isPrivileged();
+      allow create, update, delete: if hasPermission('canAccessFinancial');
     }
     
     match /conversations/{conversationId} {
-      allow list: if request.auth.uid in request.query.where.userIds.value;
+      allow list: if request.auth.uid == request.query.where.userIds.value[0];
       allow read, update, delete: if request.auth.uid in resource.data.userIds;
       allow create: if request.auth != null;
     }
@@ -142,11 +149,11 @@ service cloud.firestore {
     }
 
     match /tickets/{ticketId} {
-      allow list: if request.auth != null;
-      allow read: if isPrivileged() || request.auth.uid == resource.data.requesterId;
+      allow list: if hasPermission('canManageSupport');
+      allow read: if hasPermission('canManageSupport') || isOwner(resource.data.requesterId);
       allow create: if request.auth != null;
-      allow update: if isPrivileged() || request.auth.uid == resource.data.requesterId;
-      allow delete: if isPrivileged();
+      allow update: if hasPermission('canManageSupport') || isOwner(resource.data.requesterId);
+      allow delete: if hasPermission('canManageSupport');
     }
 
     match /developerTools/{toolId} {
@@ -155,25 +162,25 @@ service cloud.firestore {
 
     match /errorLogs/{errorId} {
         allow create: if request.auth != null;
-        allow list, read, update, delete: if isPrivileged();
+        allow list, read, update, delete: if isDev() || hasPermission('canManageSupport');
     }
 
     match /assetUsageContracts/{contractId} {
       allow list, read: if request.auth != null;
-      allow create, update, delete: if isPrivileged();
+      allow create, update, delete: if hasPermission('canManageAssets');
       match /annexes/{annexId} {
         allow list, read: if request.auth != null;
-        allow create, update, delete: if isPrivileged();
+        allow create, update, delete: if hasPermission('canManageAssets');
       }
     }
 
     match /documentTemplates/{templateId} {
       allow list, read: if request.auth != null;
-      allow create, update, delete: if isPrivileged();
+      allow create, update, delete: if hasPermission('canManageAssets');
     }
 
     match /userActivityLogs/{logId} {
-      allow read: if isPrivileged();
+      allow read: if hasPermission('canManageUsers');
       allow create: if request.auth != null;
     }
   }

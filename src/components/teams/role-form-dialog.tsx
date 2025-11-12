@@ -64,8 +64,19 @@ const formSchema = z.object({
     min: z.coerce.number().optional(),
     max: z.coerce.number().optional(),
   }).optional(),
-  isManager: z.boolean().default(false),
-  isDev: z.boolean().default(false),
+  permissions: z.object({
+    isDev: z.boolean().default(false),
+    isManager: z.boolean().default(false),
+    canViewAllProjects: z.boolean().default(false),
+    canManageProjects: z.boolean().default(false),
+    canManageUsers: z.boolean().default(false),
+    canManageContacts: z.boolean().default(false),
+    canManageProductsAndSeals: z.boolean().default(false),
+    canAccessFinancial: z.boolean().default(false),
+    canManageChecklists: z.boolean().default(false),
+    canManageAssets: z.boolean().default(false),
+    canManageSupport: z.boolean().default(false),
+  }).default({}),
 }).refine(data => {
   if (data.hierarchyLevel === 'CEO') {
     return true;
@@ -76,16 +87,27 @@ const formSchema = z.object({
   path: ["supervisorRoleId"],
 });
 
-const defaultValues = {
+const defaultValues: z.input<typeof formSchema> = {
   name: '',
   description: '',
   mission: '',
-  isManager: false,
-  isDev: false,
   responsibilities: [],
   kpis: [],
   requiredSkills: [],
   salaryRange: { min: undefined, max: undefined },
+  permissions: {
+    isDev: false,
+    isManager: false,
+    canViewAllProjects: false,
+    canManageProjects: false,
+    canManageUsers: false,
+    canManageContacts: false,
+    canManageProductsAndSeals: false,
+    canAccessFinancial: false,
+    canManageChecklists: false,
+    canManageAssets: false,
+    canManageSupport: false,
+  },
 };
 
 export function RoleFormDialog({ isOpen, onOpenChange, onSave, role, allRoles }: RoleFormDialogProps) {
@@ -116,8 +138,19 @@ export function RoleFormDialog({ isOpen, onOpenChange, onSave, role, allRoles }:
             min: role.salaryRange?.min || undefined,
             max: role.salaryRange?.max || undefined,
           },
-          isManager: role.isManager || false,
-          isDev: role.isDev || false,
+          permissions: {
+            isDev: role.permissions?.isDev || false,
+            isManager: role.permissions?.isManager || false,
+            canViewAllProjects: role.permissions?.canViewAllProjects || false,
+            canManageProjects: role.permissions?.canManageProjects || false,
+            canManageUsers: role.permissions?.canManageUsers || false,
+            canManageContacts: role.permissions?.canManageContacts || false,
+            canManageProductsAndSeals: role.permissions?.canManageProductsAndSeals || false,
+            canAccessFinancial: role.permissions?.canAccessFinancial || false,
+            canManageChecklists: role.permissions?.canManageChecklists || false,
+            canManageAssets: role.permissions?.canManageAssets || false,
+            canManageSupport: role.permissions?.canManageSupport || false,
+          },
         });
       } else {
         form.reset(defaultValues);
@@ -231,9 +264,48 @@ export function RoleFormDialog({ isOpen, onOpenChange, onSave, role, allRoles }:
                       )}/>
                     </AccordionContent>
                   </AccordionItem>
+                  
+                   <AccordionItem value="item-5">
+                    <AccordionTrigger className="font-semibold text-lg">3. Permissões de Acesso</AccordionTrigger>
+                    <AccordionContent className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">
+                        <FormField control={form.control} name="permissions.isDev" render={({ field }) => (
+                            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm col-span-2"><div className="space-y-0.5"><FormLabel>Acesso de Desenvolvedor</FormLabel><p className="text-xs text-muted-foreground">Acesso total e irrestrito a todo o sistema.</p></div><FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl></FormItem>
+                        )}/>
+                        <FormField control={form.control} name="permissions.isManager" render={({ field }) => (
+                            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm"><div className="space-y-0.5"><FormLabel>Gestor (Legado)</FormLabel></div><FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl></FormItem>
+                        )}/>
+                        <FormField control={form.control} name="permissions.canViewAllProjects" render={({ field }) => (
+                            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm"><div className="space-y-0.5"><FormLabel>Ver Todos os Projetos</FormLabel></div><FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl></FormItem>
+                        )}/>
+                         <FormField control={form.control} name="permissions.canManageProjects" render={({ field }) => (
+                            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm"><div className="space-y-0.5"><FormLabel>Gerenciar Projetos</FormLabel></div><FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl></FormItem>
+                        )}/>
+                         <FormField control={form.control} name="permissions.canManageUsers" render={({ field }) => (
+                            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm"><div className="space-y-0.5"><FormLabel>Gerenciar Usuários</FormLabel></div><FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl></FormItem>
+                        )}/>
+                         <FormField control={form.control} name="permissions.canManageContacts" render={({ field }) => (
+                            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm"><div className="space-y-0.5"><FormLabel>Gerenciar Contatos</FormLabel></div><FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl></FormItem>
+                        )}/>
+                        <FormField control={form.control} name="permissions.canManageProductsAndSeals" render={({ field }) => (
+                            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm"><div className="space-y-0.5"><FormLabel>Gerenciar Produtos/Selos</FormLabel></div><FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl></FormItem>
+                        )}/>
+                        <FormField control={form.control} name="permissions.canAccessFinancial" render={({ field }) => (
+                            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm"><div className="space-y-0.5"><FormLabel>Acessar Financeiro</FormLabel></div><FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl></FormItem>
+                        )}/>
+                         <FormField control={form.control} name="permissions.canManageChecklists" render={({ field }) => (
+                            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm"><div className="space-y-0.5"><FormLabel>Gerenciar Checklists</FormLabel></div><FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl></FormItem>
+                        )}/>
+                        <FormField control={form.control} name="permissions.canManageAssets" render={({ field }) => (
+                            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm"><div className="space-y-0.5"><FormLabel>Gerenciar Ativos</FormLabel></div><FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl></FormItem>
+                        )}/>
+                         <FormField control={form.control} name="permissions.canManageSupport" render={({ field }) => (
+                            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm"><div className="space-y-0.5"><FormLabel>Gerenciar Suporte</FormLabel></div><FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl></FormItem>
+                        )}/>
+                    </AccordionContent>
+                  </AccordionItem>
 
                   <AccordionItem value="item-3">
-                    <AccordionTrigger className="font-semibold text-lg">3. Responsabilidades e KPIs</AccordionTrigger>
+                    <AccordionTrigger className="font-semibold text-lg">4. Responsabilidades e KPIs</AccordionTrigger>
                     <AccordionContent className="space-y-6 pt-4">
                       <div className="space-y-2">
                         <FormLabel>Principais Responsabilidades</FormLabel>
@@ -263,7 +335,7 @@ export function RoleFormDialog({ isOpen, onOpenChange, onSave, role, allRoles }:
                   </AccordionItem>
                   
                    <AccordionItem value="item-4">
-                    <AccordionTrigger className="font-semibold text-lg">4. Competências e Salário</AccordionTrigger>
+                    <AccordionTrigger className="font-semibold text-lg">5. Competências e Salário</AccordionTrigger>
                     <AccordionContent className="space-y-6 pt-4">
                         <div className="space-y-2">
                             <FormLabel>Competências Técnicas e Comportamentais</FormLabel>
@@ -285,18 +357,6 @@ export function RoleFormDialog({ isOpen, onOpenChange, onSave, role, allRoles }:
                                 <FormItem><FormLabel>Faixa Salarial (Máximo)</FormLabel><FormControl><Input type="number" placeholder="Ex: 5000" {...field} /></FormControl><FormMessage /></FormItem>
                             )}/>
                         </div>
-                    </AccordionContent>
-                  </AccordionItem>
-
-                  <AccordionItem value="item-5">
-                    <AccordionTrigger className="font-semibold text-lg">5. Permissões de Acesso</AccordionTrigger>
-                    <AccordionContent className="space-y-4 pt-4">
-                      <FormField control={form.control} name="isManager" render={({ field }) => (
-                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm"><div className="space-y-0.5"><FormLabel>Permissão de Gestor</FormLabel><p className="text-xs text-muted-foreground">Concede acesso de visualização a todos os dados do sistema.</p></div><FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl></FormItem>
-                      )}/>
-                      <FormField control={form.control} name="isDev" render={({ field }) => (
-                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm"><div className="space-y-0.5"><FormLabel>Permissão de Desenvolvedor</FormLabel><p className="text-xs text-muted-foreground">Concede acesso total de leitura e escrita em todo o sistema.</p></div><FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl></FormItem>
-                      )}/>
                     </AccordionContent>
                   </AccordionItem>
 

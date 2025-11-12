@@ -285,64 +285,34 @@
     "Role": {
       "title": "Role",
       "type": "object",
-      "description": "Represents a user role within the organization with detailed HR information.",
+      "description": "Represents a user role within the organization with detailed HR and permission information.",
       "properties": {
-        "name": {
-          "type": "string",
-          "description": "Name of the role (e.g., 'Operations Manager')."
-        },
-        "description": {
-          "type": "string",
-          "description": "A brief summary of the role's main purpose."
-        },
-        "department": {
-          "type": "string",
-          "description": "The department the role belongs to.",
-          "enum": ["Operações", "TI", "Financeiro", "Comercial", "RH", "Administrativo"]
-        },
-        "hierarchyLevel": {
-          "type": "string",
-          "description": "The hierarchical level of the role.",
-          "enum": ["CEO", "Diretoria", "Gerência", "Coordenação", "Analista", "Assistente", "Estagiário"]
-        },
-        "supervisorRoleId": {
-          "type": "string",
-          "description": "The ID of the role this role reports to."
-        },
-        "mission": {
-          "type": "string",
-          "description": "The strategic mission or objective of the role."
-        },
-        "responsibilities": {
-          "type": "array",
-          "description": "A list of the main responsibilities.",
-          "items": { "type": "string" }
-        },
-        "kpis": {
-          "type": "array",
-          "description": "Key Performance Indicators for this role.",
-          "items": { "type": "string" }
-        },
-        "requiredSkills": {
-          "type": "array",
-          "description": "List of technical and behavioral skills required for the role.",
-          "items": { "type": "string" }
-        },
-        "salaryRange": {
+        "name": { "type": "string", "description": "Name of the role (e.g., 'Operations Manager')." },
+        "description": { "type": "string", "description": "A brief summary of the role's main purpose." },
+        "department": { "type": "string", "description": "The department the role belongs to.", "enum": ["Operações", "TI", "Financeiro", "Comercial", "RH", "Administrativo"] },
+        "hierarchyLevel": { "type": "string", "description": "The hierarchical level of the role.", "enum": ["CEO", "Diretoria", "Gerência", "Coordenação", "Analista", "Assistente", "Estagiário"] },
+        "supervisorRoleId": { "type": "string", "description": "The ID of the role this role reports to." },
+        "mission": { "type": "string", "description": "The strategic mission or objective of the role." },
+        "responsibilities": { "type": "array", "description": "A list of the main responsibilities.", "items": { "type": "string" } },
+        "kpis": { "type": "array", "description": "Key Performance Indicators for this role.", "items": { "type": "string" } },
+        "requiredSkills": { "type": "array", "description": "List of technical and behavioral skills required for the role.", "items": { "type": "string" } },
+        "salaryRange": { "type": "object", "properties": { "min": { "type": "number" }, "max": { "type": "number" } }, "description": "The minimum and maximum salary range for this role." },
+        "permissions": {
           "type": "object",
+          "description": "Granular permissions for the role.",
           "properties": {
-            "min": { "type": "number" },
-            "max": { "type": "number" }
-          },
-          "description": "The minimum and maximum salary range for this role."
-        },
-        "isManager": {
-          "type": "boolean",
-          "description": "Indicates if this role has manager-level privileges, such as viewing all data."
-        },
-        "isDev": {
-          "type": "boolean",
-          "description": "Indicates if this role has developer-level privileges with full system access."
+            "isDev": { "type": "boolean", "description": "Full system access for developers." },
+            "isManager": { "type": "boolean", "description": "Legacy manager flag, grants broad read access." },
+            "canViewAllProjects": { "type": "boolean", "description": "Can see all projects, not just their own." },
+            "canManageProjects": { "type": "boolean", "description": "Can create, edit, and delete projects." },
+            "canManageUsers": { "type": "boolean", "description": "Can create, edit, and delete users, teams, and roles." },
+            "canManageContacts": { "type": "boolean", "description": "Can manage all contacts (clients, suppliers, partners)." },
+            "canManageProductsAndSeals": { "type": "boolean", "description": "Can manage products and certification seals." },
+            "canAccessFinancial": { "type": "boolean", "description": "Can access financial panels and approve reimbursements." },
+            "canManageChecklists": { "type": "boolean", "description": "Can create, edit, and delete checklist templates." },
+            "canManageAssets": { "type": "boolean", "description": "Can manage all company assets, maintenances, and contracts." },
+            "canManageSupport": { "type": "boolean", "description": "Can manage and assign support tickets." }
+          }
         }
       },
       "required": ["name", "department", "hierarchyLevel"]
@@ -857,7 +827,7 @@
     },
     "/roles/{roleId}": {
         "schema": { "$ref": "#/entities/Role" },
-        "description": "Represents a user role. Contains 'id', 'name', 'description', and 'isManager'."
+        "description": "Represents a user role. Contains 'id', 'name', 'description', and permission flags."
     },
     "/contacts/{contactId}": {
       "schema": { "$ref": "#/entities/Contact" },
