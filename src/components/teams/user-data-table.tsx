@@ -48,13 +48,15 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/alert-dialog"
+} from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast"
 import { createUserAction } from "@/lib/actions";
 import { deleteDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase";
