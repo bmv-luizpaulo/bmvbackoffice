@@ -18,6 +18,10 @@ service cloud.firestore {
       return isDev() || rolePermissions[permission] == true;
     }
 
+    function isPrivileged() {
+      return isDev() || hasPermission('isManager');
+    }
+
     function isOwner(userId) {
       return request.auth.uid == userId;
     }
@@ -28,9 +32,9 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      allow read: if isDev() || hasPermission('canManageUsers') || isOwner(userId);
-      allow list: if hasPermission('canManageUsers');
-      allow write: if isDev() || hasPermission('canManageUsers') || isOwner(userId);
+      allow read: if isPrivileged() || isOwner(userId);
+      allow list: if isPrivileged();
+      allow write: if isPrivileged() || isOwner(userId);
 
       match /notifications/{notificationId} {
         allow read, write: if isOwner(userId);
@@ -137,7 +141,7 @@ service cloud.firestore {
     }
     
     match /conversations/{conversationId} {
-      allow list: if request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.userIds;
+      allow list: if request.auth != null;
       allow read, update, delete: if request.auth.uid in resource.data.userIds;
       allow create: if request.auth != null;
     }
@@ -160,7 +164,9 @@ service cloud.firestore {
 
     match /errorLogs/{errorId} {
         allow create: if request.auth != null;
-        allow list, read, update, delete: if isDev() || hasPermission('canManageSupport');
+        allow list, read, update, delete: if 
+          get(/databases/$(database)/documents/roles/$(request.auth.token.roleId)).data.permissions.isDev == true || 
+          hasPermission('canManageSupport');
     }
 
     match /assetUsageContracts/{contractId} {
