@@ -4,7 +4,7 @@ import { getSuggestedFollowUps, SuggestedFollowUpsInput } from "@/ai/flows/ai-su
 import { generateDailyChatSummary } from "@/ai/flows/daily-chat-summary";
 import { getDocs, collection, addDoc, serverTimestamp, doc, setDoc } from 'firebase/firestore';
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
-import { initializeFirebase } from "@/firebase";
+import { initializeFirebase, errorEmitter, FirestorePermissionError } from "@/firebase";
 import type { Project, Task, User } from "./types";
 import { unstable_noStore as noStore } from 'next/cache';
 import * as admin from 'firebase-admin';
@@ -52,24 +52,32 @@ export async function createUserAction(userData: Omit<User, 'id' | 'avatarUrl'>)
             return { success: false, error: 'Usuário não autenticado.' };
         }
         const decodedToken = await auth.verifyIdToken(idToken);
-        const callingUserDoc = await firestore.collection('users').doc(decodedToken.uid).get();
+        
+        const userRef = firestore.collection('users').doc(decodedToken.uid);
+        const callingUserDoc = await userRef.get();
+        
+        if (!callingUserDoc.exists) {
+            return { success: false, error: 'Usuário autor da chamada não encontrado.' };
+        }
+        
         const callingUserRoleId = callingUserDoc.data()?.roleId;
 
         if (!callingUserRoleId) {
              return { success: false, error: 'Permissão negada. Função do usuário não encontrada.' };
         }
 
-        const callingUserRoleDoc = await firestore.collection('roles').doc(callingUserRoleId).get();
-        if (!callingUserRoleDoc.data()?.isManager) {
-            return { success: false, error: 'Permissão negada. Apenas gestores podem criar usuários.' };
-        }
+        const roleRef = firestore.collection('roles').doc(callingUserRoleId);
+        const callingUserRoleDoc = await roleRef.get();
 
+        if (!callingUserRoleDoc.data()?.permissions?.canManageUsers) {
+            return { success: false, error: 'Permissão negada. Apenas usuários autorizados podem criar novos usuários.' };
+        }
 
         // Create user in Firebase Auth
         const tempPassword = Math.random().toString(36).slice(-16);
         const userRecord = await auth.createUser({
             email: userData.email,
-            emailVerified: true, // E-mail é verificado pelo gestor
+            emailVerified: true,
             password: tempPassword,
             displayName: userData.name,
             disabled: false,
@@ -93,6 +101,16 @@ export async function createUserAction(userData: Omit<User, 'id' | 'avatarUrl'>)
         return { success: true, data: { uid: userRecord.uid, setupLink: link } };
     } catch (error: any) {
         console.error("Erro ao criar usuário:", error);
+        
+        if (error.code === 'permission-denied') {
+             const permissionError = new FirestorePermissionError({
+                path: error.customData?.path || 'roles ou users',
+                operation: 'get',
+            });
+            errorEmitter.emit('permission-error', permissionError);
+            return { success: false, error: 'Permissão negada ao verificar o cargo do usuário.' };
+        }
+
         let errorMessage = 'Ocorreu um erro ao criar o usuário.';
         if (error.code === 'auth/email-already-exists') {
             errorMessage = 'Este e-mail já está em uso por outra conta.';
