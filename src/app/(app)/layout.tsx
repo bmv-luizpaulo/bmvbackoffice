@@ -102,6 +102,7 @@ const navSections = [
     },
     {
         name: 'Comercial',
+        managerOnly: true,
         items: [
             { href: '/contatos', icon: BookUser, label: 'Contatos' },
             { 
@@ -117,6 +118,7 @@ const navSections = [
     },
     {
         name: 'Operacional',
+        managerOnly: true,
         items: [
             { 
               href: '#', 
@@ -141,15 +143,18 @@ const navSections = [
     },
     {
         name: 'Gestão de Ativos',
+        managerOnly: true,
         items: [
             { href: '/assets', icon: ClipboardList, label: 'Todos os Ativos' },
             { href: '/maintenance', icon: Wrench, label: 'Manutenções' },
             { href: '/reports', icon: FileText, label: 'Relatórios' },
             { href: '/asset-contracts', icon: FileText, label: 'Contratos' },
+            { href: '/document-templates', icon: FileText, label: 'Modelos de Docs', managerOnly: true},
         ]
     },
     {
         name: 'Financeiro',
+        managerOnly: true,
         items: [
             { href: '/reembolsos', icon: HandCoins, label: 'Reembolsos' },
             { href: '/cost-centers', icon: Wallet, label: 'Centro de Custos' },
@@ -159,10 +164,11 @@ const navSections = [
     },
     {
         name: 'Equipe',
+        managerOnly: true,
         items: [
             { 
               href: '#', 
-              icon: Group, 
+              icon: Users, 
               label: 'Usuários & Grupos',
               subItems: [
                 { href: '/users', icon: User, label: 'Usuários' },
@@ -257,10 +263,14 @@ const CollapsibleNavItem = ({ item, pathname }: { item: any, pathname: string })
     );
 };
 
-function NavItem({ item, pathname }: { item: any, pathname: string }) {
+function NavItem({ item, pathname, isManager, isDev }: { item: any, pathname: string, isManager: boolean, isDev: boolean }) {
   const hasSubItems = item.subItems && item.subItems.length > 0;
   
-  if (item.devOnly && process.env.NODE_ENV !== 'development') {
+  if (item.devOnly && !isDev) {
+    return null;
+  }
+
+  if (item.managerOnly && !isManager && !isDev) {
     return null;
   }
   
@@ -277,7 +287,14 @@ function NavItem({ item, pathname }: { item: any, pathname: string }) {
     );
   }
 
-  return <CollapsibleNavItem item={item} pathname={pathname} />;
+  const visibleSubItems = item.subItems.filter((sub: any) => 
+    (!sub.managerOnly || isManager || isDev) && 
+    (!sub.devOnly || isDev)
+  );
+
+  if (visibleSubItems.length === 0) return null;
+
+  return <CollapsibleNavItem item={{ ...item, subItems: visibleSubItems }} pathname={pathname} />;
 }
 
 function InnerLayout({ children }: { children: React.ReactNode }) {
@@ -370,14 +387,21 @@ function InnerLayout({ children }: { children: React.ReactNode }) {
           <SidebarContent>
              <SidebarMenu>
                  {navSections.map((section) => {
-                    const visibleItems = section.items.filter((item: any) => !item.managerOnly || isManager || isDev);
+                    if (section.managerOnly && !isManager && !isDev) {
+                      return null;
+                    }
+                    const visibleItems = section.items.filter((item: any) => 
+                      (!item.managerOnly || isManager || isDev) && 
+                      (!item.devOnly || isDev)
+                    );
                     if (!visibleItems.length) return null;
+                    
                     return (
                       <SidebarGroup key={section.name}>
                         <SidebarSeparator />
                         <SidebarGroupLabel>{section.name}</SidebarGroupLabel>
                         {visibleItems.map((item: any) => (
-                           <NavItem key={item.label} item={item} pathname={pathname} />
+                           <NavItem key={item.label} item={item} pathname={pathname} isManager={isManager} isDev={isDev} />
                         ))}
                       </SidebarGroup>
                     );
