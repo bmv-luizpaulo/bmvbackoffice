@@ -265,7 +265,7 @@ const CollapsibleNavItem = ({ item, pathname }: { item: any, pathname: string })
 function NavItem({ item, pathname, isManager, isDev }: { item: any, pathname: string, isManager: boolean, isDev: boolean }) {
   const hasSubItems = item.subItems && item.subItems.length > 0;
   
-  if (item.devOnly && !isDev) {
+  if (item.devOnly && process.env.NODE_ENV !== 'development') {
     return null;
   }
 
@@ -392,7 +392,7 @@ function InnerLayout({ children }: { children: React.ReactNode }) {
                     }
                     const visibleItems = section.items.filter((item: any) => 
                       (!item.managerOnly || isManager || isDev) && 
-                      (!item.devOnly || isDev)
+                      (!item.devOnly || process.env.NODE_ENV === 'development')
                     );
                     if (!visibleItems.length) return null;
                     
