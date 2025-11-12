@@ -310,8 +310,8 @@ function InnerLayout({ children }: { children: React.ReactNode }) {
   const roleDocQuery = useMemoFirebase(() => (firestore && userProfile?.roleId) ? doc(firestore, 'roles', userProfile.roleId) : null, [firestore, userProfile?.roleId]);
   const { data: roleData, isLoading: isLoadingRole } = useDoc<Role>(roleDocQuery);
   
-  const roleIsManager = !!roleData?.permissions.isManager;
-  const roleIsDev = !!roleData?.permissions.isDev;
+  const roleIsManager = !!roleData?.permissions?.isManager;
+  const roleIsDev = !!roleData?.permissions?.isDev;
 
   const [claimIsManager, setClaimIsManager] = React.useState<boolean>(false);
   const [claimIsDev, setClaimIsDev] = React.useState<boolean>(false);
