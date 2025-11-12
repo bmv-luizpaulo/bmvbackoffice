@@ -35,6 +35,7 @@ import {
   Hammer,
   UserSquare,
   Bug,
+  Shield,
 } from 'lucide-react';
 import Image from 'next/image';
 import React, { useEffect } from 'react';
@@ -173,7 +174,7 @@ const navSections = [
                 { href: '/users', icon: User, label: 'Usuários' },
                 { href: '/teams', icon: Users, label: 'Equipes' },
                 { href: '/directorates', icon: Building, label: 'Diretorias' },
-                { href: '/roles', icon: Briefcase, label: 'Cargos' },
+                { href: '/perfis', icon: Shield, label: 'Perfis de Acesso' },
               ]
             },
         ]
@@ -309,8 +310,8 @@ function InnerLayout({ children }: { children: React.ReactNode }) {
   const roleDocQuery = useMemoFirebase(() => (firestore && userProfile?.roleId) ? doc(firestore, 'roles', userProfile.roleId) : null, [firestore, userProfile?.roleId]);
   const { data: roleData, isLoading: isLoadingRole } = useDoc<Role>(roleDocQuery);
   
-  const roleIsManager = !!roleData?.isManager;
-  const roleIsDev = !!roleData?.isDev;
+  const roleIsManager = !!roleData?.permissions.isManager;
+  const roleIsDev = !!roleData?.permissions.isDev;
 
   const [claimIsManager, setClaimIsManager] = React.useState<boolean>(false);
   const [claimIsDev, setClaimIsDev] = React.useState<boolean>(false);
