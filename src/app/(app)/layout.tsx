@@ -69,7 +69,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { useUser, useAuth, FirebaseClientProvider, useDoc, useMemoFirebase, useCollection } from '@/firebase';
+import { useUser, useAuth, FirebaseClientProvider, useDoc, useMemoFirebase } from '@/firebase';
 import { signOut } from 'firebase/auth';
 import {
   NotificationsProvider,
@@ -147,19 +147,18 @@ const navSections = [
         items: [
             { href: '/assets', icon: ClipboardList, label: 'Todos os Ativos' },
             { href: '/maintenance', icon: Wrench, label: 'Manutenções' },
-            { href: '/reports', icon: FileText, label: 'Relatórios' },
-            { href: '/asset-contracts', icon: FileText, label: 'Contratos' },
-            { href: '/document-templates', icon: FileText, label: 'Modelos de Docs', managerOnly: true},
+            { href: '/asset-contracts', icon: FileText, label: 'Contratos de Uso' },
+            { href: '/document-templates', icon: FileText, label: 'Modelos de Docs' },
         ]
     },
     {
         name: 'Financeiro',
         managerOnly: true,
         items: [
-            { href: '/reembolsos', icon: HandCoins, label: 'Reembolsos' },
+            { href: '/financeiro', icon: BarChart2, label: 'Painel Financeiro' },
+            { href: '/reembolsos', icon: HandCoins, label: 'Solicitações' },
             { href: '/cost-centers', icon: Wallet, label: 'Centro de Custos' },
-            { href: '/contracts', icon: Archive, label: 'Contratos' },
-            { href: '/financeiro', icon: BarChart2, label: 'Painel Financeiro', managerOnly: true },
+            { href: '/contracts', icon: Archive, label: 'Contratos Gerais' },
         ]
     },
     {
@@ -304,14 +303,14 @@ function InnerLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const firestore = useFirestore();
 
-  // Resolve user's role and manager flag to control navigation visibility
   const userDocQuery = useMemoFirebase(() => (firestore && user?.uid) ? doc(firestore, 'users', user.uid) : null, [firestore, user?.uid]);
-  const { data: userProfile } = useCollection<UserType>(userDocQuery as any);
-  const roleId = userProfile?.[0]?.roleId;
-  const roleDocQuery = useMemoFirebase(() => (firestore && roleId) ? doc(firestore, 'roles', roleId) : null, [firestore, roleId]);
-  const { data: roleData } = useCollection<Role>(roleDocQuery as any);
-  const roleIsManager = !!roleData?.[0]?.isManager;
-  const roleIsDev = !!roleData?.[0]?.isDev;
+  const { data: userProfile, isLoading: isLoadingProfile } = useDoc<UserType>(userDocQuery);
+
+  const roleDocQuery = useMemoFirebase(() => (firestore && userProfile?.roleId) ? doc(firestore, 'roles', userProfile.roleId) : null, [firestore, userProfile?.roleId]);
+  const { data: roleData, isLoading: isLoadingRole } = useDoc<Role>(roleDocQuery);
+  
+  const roleIsManager = !!roleData?.isManager;
+  const roleIsDev = !!roleData?.isDev;
 
   const [claimIsManager, setClaimIsManager] = React.useState<boolean>(false);
   const [claimIsDev, setClaimIsDev] = React.useState<boolean>(false);
@@ -326,27 +325,28 @@ function InnerLayout({ children }: { children: React.ReactNode }) {
       } catch (_) {}
     };
     fetchClaims();
-  }, [auth?.currentUser]);
+  }, [auth?.currentUser, userProfile?._tokenRefreshed]); // Re-fetch claims if token refresh is triggered
 
   const isManager = roleIsManager || claimIsManager;
   const isDev = roleIsDev || claimIsDev;
+  const isLoadingPermissions = isUserLoading || isLoadingProfile || isLoadingRole;
 
   useEffect(() => {
-    if (!isUserLoading && !user) {
+    if (!isLoadingPermissions && !user) {
       router.replace('/login');
     }
-  }, [user, isUserLoading, router]);
+  }, [user, isLoadingPermissions, router]);
 
   const handleSignOut = async () => {
     try {
       await signOut(auth);
-      // O onAuthStateChanged no provider cuidará do redirecionamento
+      router.push('/login');
     } catch (error) {
       console.error("Erro ao fazer logout:", error);
     }
   }
 
-  if (isUserLoading || !user) {
+  if (isLoadingPermissions || !user) {
       return (
         <div className="flex h-screen w-full items-center justify-center bg-background">
             <div className="flex flex-col items-center gap-4">
