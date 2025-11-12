@@ -4,13 +4,11 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     function isDev() {
-      return request.auth.token.isDev == true;
+      let roleId = request.auth.token.roleId;
+      // Checa o claim E a permissão no documento do cargo para redundância e segurança.
+      return request.auth.token.isDev == true || (roleId != null && get(/databases/$(database)/documents/roles/$(roleId)).data.permissions.isDev == true);
     }
-
-    function isManager() {
-      return request.auth.token.isManager == true;
-    }
-
+    
     function hasPermission(permission) {
       let roleId = request.auth.token.roleId;
       if (roleId == null) {
@@ -139,7 +137,7 @@ service cloud.firestore {
     }
     
     match /conversations/{conversationId} {
-      allow list: if request.auth.uid == request.query.where.userIds.value[0];
+      allow list: if request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.userIds;
       allow read, update, delete: if request.auth.uid in resource.data.userIds;
       allow create: if request.auth != null;
     }
