@@ -36,6 +36,7 @@ import { Calendar } from "../ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { CalendarIcon } from 'lucide-react';
 import { cn } from "@/lib/utils";
+import { ptBR } from 'date-fns/locale';
 
 type ContactFormDialogProps = {
   isOpen: boolean;
@@ -91,6 +92,21 @@ const defaultValues: Partial<z.infer<typeof formSchema>> = {
   },
 };
 
+const getCreatedAtDate = (createdAt: any): Date | null => {
+  if (!createdAt) return null;
+  // Handle Firebase Timestamp
+  if (createdAt.toDate) return createdAt.toDate();
+  // Handle ISO string or number
+  if (typeof createdAt === 'string' || typeof createdAt === 'number') {
+    const date = new Date(createdAt);
+    if (!isNaN(date.getTime())) {
+      return date;
+    }
+  }
+  return null;
+};
+
+
 export function ContactFormDialog({ isOpen, onOpenChange, onSave, contact, type }: ContactFormDialogProps) {
   const [isCepLoading, setIsCepLoading] = React.useState(false);
   
@@ -106,7 +122,7 @@ export function ContactFormDialog({ isOpen, onOpenChange, onSave, contact, type 
       if (contact) {
         form.reset({
           ...contact,
-          createdAt: contact.createdAt ? new Date(contact.createdAt.toDate()) : new Date(),
+          createdAt: getCreatedAtDate(contact.createdAt) || new Date(),
           address: {
             ...defaultValues.address,
             ...contact.address
