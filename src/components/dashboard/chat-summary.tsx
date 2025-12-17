@@ -6,7 +6,6 @@ import { Bot, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { getChatSummaryAction } from '@/lib/actions';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 export function ChatSummary() {
@@ -18,10 +17,13 @@ export function ChatSummary() {
         setIsLoading(true);
         setSummary(null);
 
-        const result = await getChatSummaryAction();
+        // This action was removed as it depended on Genkit.
+        // const result = await getChatSummaryAction();
+        const result = { success: false, error: "A funcionalidade de resumo de IA foi desativada temporariamente." };
+
 
         if (result.success && result.data) {
-            setSummary(result.data.summary);
+            setSummary((result.data as any).summary);
             toast({
                 title: "Resumo Gerado",
                 description: "Os destaques do chat de hoje estão prontos.",
@@ -71,5 +73,3 @@ export function ChatSummary() {
         </Card>
     );
 }
-
-    

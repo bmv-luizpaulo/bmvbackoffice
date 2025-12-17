@@ -61,21 +61,18 @@ export function ContactsTableExample() {
                   <div key={contact.id} className="flex items-center justify-between p-4 border rounded-lg">
                     <div>
                       <h3 className="font-medium">
-                        {contact.personType === 'Pessoa Jurídica' ? contact.legalName : contact.fullName}
+                        {contact.firstName} {contact.lastName}
                       </h3>
                       <p className="text-sm text-muted-foreground">
-                        {contact.email} • {contact.phone}
+                        {contact.email} • {contact.celular}
                       </p>
-                      {contact.position && (
-                        <p className="text-xs text-muted-foreground">{contact.position}</p>
-                      )}
                     </div>
                     <div className="text-right">
                       <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded">
-                        {contact.type}
+                        {contact.tipo}
                       </span>
                       <p className="text-xs text-muted-foreground mt-1">
-                        {contact.personType}
+                        {contact.tipoDocumento}
                       </p>
                     </div>
                   </div>

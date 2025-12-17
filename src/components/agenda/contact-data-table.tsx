@@ -312,7 +312,7 @@ export function ContactDataTable({ type }: ContactDataTableProps) {
       {isFormOpen && <ContactFormDialog 
         isOpen={isFormOpen}
         onOpenChange={setIsFormOpen}
-        onSave={(data, id) => handleSaveContact(data, id)}
+        onSave={(data, id) => {handleSaveContact(data, id)}}
         contact={selectedContact}
         type={type || selectedContact?.tipo || 'cliente'}
       />}
@@ -321,7 +321,7 @@ export function ContactDataTable({ type }: ContactDataTableProps) {
         isOpen={isProfileOpen}
         onOpenChange={setIsProfileOpen}
         contact={selectedContact}
-        onUpdate={handleSaveContact}
+        onUpdate={(id, data) => handleSaveContact(data as Omit<Contact, 'id'>, id)}
         onEdit={(contact) => {
             setIsProfileOpen(false);
             handleEditClick(contact);

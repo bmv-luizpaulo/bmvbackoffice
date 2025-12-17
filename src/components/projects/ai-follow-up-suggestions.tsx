@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { Bot, Loader2, Wand2 } from 'lucide-react';
 import type { Project } from '@/lib/types';
-import { getFollowUpSuggestionsAction } from '@/lib/actions';
 import { useToast } from '@/hooks/use-toast';
 
 import {
@@ -29,12 +28,15 @@ export function AiFollowUpSuggestions({ project }: AiFollowUpSuggestionsProps) {
         setIsLoading(true);
         setSuggestions(null);
         setReasoning(null);
+        
+        // This action was removed as it depended on Genkit.
+        // const result = await getFollowUpSuggestionsAction(project);
+        const result = { success: false, error: "A funcionalidade de sugestões de IA foi desativada temporariamente." };
 
-        const result = await getFollowUpSuggestionsAction(project);
 
         if (result.success && result.data) {
-            setSuggestions(result.data.suggestedActions);
-            setReasoning(result.data.reasoning);
+            setSuggestions((result.data as any).suggestedActions);
+            setReasoning((result.data as any).reasoning);
             toast({
                 title: "Sugestões Geradas",
                 description: "A IA analisou o projeto e forneceu algumas ideias.",

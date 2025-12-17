@@ -1,6 +1,9 @@
 'use server';
 import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
+import { QueryDocumentSnapshot } from 'firebase-admin/firestore';
+import { Change, EventContext } from 'firebase-functions';
+
 
 admin.initializeApp();
 
@@ -47,7 +50,7 @@ const setCustomClaimsForUser = async (userId: string, roleId: string | null) => 
 // Gatilho para quando um novo usuário é criado no Firestore.
 export const onUserCreate = functions.firestore
   .document("users/{userId}")
-  .onCreate(async (snapshot, context) => {
+  .onCreate(async (snapshot: QueryDocumentSnapshot, context: EventContext) => {
     const userId = context.params.userId;
     const userData = snapshot.data();
     const roleId = userData.roleId || null;
@@ -59,7 +62,7 @@ export const onUserCreate = functions.firestore
 // Gatilho para quando um usuário é atualizado no Firestore.
 export const onUserUpdate = functions.firestore
   .document("users/{userId}")
-  .onUpdate(async (change, context) => {
+  .onUpdate(async (change: Change<QueryDocumentSnapshot>, context: EventContext) => {
     const userId = context.params.userId;
     const beforeData = change.before.data();
     const afterData = change.after.data();

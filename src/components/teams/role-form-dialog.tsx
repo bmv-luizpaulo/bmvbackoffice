@@ -90,6 +90,8 @@ const formSchema = z.object({
 const defaultValues: z.input<typeof formSchema> = {
   name: '',
   description: '',
+  department: undefined,
+  hierarchyLevel: undefined,
   mission: '',
   responsibilities: [],
   kpis: [],
