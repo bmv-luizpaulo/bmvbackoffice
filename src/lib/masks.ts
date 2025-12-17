@@ -19,13 +19,13 @@ export function formatPhone(value: string) {
 
   if (value.length > 10) {
     // (XX) XXXXX-XXXX
-    value = value.replace(/^(\d\d)(\d{5})(\d{4}).*/, '($1) $2-$3');
-  } else if (value.length > 5) {
+    value = value.replace(/^(\d{2})(\d{5})(\d{4}).*/, '($1) $2-$3');
+  } else if (value.length > 6) {
     // (XX) XXXX-XXXX
-    value = value.replace(/^(\d\d)(\d{4})(\d{0,4}).*/, '($1) $2-$3');
+    value = value.replace(/^(\d{2})(\d{4})(\d{0,4}).*/, '($1) $2-$3');
   } else if (value.length > 2) {
     // (XX) XXXX
-    value = value.replace(/^(\d\d)(\d*)/, '($1) $2');
+    value = value.replace(/^(\d{2})(\d*)/, '($1) $2');
   } else {
     // (XX
     if (value.length > 0) {
