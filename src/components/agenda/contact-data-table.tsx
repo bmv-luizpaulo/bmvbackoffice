@@ -101,7 +101,7 @@ export function ContactDataTable({ type }: ContactDataTableProps) {
   const handleSaveContact = React.useCallback(async (contactData: Omit<Contact, 'id'>, contactId?: string) => {
     if (!firestore) return;
     
-    const dataToSave: Omit<Contact, 'id'> = { ...contactData, tipo: type || 'cliente' };
+    const dataToSave: Omit<Contact, 'id'> = { ...contactData, tipo: contactData.tipo || type || 'cliente' };
 
     if (contactId) {
       // Update
@@ -312,9 +312,9 @@ export function ContactDataTable({ type }: ContactDataTableProps) {
       {isFormOpen && <ContactFormDialog 
         isOpen={isFormOpen}
         onOpenChange={setIsFormOpen}
-        onSave={(data) => handleSaveContact(data, selectedContact?.id)}
+        onSave={(data, id) => handleSaveContact(data, id)}
         contact={selectedContact}
-        type={type || 'cliente'}
+        type={type || selectedContact?.tipo || 'cliente'}
       />}
 
       {isProfileOpen && <ContactProfileDialog
