@@ -20,22 +20,41 @@ import {
   Building,
   CheckCircle2,
   AlertCircle,
-  Clock
+  Clock,
+  MoreVertical,
+  ChevronDown
 } from 'lucide-react';
 import type { Contact } from "@/lib/types";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { Button } from "../ui/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger } from "../ui/dropdown-menu";
+import { useToast } from "@/hooks/use-toast";
+import { WhatsappIcon } from "../icons/whatsapp-icon";
 
 type ContactProfileDialogProps = {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
   contact: Contact | null;
+  onUpdate?: (contactId: string, updates: Partial<Contact>) => void;
 };
 
-export function ContactProfileDialog({ isOpen, onOpenChange, contact }: ContactProfileDialogProps) {
+export function ContactProfileDialog({ isOpen, onOpenChange, contact, onUpdate }: ContactProfileDialogProps) {
+  const { toast } = useToast();
+
   if (!contact) return null;
   
   const fullName = `${contact.firstName || ''} ${contact.lastName || ''}`.trim();
+
+  const handleUpdate = (updates: Partial<Contact>) => {
+    if (onUpdate) {
+      onUpdate(contact.id, updates);
+      toast({
+        title: "Contato Atualizado",
+        description: "As informações do contato foram salvas.",
+      });
+    }
+  };
 
   const getInitials = (name?: string | null) => {
     if (!name) return '?';
@@ -56,7 +75,7 @@ export function ContactProfileDialog({ isOpen, onOpenChange, contact }: ContactP
 
   const getCreatedAtDate = (createdAt: any): Date | null => {
     if (!createdAt) return null;
-    if (createdAt.toDate) return createdAt.toDate(); // It's a Firestore Timestamp
+    if (createdAt.toDate) return createdAt.toDate();
     if (typeof createdAt === 'string' || typeof createdAt === 'number') {
       const date = new Date(createdAt);
       if (!isNaN(date.getTime())) {
@@ -66,25 +85,63 @@ export function ContactProfileDialog({ isOpen, onOpenChange, contact }: ContactP
     return null;
   };
   const createdAtDate = getCreatedAtDate(contact.createdAt);
+  
+  const cleanPhone = (phone?: string) => phone?.replace(/\D/g, '') || '';
+  const celular = cleanPhone(contact.celular);
+  const telefone = cleanPhone(contact.telefone);
 
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-4">
-             <Avatar className="h-16 w-16 text-xl">
-                <AvatarImage src={undefined} alt={fullName} />
-                <AvatarFallback>{getInitials(fullName)}</AvatarFallback>
-            </Avatar>
-            <div>
-              <h2 className="text-2xl font-bold">{fullName}</h2>
-              <p className="text-muted-foreground">{contact.email}</p>
-              <div className="flex gap-2 mt-2">
-                <Badge variant="outline">{contact.tipo}</Badge>
-                <Badge variant="secondary">{contact.situacao}</Badge>
-              </div>
-            </div>
+          <DialogTitle className="flex items-start justify-between gap-4">
+             <div className="flex items-center gap-4">
+                <Avatar className="h-16 w-16 text-xl">
+                    <AvatarImage src={undefined} alt={fullName} />
+                    <AvatarFallback>{getInitials(fullName)}</AvatarFallback>
+                </Avatar>
+                <div>
+                  <h2 className="text-2xl font-bold">{fullName}</h2>
+                  <p className="text-muted-foreground">{contact.email}</p>
+                  <div className="flex gap-2 mt-2">
+                    <Badge variant="outline">{contact.tipo}</Badge>
+                    <Badge variant="secondary">{contact.situacao}</Badge>
+                  </div>
+                </div>
+             </div>
+             {onUpdate && (
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon">
+                            <MoreVertical className="h-5 w-5" />
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                        <DropdownMenuLabel>Ações Rápidas</DropdownMenuLabel>
+                        <DropdownMenuSub>
+                            <DropdownMenuSubTrigger>Alterar Tipo</DropdownMenuSubTrigger>
+                            <DropdownMenuSubContent>
+                                <DropdownMenuRadioGroup value={contact.tipo} onValueChange={(value) => handleUpdate({ tipo: value as any })}>
+                                    <DropdownMenuRadioItem value="cliente">Cliente</DropdownMenuRadioItem>
+                                    <DropdownMenuRadioItem value="fornecedor">Fornecedor</DropdownMenuRadioItem>
+                                    <DropdownMenuRadioItem value="parceiro">Parceiro</DropdownMenuRadioItem>
+                                </DropdownMenuRadioGroup>
+                            </DropdownMenuSubContent>
+                        </DropdownMenuSub>
+                        <DropdownMenuSub>
+                            <DropdownMenuSubTrigger>Alterar Situação</DropdownMenuSubTrigger>
+                            <DropdownMenuSubContent>
+                               <DropdownMenuRadioGroup value={contact.situacao} onValueChange={(value) => handleUpdate({ situacao: value as any })}>
+                                    <DropdownMenuRadioItem value="Ativo">Ativo</DropdownMenuRadioItem>
+                                    <DropdownMenuRadioItem value="Inativo">Inativo</DropdownMenuRadioItem>
+                                    <DropdownMenuRadioItem value="Bloqueado">Bloqueado</DropdownMenuRadioItem>
+                                </DropdownMenuRadioGroup>
+                            </DropdownMenuSubContent>
+                        </DropdownMenuSub>
+                    </DropdownMenuContent>
+                </DropdownMenu>
+             )}
           </DialogTitle>
         </DialogHeader>
 
@@ -97,17 +154,29 @@ export function ContactProfileDialog({ isOpen, onOpenChange, contact }: ContactP
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3 text-sm">
-                 <div className="flex items-center gap-2">
-                    <Mail className="h-4 w-4 text-muted-foreground" />
-                    <span>{contact.email}</span>
+                 <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <Mail className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                      <span className="truncate">{contact.email}</span>
+                    </div>
+                    <a href={`mailto:${contact.email}`}><Button variant="outline" size="sm">Email</Button></a>
                   </div>
-                 {contact.celular && <div className="flex items-center gap-2">
-                    <Phone className="h-4 w-4 text-muted-foreground" />
-                    <span>{contact.celular} (Celular)</span>
+                 {contact.celular && <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <Phone className="h-4 w-4 text-muted-foreground" />
+                      <span>{contact.celular} (Celular)</span>
+                    </div>
+                    <div className="flex gap-1">
+                      <a href={`https://wa.me/55${celular}`} target="_blank" rel="noopener noreferrer"><Button variant="outline" size="icon" className="h-8 w-8"><WhatsappIcon className="h-4 w-4"/></Button></a>
+                      <a href={`tel:${celular}`}><Button variant="outline" size="icon" className="h-8 w-8"><Phone className="h-4 w-4"/></Button></a>
+                    </div>
                   </div>}
-                 {contact.telefone && <div className="flex items-center gap-2">
-                    <Phone className="h-4 w-4 text-muted-foreground" />
-                    <span>{contact.telefone} (Telefone)</span>
+                 {contact.telefone && <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <Phone className="h-4 w-4 text-muted-foreground" />
+                      <span>{contact.telefone} (Telefone)</span>
+                    </div>
+                    <a href={`tel:${telefone}`}><Button variant="outline" size="sm">Ligar</Button></a>
                   </div>}
               </CardContent>
             </Card>

@@ -98,14 +98,17 @@ export function ContactDataTable({ type }: ContactDataTableProps) {
     setIsAlertOpen(true);
   }, []);
 
-  const handleSaveContact = React.useCallback(async (contactData: Omit<Contact, 'id'>) => {
+  const handleSaveContact = React.useCallback(async (contactData: Omit<Contact, 'id'>, contactId?: string) => {
     if (!firestore) return;
     
     const dataToSave: Omit<Contact, 'id'> = { ...contactData, tipo: type || 'cliente' };
 
-    if (selectedContact) {
+    if (contactId) {
       // Update
-      const contactRef = doc(firestore, 'contacts', selectedContact.id);
+      const contactRef = doc(firestore, 'contacts', contactId);
+      await updateDocumentNonBlocking(contactRef, dataToSave as any);
+    } else if (selectedContact) {
+       const contactRef = doc(firestore, 'contacts', selectedContact.id);
       await updateDocumentNonBlocking(contactRef, dataToSave as any);
     } else {
       // Create
@@ -309,7 +312,7 @@ export function ContactDataTable({ type }: ContactDataTableProps) {
       {isFormOpen && <ContactFormDialog 
         isOpen={isFormOpen}
         onOpenChange={setIsFormOpen}
-        onSave={handleSaveContact}
+        onSave={(data) => handleSaveContact(data, selectedContact?.id)}
         contact={selectedContact}
         type={type || 'cliente'}
       />}
@@ -318,6 +321,7 @@ export function ContactDataTable({ type }: ContactDataTableProps) {
         isOpen={isProfileOpen}
         onOpenChange={setIsProfileOpen}
         contact={selectedContact}
+        onUpdate={handleSaveContact}
       />}
 
       <ContactImportExportDialog
