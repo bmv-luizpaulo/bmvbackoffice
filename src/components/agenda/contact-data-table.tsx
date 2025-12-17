@@ -48,9 +48,9 @@ import {
 } from "@/components/ui/alert-dialog"
 import { updateDocumentNonBlocking, deleteDocumentNonBlocking, addDocumentNonBlocking } from "@/firebase";
 import { Badge } from "../ui/badge";
+import { ContactFormDialog } from './contact-form-dialog';
+import { ContactImportExportDialog } from '../contacts/contact-import-export';
 
-const ContactFormDialog = dynamic(() => import('./contact-form-dialog').then(m => m.ContactFormDialog), { ssr: false });
-const ContactImportExportDialog = dynamic(() => import('../contacts/contact-import-export').then(m => m.ContactImportExportDialog), { ssr: false });
 
 interface ContactDataTableProps {
     type?: 'cliente' | 'fornecedor' | 'parceiro';
@@ -62,7 +62,7 @@ export function ContactDataTable({ type }: ContactDataTableProps) {
     if (!firestore) return null;
     const baseQuery = collection(firestore, 'contacts');
     if (type) {
-      return query(baseQuery, where('type', '==', type));
+      return query(baseQuery, where('tipo', '==', type));
     }
     return baseQuery;
   }, [firestore, type]);
@@ -91,10 +91,10 @@ export function ContactDataTable({ type }: ContactDataTableProps) {
     setIsAlertOpen(true);
   }, []);
 
-  const handleSaveContact = React.useCallback(async (contactData: Omit<Contact, 'id' | 'type'>) => {
+  const handleSaveContact = React.useCallback(async (contactData: Omit<Contact, 'id'>) => {
     if (!firestore) return;
     
-    const dataToSave: Omit<Contact, 'id'> = { ...contactData, type: type || 'cliente' };
+    const dataToSave: Omit<Contact, 'id'> = { ...contactData, tipo: type || 'cliente' };
 
     if (selectedContact) {
       // Update
@@ -102,7 +102,7 @@ export function ContactDataTable({ type }: ContactDataTableProps) {
       await updateDocumentNonBlocking(contactRef, dataToSave as any);
     } else {
       // Create
-      await addDocumentNonBlocking(collection(firestore, 'contacts'), dataToSave as any);
+      await addDocumentNonBlocking(collection(firestore, 'contacts'), { ...dataToSave, createdAt: new Date() } as any);
     }
   }, [firestore, selectedContact, type]);
 
@@ -134,21 +134,14 @@ export function ContactDataTable({ type }: ContactDataTableProps) {
         header: "Nome",
         cell: ({ row }) => {
             const contact = row.original;
-            return contact.personType === 'Pessoa Jurídica' 
-                ? (
-                    <div>
-                        <div className="font-medium">{contact.tradeName || contact.legalName}</div>
-                        <div className="text-xs text-muted-foreground">{contact.legalName}</div>
-                    </div>
-                )
-                : <div className="font-medium">{contact.fullName}</div>
+            const name = contact.firstName || '';
+            const lastName = contact.lastName || '';
+            return <div className="font-medium">{`${name} ${lastName}`.trim()}</div>
         },
         filterFn: (row, id, value) => {
             const contact = row.original;
-            const name = contact.personType === 'Pessoa Jurídica' 
-                ? `${' '}${contact.tradeName || ''} ${contact.legalName || ''}`
-                : contact.fullName || '';
-            return name.toLowerCase().includes(String(value).toLowerCase());
+            const fullName = `${contact.firstName || ''} ${contact.lastName || ''}`.trim();
+            return fullName.toLowerCase().includes(String(value).toLowerCase());
         },
     },
     {
@@ -156,17 +149,17 @@ export function ContactDataTable({ type }: ContactDataTableProps) {
       header: "Email",
     },
      {
-      accessorKey: "phone",
-      header: "Telefone",
+      accessorKey: "celular",
+      header: "Celular",
     },
     {
-      accessorKey: "personType",
-      header: "Tipo de Pessoa",
+      accessorKey: "tipoDocumento",
+      header: "Tipo de Documento",
     },
     ...(!type ? [{
-      accessorKey: "type",
+      accessorKey: "tipo",
       header: "Tipo",
-      cell: ({ row }: any) => <Badge variant="outline">{row.original.type}</Badge>
+      cell: ({ row }: any) => <Badge variant="outline">{row.original.tipo}</Badge>
     }] : []),
     {
       id: "actions",

@@ -24,7 +24,7 @@ import {
 import type { Contact } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { useFirestore } from "@/firebase";
-import { collection, addDoc } from "firebase/firestore";
+import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import * as XLSX from 'xlsx';
 
 type ContactImportExportDialogProps = {
@@ -39,6 +39,29 @@ type ImportResult = {
   total: number;
 };
 
+// Mapeamento dos cabeçalhos esperados para os campos do tipo Contact
+const headerMapping: { [key: string]: keyof Partial<Contact> | 'address.cep' | 'address.rua' | 'address.cidade' | 'address.numero' | 'address.complemento' | 'address.bairro' | 'address.pais' } = {
+  'nome': 'firstName',
+  'sobrenome': 'lastName',
+  'email': 'email',
+  'celular': 'celular',
+  'telefone': 'telefone',
+  'data criação': 'createdAt',
+  'situação': 'situacao',
+  'tipo': 'tipo',
+  'cpf/cnpj': 'documento',
+  'tipo documento': 'tipoDocumento',
+  'autenticação': 'autenticacao',
+  'cep': 'address.cep',
+  'rua': 'address.rua',
+  'cidade': 'address.cidade',
+  'número': 'address.numero',
+  'complemento': 'address.complemento',
+  'bairro': 'address.bairro',
+  'país': 'address.pais',
+};
+
+
 export function ContactImportExportDialog({ isOpen, onOpenChange, contacts }: ContactImportExportDialogProps) {
   const { toast } = useToast();
   const firestore = useFirestore();
@@ -48,176 +71,94 @@ export function ContactImportExportDialog({ isOpen, onOpenChange, contacts }: Co
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   const handleExportCSV = () => {
-    const headers = [
-      'ID',
-      'Empresa',
-      'Nome',
-      'Sobrenome',
-      'Cargo',
-      'Data de Nascimento',
-      'Vendedor',
-      'Gestor',
-      'Rua/Av',
-      'N°',
-      'Complemento',
-      'CEP',
-      'Bairro',
-      'Cidade',
-      'Estado',
-      'País',
-      'Celular 1',
-      'Celular 2',
-      'Telefone 1',
-      'Telefone 2',
-      'E-mail',
-      'WebSite',
-      'Observações'
-    ];
+    const dataToExport = contacts.map(contact => ({
+      'Nome': contact.firstName,
+      'Sobrenome': contact.lastName,
+      'Email': contact.email,
+      'Celular': contact.celular,
+      'Telefone': contact.telefone,
+      'Data criação': contact.createdAt?.toDate ? format(contact.createdAt.toDate(), 'dd/MM/yyyy') : '',
+      'Situação': contact.situacao,
+      'Tipo': contact.tipo,
+      'CPF/CNPJ': contact.documento,
+      'Tipo documento': contact.tipoDocumento,
+      'Autenticação': contact.autenticacao,
+      'CEP': contact.address?.cep,
+      'Rua': contact.address?.rua,
+      'Cidade': contact.address?.cidade,
+      'Número': contact.address?.numero,
+      'Complemento': contact.address?.complemento,
+      'Bairro': contact.address?.bairro,
+      'País': contact.address?.pais,
+    }));
 
-    const csvData = contacts.map(contact => [
-      contact.id || '',
-      contact.legalName || contact.fullName || '',
-      contact.fullName?.split(' ')[0] || '',
-      contact.fullName?.split(' ').slice(1).join(' ') || '',
-      contact.position || '',
-      contact.birthDate || '',
-      contact.salesperson || '',
-      contact.manager || '',
-      contact.address?.street || '',
-      contact.address?.number || '',
-      contact.address?.complement || '',
-      contact.address?.zipCode || '',
-      contact.address?.neighborhood || '',
-      contact.address?.city || '',
-      contact.address?.state || '',
-      contact.address?.country || 'Brasil',
-      contact.phone || '',
-      contact.phone2 || '',
-      contact.landline || '',
-      contact.landline2 || '',
-      contact.email || '',
-      contact.website || '',
-      contact.observations || ''
-    ]);
+    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Contatos");
+    XLSX.writeFile(workbook, `contatos_${new Date().toISOString().split('T')[0]}.xlsx`);
 
-    const csvContent = [headers, ...csvData]
-      .map(row => row.map(field => `"${String(field).replace(/"/g, '""')}"`).join(','))
-      .join('\r\n');
-
-    // Adicionar BOM UTF-8
-    const BOM = '\uFEFF';
-    const csvWithBOM = BOM + csvContent;
-
-    const blob = new Blob([csvWithBOM], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `contatos_${new Date().toISOString().split('T')[0]}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-
-    toast({ title: "Exportação Concluída", description: "Arquivo CSV baixado com sucesso." });
+    toast({ title: "Exportação Concluída", description: "Arquivo XLSX baixado com sucesso." });
   };
 
   const handleExportTemplate = () => {
     const headers = [
-      'ID',
-      'Empresa*',
-      'Nome*',
-      'Sobrenome',
-      'Cargo',
-      'Data de Nascimento',
-      'Vendedor',
-      'Gestor',
-      'Rua/Av',
-      'N°',
-      'Complemento',
-      'CEP',
-      'Bairro',
-      'Cidade',
-      'Estado',
-      'País',
-      'Celular 1',
-      'Celular 2',
-      'Telefone 1',
-      'Telefone 2',
-      'E-mail*',
-      'WebSite',
-      'Observações'
+      'Nome', 'Sobrenome', 'Email', 'Celular', 'Telefone', 'Data criação', 
+      'Situação', 'Tipo', 'CPF/CNPJ', 'Tipo documento', 'Autenticação', 
+      'CEP', 'Rua', 'Cidade', 'Número', 'Complemento', 'Bairro', 'País'
     ];
-
     const exampleRow = [
-      '',
-      'Empresa ABC Ltda',
-      'João',
-      'Silva Santos',
-      'Gerente Comercial',
-      '15/03/1985',
-      'Maria Vendedora',
-      'Carlos Gestor',
-      'Rua das Flores',
-      '123',
-      'Sala 45',
-      '01234-567',
-      'Centro',
-      'São Paulo',
-      'SP',
-      'Brasil',
-      '(11) 99999-9999',
-      '(11) 88888-8888',
-      '(11) 3333-4444',
-      '(11) 2222-3333',
-      'joao.silva@empresa.com',
-      'https://www.empresa.com',
-      'Cliente preferencial'
+      'João', 'Silva', 'joao.silva@example.com', '(11) 99999-9999', '(11) 5555-5555', new Date().toLocaleDateString('pt-BR'),
+      'Ativo', 'cliente', '123.456.789-00', 'CPF', 'Pendente',
+      '01234-567', 'Rua das Flores', 'São Paulo', '123', 'Apto 45', 'Centro', 'Brasil'
     ];
-
-    const csvContent = [headers, exampleRow]
-      .map(row => row.map(field => `"${String(field).replace(/"/g, '""')}"`).join(','))
-      .join('\r\n');
-
-    // Adicionar BOM para UTF-8
-    const BOM = '\uFEFF';
-    const csvWithBOM = BOM + csvContent;
-
-    const blob = new Blob([csvWithBOM], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', 'template_contatos.csv');
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-
-    toast({ title: "Template Baixado", description: "Use este arquivo como modelo para importação." });
+    
+    const worksheet = XLSX.utils.aoa_to_sheet([headers, exampleRow]);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Template");
+    XLSX.writeFile(workbook, "template_contatos.xlsx");
+    
+    toast({ title: "Template Baixado", description: "Use este arquivo .xlsx como modelo para importação." });
   };
 
-  const parseCSV = (text: string): string[][] => {
-    const lines = text.split('\n');
-    const result: string[][] = [];
-    
-    for (const line of lines) {
-      if (line.trim()) {
-        const fields = line.split(',').map(field => 
-          field.trim().replace(/^"(.*)"$/, '$1').replace(/""/g, '"')
-        );
-        result.push(fields);
-      }
+  const processRow = (row: any, rowIndex: number): Partial<Contact> | { error: string } => {
+    const contactData: Partial<Contact> = {};
+    const address: Partial<Contact['address']> = {};
+
+    for (const header in row) {
+        const normalizedHeader = header.toLowerCase().trim();
+        const fieldKey = headerMapping[normalizedHeader];
+        if (fieldKey) {
+            const value = row[header] !== null && row[header] !== undefined ? String(row[header]).trim() : '';
+            if (fieldKey.startsWith('address.')) {
+                (address as any)[fieldKey.split('.')[1]] = value;
+            } else {
+                (contactData as any)[fieldKey] = value;
+            }
+        }
     }
     
-    return result;
+    if (Object.keys(address).length > 0) {
+        contactData.address = address as any;
+    }
+
+    if (!contactData.email) {
+      return { error: `Linha ${rowIndex + 2}: Email é obrigatório.` };
+    }
+    if (!contactData.documento) {
+        return { error: `Linha ${rowIndex + 2}: CPF/CNPJ é obrigatório.` };
+    }
+    if (!contactData.tipoDocumento || !['CPF', 'CNPJ'].includes(contactData.tipoDocumento)) {
+        return { error: `Linha ${rowIndex + 2}: Tipo de documento inválido. Use CPF ou CNPJ.` };
+    }
+
+    // Valores padrão para enums se não forem fornecidos ou forem inválidos
+    contactData.situacao = ['Ativo', 'Inativo', 'Bloqueado'].includes(contactData.situacao as any) ? contactData.situacao : 'Ativo';
+    contactData.tipo = ['cliente', 'fornecedor', 'parceiro'].includes(contactData.tipo as any) ? contactData.tipo : 'cliente';
+    contactData.autenticacao = ['Verificado', 'Não verificado', 'Pendente'].includes(contactData.autenticacao as any) ? contactData.autenticacao : 'Pendente';
+    
+    return contactData;
   };
-  
-  const parseXLSX = (arrayBuffer: ArrayBuffer): any[][] => {
-      const workbook = XLSX.read(arrayBuffer, { type: 'array' });
-      const worksheetName = workbook.SheetNames[0];
-      const worksheet = workbook.Sheets[worksheetName];
-      const data = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
-      return data;
-  };
+
 
   const handleFileImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -233,21 +174,16 @@ export function ContactImportExportDialog({ isOpen, onOpenChange, contacts }: Co
     setImportResult(null);
 
     try {
-      let rows: any[][];
-
-      if(file.name.endsWith('.xlsx')) {
-        const arrayBuffer = await file.arrayBuffer();
-        rows = parseXLSX(arrayBuffer);
-      } else {
-        const text = await file.text();
-        rows = parseCSV(text);
-      }
+      const arrayBuffer = await file.arrayBuffer();
+      const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+      const worksheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[worksheetName];
+      const dataRows = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
       
-      if (rows.length < 2) {
-        throw new Error("Arquivo deve conter pelo menos um cabeçalho e uma linha de dados.");
+      if (dataRows.length < 1) {
+        throw new Error("Arquivo deve conter pelo menos uma linha de dados.");
       }
 
-      const [headers, ...dataRows] = rows;
       const errors: string[] = [];
       let successCount = 0;
 
@@ -256,66 +192,19 @@ export function ContactImportExportDialog({ isOpen, onOpenChange, contacts }: Co
         setImportProgress(((i + 1) / dataRows.length) * 100);
 
         try {
-          const [
-            id, empresa, nome, sobrenome, cargo, dataNascimento, vendedor, gestor,
-            rua, numero, complemento, cep, bairro, cidade, estado, pais,
-            celular1, celular2, telefone1, telefone2, email, website, observacoes
-          ] = row;
-
-          if (!nome || !email) {
-            errors.push(`Linha ${i + 2}: Nome e email são obrigatórios`);
+          const contactData = processRow(row, i);
+          if ('error' in contactData) {
+            errors.push(contactData.error);
             continue;
           }
 
-          // Determinar tipo de pessoa baseado na presença de empresa
-          const isCompany = empresa && String(empresa).trim() !== '';
-          const fullName = `${String(nome).trim()} ${String(sobrenome || '').trim()}`.trim();
-
-          const contactData: Omit<Contact, 'id'> = {
-            type: 'cliente', // Assumindo que são clientes
-            personType: isCompany ? 'Pessoa Jurídica' : 'Pessoa Física',
-            
-            // Pessoa Física
-            fullName: isCompany ? undefined : fullName,
-            
-            // Pessoa Jurídica
-            legalName: isCompany ? String(empresa).trim() : undefined,
-            contactPerson: isCompany ? fullName : undefined,
-            
-            // Campos comuns
-            email: String(email).trim().toLowerCase(),
-            phone: String(celular1 || '').trim() || undefined,
-            phone2: String(celular2 || '').trim() || undefined,
-            landline: String(telefone1 || '').trim() || undefined,
-            landline2: String(telefone2 || '').trim() || undefined,
-            website: String(website || '').trim() || undefined,
-            position: String(cargo || '').trim() || undefined,
-            birthDate: String(dataNascimento || '').trim() || undefined,
-            salesperson: String(vendedor || '').trim() || undefined,
-            manager: String(gestor || '').trim() || undefined,
-            observations: String(observacoes || '').trim() || undefined,
-            
-            address: (rua || numero || cidade) ? {
-              street: String(rua || '').trim() || undefined,
-              number: String(numero || '').trim() || undefined,
-              complement: String(complemento || '').trim() || undefined,
-              neighborhood: String(bairro || '').trim() || undefined,
-              city: String(cidade || '').trim() || undefined,
-              state: String(estado || '').trim() || undefined,
-              zipCode: String(cep || '').trim() || undefined,
-              country: String(pais || '').trim() || 'Brasil'
-            } : undefined
-          };
-
           if (firestore) {
-            await addDoc(collection(firestore, 'contacts'), contactData as any);
+            await addDoc(collection(firestore, 'contacts'), { ...contactData, createdAt: serverTimestamp() } as any);
             successCount++;
           }
         } catch (error) {
-          errors.push(`Linha ${i + 2}: Erro ao processar dados - ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
+          errors.push(`Linha ${i + 2}: Erro ao processar - ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
         }
-
-        // Pequena pausa para não sobrecarregar
         await new Promise(resolve => setTimeout(resolve, 50));
       }
 
@@ -326,18 +215,11 @@ export function ContactImportExportDialog({ isOpen, onOpenChange, contacts }: Co
       });
 
       if (successCount > 0) {
-        toast({ 
-          title: "Importação Concluída", 
-          description: `${successCount} contatos importados com sucesso.` 
-        });
+        toast({ title: "Importação Concluída", description: `${successCount} contatos importados com sucesso.` });
       }
 
     } catch (error) {
-      toast({ 
-        variant: "destructive", 
-        title: "Erro na Importação", 
-        description: error instanceof Error ? error.message : "Erro desconhecido" 
-      });
+      toast({ variant: "destructive", title: "Erro na Importação", description: error instanceof Error ? error.message : "Erro desconhecido" });
     } finally {
       setIsImporting(false);
       if (fileInputRef.current) {
@@ -367,11 +249,11 @@ export function ContactImportExportDialog({ isOpen, onOpenChange, contacts }: Co
             <div className="flex gap-2">
               <Button onClick={handleExportCSV} className="flex-1">
                 <Download className="h-4 w-4 mr-2" />
-                Exportar Lista Atual (CSV)
+                Exportar Lista Atual (XLSX)
               </Button>
               <Button variant="outline" onClick={handleExportTemplate}>
                 <FileSpreadsheet className="h-4 w-4 mr-2" />
-                Baixar Template (CSV)
+                Baixar Template (XLSX)
               </Button>
             </div>
           </div>
@@ -380,9 +262,9 @@ export function ContactImportExportDialog({ isOpen, onOpenChange, contacts }: Co
           <div className="space-y-3">
             <h3 className="font-medium">Importar Contatos</h3>
             <div className="space-y-2">
-              <Label htmlFor="csv-file">Arquivo (CSV ou XLSX)</Label>
+              <Label htmlFor="file-upload">Arquivo (CSV ou XLSX)</Label>
               <Input
-                id="csv-file"
+                id="file-upload"
                 type="file"
                 accept=".csv, .xlsx, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel"
                 onChange={handleFileImport}
@@ -390,7 +272,7 @@ export function ContactImportExportDialog({ isOpen, onOpenChange, contacts }: Co
                 ref={fileInputRef}
               />
               <p className="text-sm text-muted-foreground">
-                Campos obrigatórios: Nome, Email. Se "Empresa" estiver preenchida, será tratado como Pessoa Jurídica.
+                Campos obrigatórios: Email, CPF/CNPJ, Tipo documento. Use o template para o formato correto.
               </p>
             </div>
 
