@@ -25,6 +25,7 @@ import type { Contact } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { useFirestore } from "@/firebase";
 import { collection, addDoc } from "firebase/firestore";
+import * as XLSX from 'xlsx';
 
 type ContactImportExportDialogProps = {
   isOpen: boolean;
@@ -177,7 +178,7 @@ export function ContactImportExportDialog({ isOpen, onOpenChange, contacts }: Co
       .map(row => row.map(field => `"${String(field).replace(/"/g, '""')}"`).join(','))
       .join('\r\n');
 
-    // Adicionar BOM UTF-8
+    // Adicionar BOM para UTF-8
     const BOM = '\uFEFF';
     const csvWithBOM = BOM + csvContent;
 
@@ -209,13 +210,21 @@ export function ContactImportExportDialog({ isOpen, onOpenChange, contacts }: Co
     
     return result;
   };
+  
+  const parseXLSX = (arrayBuffer: ArrayBuffer): any[][] => {
+      const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+      const worksheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[worksheetName];
+      const data = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
+      return data;
+  };
 
-  const handleImportCSV = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    if (!file.name.endsWith('.csv')) {
-      toast({ variant: "destructive", title: "Formato Inválido", description: "Por favor, selecione um arquivo CSV." });
+    if (!file.name.endsWith('.csv') && !file.name.endsWith('.xlsx')) {
+      toast({ variant: "destructive", title: "Formato Inválido", description: "Por favor, selecione um arquivo CSV ou XLSX." });
       return;
     }
 
@@ -224,8 +233,15 @@ export function ContactImportExportDialog({ isOpen, onOpenChange, contacts }: Co
     setImportResult(null);
 
     try {
-      const text = await file.text();
-      const rows = parseCSV(text);
+      let rows: any[][];
+
+      if(file.name.endsWith('.xlsx')) {
+        const arrayBuffer = await file.arrayBuffer();
+        rows = parseXLSX(arrayBuffer);
+      } else {
+        const text = await file.text();
+        rows = parseCSV(text);
+      }
       
       if (rows.length < 2) {
         throw new Error("Arquivo deve conter pelo menos um cabeçalho e uma linha de dados.");
@@ -252,8 +268,8 @@ export function ContactImportExportDialog({ isOpen, onOpenChange, contacts }: Co
           }
 
           // Determinar tipo de pessoa baseado na presença de empresa
-          const isCompany = empresa && empresa.trim() !== '';
-          const fullName = `${nome.trim()} ${sobrenome?.trim() || ''}`.trim();
+          const isCompany = empresa && String(empresa).trim() !== '';
+          const fullName = `${String(nome).trim()} ${String(sobrenome || '').trim()}`.trim();
 
           const contactData: Omit<Contact, 'id'> = {
             type: 'cliente', // Assumindo que são clientes
@@ -263,36 +279,36 @@ export function ContactImportExportDialog({ isOpen, onOpenChange, contacts }: Co
             fullName: isCompany ? undefined : fullName,
             
             // Pessoa Jurídica
-            legalName: isCompany ? empresa.trim() : undefined,
+            legalName: isCompany ? String(empresa).trim() : undefined,
             contactPerson: isCompany ? fullName : undefined,
             
             // Campos comuns
-            email: email.trim().toLowerCase(),
-            phone: celular1?.trim() || undefined,
-            phone2: celular2?.trim() || undefined,
-            landline: telefone1?.trim() || undefined,
-            landline2: telefone2?.trim() || undefined,
-            website: website?.trim() || undefined,
-            position: cargo?.trim() || undefined,
-            birthDate: dataNascimento?.trim() || undefined,
-            salesperson: vendedor?.trim() || undefined,
-            manager: gestor?.trim() || undefined,
-            observations: observacoes?.trim() || undefined,
+            email: String(email).trim().toLowerCase(),
+            phone: String(celular1 || '').trim() || undefined,
+            phone2: String(celular2 || '').trim() || undefined,
+            landline: String(telefone1 || '').trim() || undefined,
+            landline2: String(telefone2 || '').trim() || undefined,
+            website: String(website || '').trim() || undefined,
+            position: String(cargo || '').trim() || undefined,
+            birthDate: String(dataNascimento || '').trim() || undefined,
+            salesperson: String(vendedor || '').trim() || undefined,
+            manager: String(gestor || '').trim() || undefined,
+            observations: String(observacoes || '').trim() || undefined,
             
             address: (rua || numero || cidade) ? {
-              street: rua?.trim() || undefined,
-              number: numero?.trim() || undefined,
-              complement: complemento?.trim() || undefined,
-              neighborhood: bairro?.trim() || undefined,
-              city: cidade?.trim() || undefined,
-              state: estado?.trim() || undefined,
-              zipCode: cep?.trim() || undefined,
-              country: pais?.trim() || 'Brasil'
+              street: String(rua || '').trim() || undefined,
+              number: String(numero || '').trim() || undefined,
+              complement: String(complemento || '').trim() || undefined,
+              neighborhood: String(bairro || '').trim() || undefined,
+              city: String(cidade || '').trim() || undefined,
+              state: String(estado || '').trim() || undefined,
+              zipCode: String(cep || '').trim() || undefined,
+              country: String(pais || '').trim() || 'Brasil'
             } : undefined
           };
 
           if (firestore) {
-            await addDoc(collection(firestore, 'contacts'), contactData);
+            await addDoc(collection(firestore, 'contacts'), contactData as any);
             successCount++;
           }
         } catch (error) {
@@ -300,7 +316,7 @@ export function ContactImportExportDialog({ isOpen, onOpenChange, contacts }: Co
         }
 
         // Pequena pausa para não sobrecarregar
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise(resolve => setTimeout(resolve, 50));
       }
 
       setImportResult({
@@ -330,6 +346,7 @@ export function ContactImportExportDialog({ isOpen, onOpenChange, contacts }: Co
     }
   };
 
+
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl">
@@ -339,7 +356,7 @@ export function ContactImportExportDialog({ isOpen, onOpenChange, contacts }: Co
             Importar/Exportar Contatos
           </DialogTitle>
           <DialogDescription>
-            Importe contatos de um arquivo CSV ou exporte a lista atual.
+            Importe contatos de um arquivo CSV ou XLSX, ou exporte a lista atual.
           </DialogDescription>
         </DialogHeader>
 
@@ -350,11 +367,11 @@ export function ContactImportExportDialog({ isOpen, onOpenChange, contacts }: Co
             <div className="flex gap-2">
               <Button onClick={handleExportCSV} className="flex-1">
                 <Download className="h-4 w-4 mr-2" />
-                Exportar Lista Atual
+                Exportar Lista Atual (CSV)
               </Button>
               <Button variant="outline" onClick={handleExportTemplate}>
                 <FileSpreadsheet className="h-4 w-4 mr-2" />
-                Baixar Template
+                Baixar Template (CSV)
               </Button>
             </div>
           </div>
@@ -363,12 +380,12 @@ export function ContactImportExportDialog({ isOpen, onOpenChange, contacts }: Co
           <div className="space-y-3">
             <h3 className="font-medium">Importar Contatos</h3>
             <div className="space-y-2">
-              <Label htmlFor="csv-file">Arquivo CSV</Label>
+              <Label htmlFor="csv-file">Arquivo (CSV ou XLSX)</Label>
               <Input
                 id="csv-file"
                 type="file"
-                accept=".csv"
-                onChange={handleImportCSV}
+                accept=".csv, .xlsx, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel"
+                onChange={handleFileImport}
                 disabled={isImporting}
                 ref={fileInputRef}
               />
