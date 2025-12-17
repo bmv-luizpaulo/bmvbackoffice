@@ -41,46 +41,35 @@ export type UserActivityLog = {
 
 export type Contact = {
   id: string;
-  type: 'cliente' | 'fornecedor' | 'parceiro';
-  personType: 'Pessoa Física' | 'Pessoa Jurídica';
-  // Pessoa Física
+  firstName?: string;
+  lastName?: string;
+  email: string;
+  celular?: string;
+  telefone?: string;
+  createdAt: any;
+  situacao: 'Ativo' | 'Inativo' | 'Bloqueado';
+  tipo: 'cliente' | 'fornecedor' | 'parceiro';
+  documento: string;
+  tipoDocumento: 'CPF' | 'CNPJ';
+  autenticacao: 'Verificado' | 'Não verificado' | 'Pendente';
+  address: {
+    cep: string;
+    rua: string;
+    cidade: string;
+    numero: string;
+    complemento?: string;
+    bairro: string;
+    pais: string;
+  };
+  // Campos antigos para manter a compatibilidade se necessário, mas que devem ser migrados.
+  // Podem ser removidos após a migração dos dados.
   fullName?: string;
+  personType?: 'Pessoa Física' | 'Pessoa Jurídica';
   cpf?: string;
-  rg?: string;
-  // Pessoa Jurídica
+  cnpj?: string;
   legalName?: string;
   tradeName?: string;
-  cnpj?: string;
-  stateRegistration?: string;
-  municipalRegistration?: string;
-  contactPerson?: string;
-  // Comum
-  email?: string;
   phone?: string;
-  phone2?: string;
-  landline?: string;
-  landline2?: string;
-  website?: string;
-  linkedinUrl?: string;
-  position?: string;
-  birthDate?: string;
-  salesperson?: string;
-  manager?: string;
-  address?: {
-    street?: string;
-    number?: string;
-    complement?: string;
-    neighborhood?: string;
-    city?: string;
-    state?: string;
-    zipCode?: string;
-    country?: string;
-  };
-  // Campos de negócio
-  customerSince?: any;
-  creditLimit?: number;
-  paymentTerms?: string;
-  observations?: string;
 };
 
 export type Opportunity = {
@@ -169,6 +158,19 @@ export type Role = {
     };
     isManager?: boolean;
     isDev?: boolean;
+    permissions?: {
+      isDev?: boolean;
+      isManager?: boolean;
+      canViewAllProjects?: boolean;
+      canManageProjects?: boolean;
+      canManageUsers?: boolean;
+      canManageContacts?: boolean;
+      canManageProductsAndSeals?: boolean;
+      canAccessFinancial?: boolean;
+      canManageChecklists?: boolean;
+      canManageAssets?: boolean;
+      canManageSupport?: boolean;
+    };
 };
 
 

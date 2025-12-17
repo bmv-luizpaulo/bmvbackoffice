@@ -320,75 +320,73 @@
     "Contact": {
       "title": "Contact",
       "type": "object",
-      "description": "Represents a contact, which can be a client, a supplier, or a partner.",
+      "description": "Represents a business contact.",
       "properties": {
-        "type": {
+        "firstName": {
           "type": "string",
-          "description": "The type of contact.",
-          "enum": ["cliente", "fornecedor", "parceiro"]
+          "description": "Contact's first name."
         },
-        "personType": {
+        "lastName": {
           "type": "string",
-          "description": "The type of person, either individual or corporate.",
-          "enum": ["Pessoa Física", "Pessoa Jurídica"]
-        },
-        "fullName": {
-          "type": "string",
-          "description": "The contact's full name (for individuals)."
-        },
-        "cpf": {
-          "type": "string",
-          "description": "The contact's CPF document number (for individuals)."
-        },
-        "rg": {
-          "type": "string",
-          "description": "The contact's RG document number (for individuals)."
-        },
-        "legalName": {
-            "type": "string",
-            "description": "The legal name of the company (for corporate entities)."
-        },
-        "tradeName": {
-            "type": "string",
-            "description": "The trade name or 'nome fantasia' of the company (for corporate entities)."
-        },
-        "cnpj": {
-          "type": "string",
-          "description": "The company's CNPJ document number (for corporate entities)."
-        },
-        "stateRegistration": {
-          "type": "string",
-          "description": "The company's state registration number (Inscrição Estadual)."
+          "description": "Contact's last name."
         },
         "email": {
           "type": "string",
           "format": "email",
-          "description": "The primary contact email address."
+          "description": "Contact's email address."
         },
-        "phone": {
+        "celular": {
           "type": "string",
-          "description": "The primary contact phone number."
+          "description": "Contact's mobile phone number."
         },
-        "linkedinUrl": {
+        "telefone": {
           "type": "string",
-          "format": "uri",
-          "description": "URL of the contact's LinkedIn profile."
+          "description": "Contact's landline phone number."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp of contact creation."
+        },
+        "situacao": {
+          "type": "string",
+          "enum": ["Ativo", "Inativo", "Bloqueado"],
+          "description": "The current status of the contact."
+        },
+        "tipo": {
+          "type": "string",
+          "enum": ["cliente", "fornecedor", "parceiro"],
+          "description": "The type of the contact."
+        },
+        "documento": {
+          "type": "string",
+          "description": "The document number (CPF or CNPJ)."
+        },
+        "tipoDocumento": {
+          "type": "string",
+          "enum": ["CPF", "CNPJ"],
+          "description": "The type of the document."
+        },
+        "autenticacao": {
+          "type": "string",
+          "enum": ["Verificado", "Não verificado", "Pendente"],
+          "description": "The authentication status of the contact."
         },
         "address": {
           "type": "object",
-          "description": "The contact's full address.",
           "properties": {
-            "street": { "type": "string" },
-            "number": { "type": "string" },
-            "complement": { "type": "string" },
-            "neighborhood": { "type": "string" },
-            "city": { "type": "string" },
-            "state": { "type": "string" },
-            "zipCode": { "type": "string" }
-          }
+            "cep": { "type": "string" },
+            "rua": { "type": "string" },
+            "cidade": { "type": "string" },
+            "numero": { "type": "string" },
+            "complemento": { "type": "string" },
+            "bairro": { "type": "string" },
+            "pais": { "type": "string" }
+          },
+          "required": ["cep", "rua", "cidade", "numero", "bairro", "pais"]
         }
       },
-      "required": ["type", "personType", "email"]
+      "required": ["email", "situacao", "tipo", "documento", "tipoDocumento", "autenticacao"]
     },
     "ProjectFile": {
       "title": "ProjectFile",
