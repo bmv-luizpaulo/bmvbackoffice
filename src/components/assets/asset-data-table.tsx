@@ -54,6 +54,7 @@ import dynamic from "next/dynamic";
 import { format, differenceInDays, isPast } from "date-fns";
 import Link from "next/link";
 import { useNotifications } from "../notifications/notifications-provider";
+import { useVirtualizer } from "@tanstack/react-virtual";
 
 const AssetFormDialog = dynamic(() => import('./asset-form-dialog').then(m => m.AssetFormDialog), { ssr: false });
 const AssetHistoryDialog = dynamic(() => import('./asset-history-dialog').then(m => m.AssetHistoryDialog), { ssr: false });
@@ -559,6 +560,21 @@ export const AssetDataTable = React.memo(function AssetDataTable({ ownerFilter }
     setIsTransferOpen(false);
     setTransferTargets([]);
   }, [firestore, transferUserId, transferTargets, usersMap, logHistory, createNotification, toast]);
+  
+  const parentRef = React.useRef<HTMLDivElement>(null);
+  const filteredUsers = React.useMemo(() => {
+    if (!usersData) return [];
+    if (!transferSearch.trim()) return usersData;
+    const q = transferSearch.toLowerCase();
+    return usersData.filter(u => u.name?.toLowerCase().includes(q) || u.email?.toLowerCase().includes(q));
+  }, [usersData, transferSearch]);
+  
+  const rowVirtualizer = useVirtualizer({
+    count: filteredUsers.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 40,
+    overscan: 5,
+  });
 
   return (
     <div>
@@ -644,7 +660,7 @@ export const AssetDataTable = React.memo(function AssetDataTable({ ownerFilter }
               <input id="next30" type="checkbox" className="h-4 w-4" checked={next30Only} onChange={(e) => setNext30Only(e.target.checked)} />
               <label htmlFor="next30" className="text-sm">Próximas 30 dias</label>
             </div>
-            <Button variant="outline" onClick={handleExportCsv} disabled={!hasSelection}>Exportar CSV</Button>
+            <Button variant="outline" onClick={handleExportCsv} disabled={!data.length}>Exportar CSV</Button>
             <Button variant="outline" onClick={handleImportClick}>Importar CSV</Button>
             <Button onClick={handleAddNewClick}>Adicionar Ativo</Button>
         </div>
@@ -703,7 +719,7 @@ export const AssetDataTable = React.memo(function AssetDataTable({ ownerFilter }
                         <p className="text-muted-foreground">Nenhum ativo encontrado.</p>
                         <div className="flex items-center justify-center gap-2">
                           <Button onClick={handleAddNewClick}>Adicionar Ativo</Button>
-                          <Button variant="outline" disabled>Importar CSV</Button>
+                          <Button variant="outline" onClick={handleImportClick}>Importar CSV</Button>
                         </div>
                       </div>
                     )}
@@ -833,32 +849,35 @@ export const AssetDataTable = React.memo(function AssetDataTable({ ownerFilter }
               value={transferSearch}
               onChange={(e) => setTransferSearch(e.target.value)}
             />
-            <div className="max-h-56 overflow-auto border rounded-md">
-              <table className="w-full text-sm">
-                <tbody>
-                  <tr className={transferUserId === '' ? 'bg-muted/50' : ''}>
-                    <td>
-                      <button className="w-full text-left p-2" onClick={() => setTransferUserId('')}>Sem responsável</button>
-                    </td>
-                  </tr>
-                  {usersData
-                    ?.filter(u => {
-                      if (!transferSearch.trim()) return true;
-                      const q = transferSearch.toLowerCase();
-                      return u.name?.toLowerCase().includes(q) || u.email?.toLowerCase().includes(q);
-                    })
-                    .slice(0, 50)
-                    .map(u => (
-                      <tr key={u.id} className={transferUserId === u.id ? 'bg-muted/50' : ''}>
-                        <td>
-                          <button className="w-full text-left p-2" onClick={() => setTransferUserId(u.id)}>
-                            {u.name} <span className="text-muted-foreground">({u.email})</span>
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                </tbody>
-              </table>
+            <div ref={parentRef} className="h-64 overflow-auto border rounded-md">
+              <div style={{ height: `${rowVirtualizer.getTotalSize()}px`, width: '100%', position: 'relative' }}>
+                <div 
+                  onClick={() => setTransferUserId('')} 
+                  className={`p-2 cursor-pointer ${transferUserId === '' ? 'bg-muted/50' : 'hover:bg-muted/30'}`}
+                >
+                    Sem responsável
+                </div>
+                {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+                  const user = filteredUsers[virtualRow.index];
+                  return (
+                    <div
+                      key={user.id}
+                      style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: '100%',
+                        height: `${virtualRow.size}px`,
+                        transform: `translateY(${virtualRow.start + 40}px)`, // +40 for the static "Sem responsável" item
+                      }}
+                      className={`p-2 cursor-pointer ${transferUserId === user.id ? 'bg-muted/50' : 'hover:bg-muted/30'}`}
+                      onClick={() => setTransferUserId(user.id)}
+                    >
+                      {user.name} <span className="text-muted-foreground">({user.email})</span>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
             {transferTargets.length > 1 && (
               <p className="text-xs text-muted-foreground">{transferTargets.length} ativo(s) serão atualizados.</p>
