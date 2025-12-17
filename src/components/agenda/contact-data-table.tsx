@@ -46,7 +46,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { updateDocumentNonBlocking, deleteDocumentNonBlocking, addDocumentNonBlocking } from "@/firebase";
+import { updateDocumentNonBlocking, deleteDocumentNonBlocking, addDocumentNonBlocking } from "@/firebase"
 import { Badge } from "../ui/badge";
 import { ContactFormDialog } from './contact-form-dialog';
 import { ContactImportExportDialog } from '../contacts/contact-import-export';
@@ -107,14 +107,11 @@ export function ContactDataTable({ type }: ContactDataTableProps) {
       // Update
       const contactRef = doc(firestore, 'contacts', contactId);
       await updateDocumentNonBlocking(contactRef, dataToSave as any);
-    } else if (selectedContact) {
-       const contactRef = doc(firestore, 'contacts', selectedContact.id);
-      await updateDocumentNonBlocking(contactRef, dataToSave as any);
     } else {
       // Create
       await addDocumentNonBlocking(collection(firestore, 'contacts'), { ...dataToSave, createdAt: new Date() } as any);
     }
-  }, [firestore, selectedContact, type]);
+  }, [firestore, type]);
 
   const handleDeleteContact = React.useCallback(() => {
     if (!firestore || !selectedContact) return;
@@ -312,7 +309,7 @@ export function ContactDataTable({ type }: ContactDataTableProps) {
       {isFormOpen && <ContactFormDialog 
         isOpen={isFormOpen}
         onOpenChange={setIsFormOpen}
-        onSave={(data, id) => {handleSaveContact(data, id)}}
+        onSave={handleSaveContact}
         contact={selectedContact}
         type={type || selectedContact?.tipo || 'cliente'}
       />}
@@ -321,8 +318,8 @@ export function ContactDataTable({ type }: ContactDataTableProps) {
         isOpen={isProfileOpen}
         onOpenChange={setIsProfileOpen}
         contact={selectedContact}
-        onUpdate={(id, data) => handleSaveContact(data as Omit<Contact, 'id'>, id)}
-        onEdit={(contact) => {
+        onUpdate={handleSaveContact}
+        onEdit={(contact: Contact) => {
             setIsProfileOpen(false);
             handleEditClick(contact);
         }}

@@ -41,6 +41,19 @@ type ContactProfileDialogProps = {
   onEdit?: (contact: Contact) => void;
 };
 
+const getCreatedAtDate = (createdAt: any): Date | null => {
+  if (!createdAt) return null;
+  if (createdAt instanceof Date) return createdAt;
+  if (createdAt.toDate) return createdAt.toDate();
+  if (typeof createdAt === 'string' || typeof createdAt === 'number') {
+    const date = new Date(createdAt);
+    if (!isNaN(date.getTime())) {
+      return date;
+    }
+  }
+  return null;
+};
+
 export function ContactProfileDialog({ isOpen, onOpenChange, contact, onUpdate, onEdit }: ContactProfileDialogProps) {
   const { toast } = useToast();
 
@@ -75,17 +88,6 @@ export function ContactProfileDialog({ isOpen, onOpenChange, contact, onUpdate, 
   const currentAuthConfig = authConfig[contact.autenticacao] || authConfig['Pendente'];
   const AuthIcon = currentAuthConfig.icon;
 
-  const getCreatedAtDate = (createdAt: any): Date | null => {
-    if (!createdAt) return null;
-    if (createdAt.toDate) return createdAt.toDate();
-    if (typeof createdAt === 'string' || typeof createdAt === 'number') {
-      const date = new Date(createdAt);
-      if (!isNaN(date.getTime())) {
-        return date;
-      }
-    }
-    return null;
-  };
   const createdAtDate = getCreatedAtDate(contact.createdAt);
   
   const cleanPhone = (phone?: string) => phone?.replace(/\D/g, '') || '';
