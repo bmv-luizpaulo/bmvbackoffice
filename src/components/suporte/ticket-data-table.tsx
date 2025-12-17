@@ -54,7 +54,7 @@ import { useNotifications } from "../notifications/notifications-provider"
 
 const TicketFormDialog = dynamic(() => import('./ticket-form-dialog').then(m => m.TicketFormDialog), { ssr: false });
 
-export function TicketDataTable() {
+export const TicketDataTable = React.memo(function TicketDataTable() {
   const firestore = useFirestore();
   const { toast } = useToast();
   const { user: authUser } = useAuthUser();
@@ -94,12 +94,12 @@ export function TicketDataTable() {
   const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [selectedTicket, setSelectedTicket] = React.useState<Ticket | null>(null);
 
-  const handleEditClick = (ticket: Ticket) => {
+  const handleEditClick = React.useCallback((ticket: Ticket) => {
     setSelectedTicket(ticket);
     setIsFormOpen(true);
-  };
+  }, []);
   
-  const handleSaveTicket = async (ticketData: Omit<Ticket, 'id' | 'requesterId' | 'createdAt'>) => {
+  const handleSaveTicket = React.useCallback(async (ticketData: Omit<Ticket, 'id' | 'requesterId' | 'createdAt'>) => {
       if (!firestore || !authUser) return;
 
       if (selectedTicket) {
@@ -128,9 +128,9 @@ export function TicketDataTable() {
           }
       }
       setIsFormOpen(false);
-  };
+  }, [firestore, authUser, selectedTicket, toast, createNotification, userProfile, usersData, rolesMap]);
 
-  const handleStatusChange = async (ticket: Ticket, newStatus: 'Aberto' | 'Em Andamento' | 'Fechado') => {
+  const handleStatusChange = React.useCallback(async (ticket: Ticket, newStatus: 'Aberto' | 'Em Andamento' | 'Fechado') => {
       if (!firestore || !authUser) return;
       const dataToUpdate: Partial<Ticket> = {
           status: newStatus,
@@ -140,7 +140,7 @@ export function TicketDataTable() {
       }
       await updateDocumentNonBlocking(doc(firestore, 'tickets', ticket.id), dataToUpdate);
       toast({ title: "Status Alterado", description: `O chamado foi marcado como "${newStatus}".` });
-  }
+  }, [firestore, authUser, toast]);
 
   const columns: ColumnDef<Ticket>[] = React.useMemo(() => [
     {
@@ -289,4 +289,4 @@ export function TicketDataTable() {
       )}
     </div>
   )
-}
+});

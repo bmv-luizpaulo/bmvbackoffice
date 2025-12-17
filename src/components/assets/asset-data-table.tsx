@@ -62,7 +62,7 @@ interface AssetDataTableProps {
   ownerFilter?: string | null;
 }
 
-export function AssetDataTable({ ownerFilter }: AssetDataTableProps) {
+export const AssetDataTable = React.memo(function AssetDataTable({ ownerFilter }: AssetDataTableProps) {
   const firestore = useFirestore();
   const { user: authUser } = useAuthUser();
   const { toast } = useToast();
@@ -521,7 +521,7 @@ export function AssetDataTable({ ownerFilter }: AssetDataTableProps) {
     await applyBulkUpdate({ location: value });
   }, [applyBulkUpdate]);
 
-  const handleBulkAssignResponsible = React.useCallback(async () => {
+  const handleBulkAssignResponsible = React.useCallback(() => {
     // open dialog with selected assets
     const targets = selectedRows.map(r => r.original as Asset);
     setTransferTargets(targets);
@@ -644,7 +644,7 @@ export function AssetDataTable({ ownerFilter }: AssetDataTableProps) {
               <input id="next30" type="checkbox" className="h-4 w-4" checked={next30Only} onChange={(e) => setNext30Only(e.target.checked)} />
               <label htmlFor="next30" className="text-sm">Próximas 30 dias</label>
             </div>
-            <Button variant="outline" onClick={handleExportCsv}>Exportar CSV</Button>
+            <Button variant="outline" onClick={handleExportCsv} disabled={!hasSelection}>Exportar CSV</Button>
             <Button variant="outline" onClick={handleImportClick}>Importar CSV</Button>
             <Button onClick={handleAddNewClick}>Adicionar Ativo</Button>
         </div>
@@ -872,4 +872,4 @@ export function AssetDataTable({ ownerFilter }: AssetDataTableProps) {
       </AlertDialog>
     </div>
   )
-}
+});

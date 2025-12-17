@@ -54,7 +54,7 @@ import { Badge } from "../ui/badge";
 import { ContractFormDialog } from './contract-form-dialog';
 
 
-export function ContractDataTable() {
+export const ContractDataTable = React.memo(function ContractDataTable() {
   const firestore = useFirestore();
   const { toast } = useToast();
   const { user: authUser } = useUser();
@@ -327,4 +327,4 @@ export function ContractDataTable() {
       )}
     </div>
   )
-}
+});

@@ -50,7 +50,7 @@ import { useToast } from "@/hooks/use-toast"
 
 const CostCenterFormDialog = dynamic(() => import('./cost-center-form-dialog').then(m => m.CostCenterFormDialog), { ssr: false });
 
-export function CostCenterDataTable() {
+export const CostCenterDataTable = React.memo(function CostCenterDataTable() {
   const firestore = useFirestore();
   const { toast } = useToast();
   
@@ -291,4 +291,4 @@ export function CostCenterDataTable() {
       )}
     </div>
   )
-}
+});
