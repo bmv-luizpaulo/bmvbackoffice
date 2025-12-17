@@ -20,7 +20,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { MoreHorizontal, Pencil, Trash2, FileSpreadsheet } from "lucide-react"
+import { MoreHorizontal, Pencil, Trash2, FileSpreadsheet, Eye } from "lucide-react"
 import dynamic from "next/dynamic";
 
 import {
@@ -50,6 +50,7 @@ import { updateDocumentNonBlocking, deleteDocumentNonBlocking, addDocumentNonBlo
 import { Badge } from "../ui/badge";
 import { ContactFormDialog } from './contact-form-dialog';
 import { ContactImportExportDialog } from '../contacts/contact-import-export';
+import { ContactProfileDialog } from './contact-profile-dialog';
 
 
 interface ContactDataTableProps {
@@ -78,8 +79,14 @@ export function ContactDataTable({ type }: ContactDataTableProps) {
   
   const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [isAlertOpen, setIsAlertOpen] = React.useState(false);
+  const [isProfileOpen, setIsProfileOpen] = React.useState(false);
   const [isImportExportOpen, setIsImportExportOpen] = React.useState(false);
   const [selectedContact, setSelectedContact] = React.useState<Contact | null>(null);
+
+  const handleViewProfileClick = React.useCallback((contact: Contact) => {
+    setSelectedContact(contact);
+    setIsProfileOpen(true);
+  }, []);
 
   const handleEditClick = React.useCallback((contact: Contact) => {
     setSelectedContact(contact);
@@ -176,6 +183,10 @@ export function ContactDataTable({ type }: ContactDataTableProps) {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>Ações</DropdownMenuLabel>
+              <DropdownMenuItem onClick={() => handleViewProfileClick(contact)}>
+                <Eye className="mr-2 h-4 w-4" />
+                Visualizar
+              </DropdownMenuItem>
               <DropdownMenuItem onClick={() => handleEditClick(contact)}>
                 <Pencil className="mr-2 h-4 w-4" />
                 Editar
@@ -193,7 +204,7 @@ export function ContactDataTable({ type }: ContactDataTableProps) {
         )
       },
     },
-  ], [handleEditClick, handleDeleteClick, type]);
+  ], [handleEditClick, handleDeleteClick, handleViewProfileClick, type]);
 
   const table = useReactTable({
     data,
@@ -295,13 +306,19 @@ export function ContactDataTable({ type }: ContactDataTableProps) {
         </Button>
       </div>
 
-      <ContactFormDialog 
+      {isFormOpen && <ContactFormDialog 
         isOpen={isFormOpen}
         onOpenChange={setIsFormOpen}
         onSave={handleSaveContact}
         contact={selectedContact}
         type={type || 'cliente'}
-      />
+      />}
+
+      {isProfileOpen && <ContactProfileDialog
+        isOpen={isProfileOpen}
+        onOpenChange={setIsProfileOpen}
+        contact={selectedContact}
+      />}
 
       <ContactImportExportDialog
         isOpen={isImportExportOpen}
