@@ -322,6 +322,10 @@ export function ContactDataTable({ type }: ContactDataTableProps) {
         onOpenChange={setIsProfileOpen}
         contact={selectedContact}
         onUpdate={handleSaveContact}
+        onEdit={(contact) => {
+            setIsProfileOpen(false);
+            handleEditClick(contact);
+        }}
       />}
 
       <ContactImportExportDialog

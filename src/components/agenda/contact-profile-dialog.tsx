@@ -22,7 +22,8 @@ import {
   AlertCircle,
   Clock,
   MoreVertical,
-  ChevronDown
+  ChevronDown,
+  Pencil
 } from 'lucide-react';
 import type { Contact } from "@/lib/types";
 import { format } from "date-fns";
@@ -37,9 +38,10 @@ type ContactProfileDialogProps = {
   onOpenChange: (isOpen: boolean) => void;
   contact: Contact | null;
   onUpdate?: (contactId: string, updates: Partial<Contact>) => void;
+  onEdit?: (contact: Contact) => void;
 };
 
-export function ContactProfileDialog({ isOpen, onOpenChange, contact, onUpdate }: ContactProfileDialogProps) {
+export function ContactProfileDialog({ isOpen, onOpenChange, contact, onUpdate, onEdit }: ContactProfileDialogProps) {
   const { toast } = useToast();
 
   if (!contact) return null;
@@ -110,7 +112,7 @@ export function ContactProfileDialog({ isOpen, onOpenChange, contact, onUpdate }
                   </div>
                 </div>
              </div>
-             {onUpdate && (
+             {(onUpdate || onEdit) && (
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="icon">
@@ -119,26 +121,37 @@ export function ContactProfileDialog({ isOpen, onOpenChange, contact, onUpdate }
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                         <DropdownMenuLabel>Ações Rápidas</DropdownMenuLabel>
-                        <DropdownMenuSub>
-                            <DropdownMenuSubTrigger>Alterar Tipo</DropdownMenuSubTrigger>
-                            <DropdownMenuSubContent>
-                                <DropdownMenuRadioGroup value={contact.tipo} onValueChange={(value) => handleUpdate({ tipo: value as any })}>
-                                    <DropdownMenuRadioItem value="cliente">Cliente</DropdownMenuRadioItem>
-                                    <DropdownMenuRadioItem value="fornecedor">Fornecedor</DropdownMenuRadioItem>
-                                    <DropdownMenuRadioItem value="parceiro">Parceiro</DropdownMenuRadioItem>
-                                </DropdownMenuRadioGroup>
-                            </DropdownMenuSubContent>
-                        </DropdownMenuSub>
-                        <DropdownMenuSub>
-                            <DropdownMenuSubTrigger>Alterar Situação</DropdownMenuSubTrigger>
-                            <DropdownMenuSubContent>
-                               <DropdownMenuRadioGroup value={contact.situacao} onValueChange={(value) => handleUpdate({ situacao: value as any })}>
-                                    <DropdownMenuRadioItem value="Ativo">Ativo</DropdownMenuRadioItem>
-                                    <DropdownMenuRadioItem value="Inativo">Inativo</DropdownMenuRadioItem>
-                                    <DropdownMenuRadioItem value="Bloqueado">Bloqueado</DropdownMenuRadioItem>
-                                </DropdownMenuRadioGroup>
-                            </DropdownMenuSubContent>
-                        </DropdownMenuSub>
+                        {onEdit && (
+                            <DropdownMenuItem onClick={() => onEdit(contact)}>
+                                <Pencil className="mr-2 h-4 w-4" />
+                                Editar Contato
+                            </DropdownMenuItem>
+                        )}
+                        {onUpdate && (
+                        <>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuSub>
+                                <DropdownMenuSubTrigger>Alterar Tipo</DropdownMenuSubTrigger>
+                                <DropdownMenuSubContent>
+                                    <DropdownMenuRadioGroup value={contact.tipo} onValueChange={(value) => handleUpdate({ tipo: value as any })}>
+                                        <DropdownMenuRadioItem value="cliente">Cliente</DropdownMenuRadioItem>
+                                        <DropdownMenuRadioItem value="fornecedor">Fornecedor</DropdownMenuRadioItem>
+                                        <DropdownMenuRadioItem value="parceiro">Parceiro</DropdownMenuRadioItem>
+                                    </DropdownMenuRadioGroup>
+                                </DropdownMenuSubContent>
+                            </DropdownMenuSub>
+                            <DropdownMenuSub>
+                                <DropdownMenuSubTrigger>Alterar Situação</DropdownMenuSubTrigger>
+                                <DropdownMenuSubContent>
+                                <DropdownMenuRadioGroup value={contact.situacao} onValueChange={(value) => handleUpdate({ situacao: value as any })}>
+                                        <DropdownMenuRadioItem value="Ativo">Ativo</DropdownMenuRadioItem>
+                                        <DropdownMenuRadioItem value="Inativo">Inativo</DropdownMenuRadioItem>
+                                        <DropdownMenuRadioItem value="Bloqueado">Bloqueado</DropdownMenuRadioItem>
+                                    </DropdownMenuRadioGroup>
+                                </DropdownMenuSubContent>
+                            </DropdownMenuSub>
+                        </>
+                        )}
                     </DropdownMenuContent>
                 </DropdownMenu>
              )}
