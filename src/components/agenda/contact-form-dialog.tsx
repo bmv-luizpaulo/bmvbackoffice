@@ -94,8 +94,6 @@ const defaultValues: Partial<z.infer<typeof formSchema>> = {
 
 const getCreatedAtDate = (createdAt: any): Date | null => {
   if (!createdAt) return null;
-  // Handle Firebase Timestamp
-  if (createdAt.toDate) return createdAt.toDate();
   // Handle ISO string or number
   if (typeof createdAt === 'string' || typeof createdAt === 'number') {
     const date = new Date(createdAt);
@@ -103,6 +101,8 @@ const getCreatedAtDate = (createdAt: any): Date | null => {
       return date;
     }
   }
+  // Handle Firebase Timestamp
+  if (createdAt.toDate) return createdAt.toDate();
   return null;
 };
 
