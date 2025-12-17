@@ -55,7 +55,6 @@ export default function ChecklistsPage() {
 
   const isManager = role?.isManager || role?.isDev;
 
-  // Simplified query to fetch all checklists. Filtering will happen on the client.
   const checklistsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
     return query(collection(firestore, 'checklists'), orderBy('name'));
@@ -68,7 +67,6 @@ export default function ChecklistsPage() {
     if (isManager || !filterParam) {
       return allChecklists;
     }
-    // Client-side filtering for non-managers on the 'me' view
     if (filterParam === 'me') {
       const userTeamIds = userProfile?.teamIds || [];
       return allChecklists.filter(c => userTeamIds.includes(c.teamId));
@@ -173,7 +171,7 @@ export default function ChecklistsPage() {
 
     await addDocumentNonBlocking(itemsCollection, newItem);
     setNewItemText('');
-  }, [firestore, selectedChecklist, newItemText, checklistItems, newItemType]);
+  }, [firestore, selectedChecklist, newItemText, newItemType, checklistItems]);
 
   const handleDeleteItem = React.useCallback((itemId: string) => {
     if (!firestore || !selectedChecklist) return;
@@ -195,6 +193,7 @@ export default function ChecklistsPage() {
   const handleCommentChange = React.useCallback((item: ChecklistItem, comment: string) => {
     if (!firestore || !selectedChecklist || item.type !== 'yes_no') return;
     
+    // Clear any existing timer for this item
     if (commentDebounceTimers[item.id]) {
       clearTimeout(commentDebounceTimers[item.id]);
     }
@@ -548,25 +547,27 @@ export default function ChecklistsPage() {
         />
       )}
 
-      <AlertDialog open={!!checklistToDelete} onOpenChange={(open) => !open && setChecklistToDelete(null)}>
-        <AlertDialogContent>
-            <AlertDialogHeader>
-                <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
-                <AlertDialogDescription>
-                    Esta ação não pode ser desfeita e excluirá o checklist "{checklistToDelete?.name}" e todos os seus itens.
-                </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-                <AlertDialogCancel onClick={() => setChecklistToDelete(null)}>Cancelar</AlertDialogCancel>
-                <AlertDialogAction
-                    className='bg-destructive hover:bg-destructive/90'
-                    onClick={confirmDelete}
-                >
-                    Excluir
-                </AlertDialogAction>
-            </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {checklistToDelete && (
+          <AlertDialog open={!!checklistToDelete} onOpenChange={(open) => !open && setChecklistToDelete(null)}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        Esta ação não pode ser desfeita e excluirá o checklist "{checklistToDelete?.name}" e todos os seus itens.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel onClick={() => setChecklistToDelete(null)}>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction
+                        className='bg-destructive hover:bg-destructive/90'
+                        onClick={confirmDelete}
+                    >
+                        Excluir
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+      )}
     </div>
   );
 }
