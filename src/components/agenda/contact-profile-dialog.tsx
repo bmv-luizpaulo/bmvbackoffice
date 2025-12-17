@@ -54,6 +54,20 @@ export function ContactProfileDialog({ isOpen, onOpenChange, contact }: ContactP
   const currentAuthConfig = authConfig[contact.autenticacao] || authConfig['Pendente'];
   const AuthIcon = currentAuthConfig.icon;
 
+  const getCreatedAtDate = (createdAt: any): Date | null => {
+    if (!createdAt) return null;
+    if (createdAt.toDate) return createdAt.toDate(); // It's a Firestore Timestamp
+    if (typeof createdAt === 'string' || typeof createdAt === 'number') {
+      const date = new Date(createdAt);
+      if (!isNaN(date.getTime())) {
+        return date;
+      }
+    }
+    return null;
+  };
+  const createdAtDate = getCreatedAtDate(contact.createdAt);
+
+
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl">
@@ -138,7 +152,7 @@ export function ContactProfileDialog({ isOpen, onOpenChange, contact }: ContactP
         <Separator />
         
         <div className="text-xs text-muted-foreground text-center">
-            Contato criado em {contact.createdAt ? format(new Date(contact.createdAt.toDate()), 'dd/MM/yyyy HH:mm', { locale: ptBR }) : 'Data desconhecida'}
+            Contato criado em {createdAtDate ? format(createdAtDate, 'dd/MM/yyyy HH:mm', { locale: ptBR }) : 'Data desconhecida'}
         </div>
 
       </DialogContent>
