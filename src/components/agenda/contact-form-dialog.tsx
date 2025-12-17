@@ -41,7 +41,7 @@ import { ptBR } from 'date-fns/locale';
 type ContactFormDialogProps = {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
-  onSave: (contact: Omit<Contact, 'id'>) => void;
+  onSave: (contact: Omit<Contact, 'id'>, contactId?: string) => void;
   contact?: Contact | null;
   type: 'cliente' | 'fornecedor' | 'parceiro';
 };
@@ -102,7 +102,9 @@ const getCreatedAtDate = (createdAt: any): Date | null => {
     }
   }
   // Handle Firebase Timestamp
-  if (createdAt.toDate) return createdAt.toDate();
+  if (createdAt && typeof createdAt.toDate === 'function') {
+    return createdAt.toDate();
+  }
   return null;
 };
 
@@ -132,7 +134,7 @@ export function ContactFormDialog({ isOpen, onOpenChange, onSave, contact, type 
         form.reset({ ...defaultValues, tipo: type });
       }
     }
-  }, [contact, form, isOpen, type]);
+  }, [contact, isOpen, type]);
 
   const handleCepLookup = async (cep: string) => {
     const cepDigits = cep.replace(/\D/g, '');
@@ -154,7 +156,7 @@ export function ContactFormDialog({ isOpen, onOpenChange, onSave, contact, type 
   };
 
   function onSubmit(values: z.infer<typeof formSchema>) {
-    onSave(values as Omit<Contact, 'id'>);
+    onSave(values as Omit<Contact, 'id'>, contact?.id);
     onOpenChange(false);
   }
   
