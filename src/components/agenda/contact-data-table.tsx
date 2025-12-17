@@ -47,26 +47,26 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { updateDocumentNonBlocking, deleteDocumentNonBlocking, addDocumentNonBlocking } from "@/firebase";
+import { Badge } from "../ui/badge";
 
 const ContactFormDialog = dynamic(() => import('./contact-form-dialog').then(m => m.ContactFormDialog), { ssr: false });
 const ContactImportExportDialog = dynamic(() => import('../contacts/contact-import-export').then(m => m.ContactImportExportDialog), { ssr: false });
 
 interface ContactDataTableProps {
-    type: 'cliente' | 'fornecedor' | 'parceiro';
+    type?: 'cliente' | 'fornecedor' | 'parceiro';
 }
 
 export function ContactDataTable({ type }: ContactDataTableProps) {
   const firestore = useFirestore();
-  const contactsQuery = useMemoFirebase(
-    () =>
-      firestore
-        ? query(
-            collection(firestore, 'contacts'),
-            where('type', '==', type)
-          )
-        : null,
-    [firestore, type]
-  );
+  const contactsQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    const baseQuery = collection(firestore, 'contacts');
+    if (type) {
+      return query(baseQuery, where('type', '==', type));
+    }
+    return baseQuery;
+  }, [firestore, type]);
+
   const { data: contactsData, isLoading } = useCollection<Contact>(contactsQuery);
   const data = React.useMemo(() => contactsData ?? [], [contactsData]);
 
@@ -94,7 +94,7 @@ export function ContactDataTable({ type }: ContactDataTableProps) {
   const handleSaveContact = React.useCallback(async (contactData: Omit<Contact, 'id' | 'type'>) => {
     if (!firestore) return;
     
-    const dataToSave: Omit<Contact, 'id'> = { ...contactData, type };
+    const dataToSave: Omit<Contact, 'id'> = { ...contactData, type: type || 'cliente' };
 
     if (selectedContact) {
       // Update
@@ -124,6 +124,7 @@ export function ContactDataTable({ type }: ContactDataTableProps) {
           case 'cliente': return 'Cliente';
           case 'fornecedor': return 'Fornecedor';
           case 'parceiro': return 'Parceiro';
+          default: return 'Contato';
       }
   }, [type]);
 
@@ -145,7 +146,7 @@ export function ContactDataTable({ type }: ContactDataTableProps) {
         filterFn: (row, id, value) => {
             const contact = row.original;
             const name = contact.personType === 'Pessoa Jurídica' 
-                ? `${contact.tradeName || ''} ${contact.legalName || ''}`
+                ? `${' '}${contact.tradeName || ''} ${contact.legalName || ''}`
                 : contact.fullName || '';
             return name.toLowerCase().includes(String(value).toLowerCase());
         },
@@ -162,6 +163,11 @@ export function ContactDataTable({ type }: ContactDataTableProps) {
       accessorKey: "personType",
       header: "Tipo de Pessoa",
     },
+    ...(!type ? [{
+      accessorKey: "type",
+      header: "Tipo",
+      cell: ({ row }: any) => <Badge variant="outline">{row.original.type}</Badge>
+    }] : []),
     {
       id: "actions",
       cell: ({ row }) => {
@@ -194,7 +200,7 @@ export function ContactDataTable({ type }: ContactDataTableProps) {
         )
       },
     },
-  ], [handleEditClick, handleDeleteClick]);
+  ], [handleEditClick, handleDeleteClick, type]);
 
   const table = useReactTable({
     data,
@@ -270,7 +276,7 @@ export function ContactDataTable({ type }: ContactDataTableProps) {
             ) : (
               <TableRow>
                 <TableCell colSpan={columns.length} className="h-24 text-center">
-                  {isLoading ? `Carregando ${type}s...` : "Nenhum resultado."}
+                  {isLoading ? `Carregando ${type ? type+'s' : 'contatos'}...` : "Nenhum resultado."}
                 </TableCell>
               </TableRow>
             )}
@@ -301,7 +307,7 @@ export function ContactDataTable({ type }: ContactDataTableProps) {
         onOpenChange={setIsFormOpen}
         onSave={handleSaveContact}
         contact={selectedContact}
-        type={type}
+        type={type || 'cliente'}
       />
 
       <ContactImportExportDialog
