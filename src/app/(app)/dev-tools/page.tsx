@@ -13,7 +13,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { getSuggestedFollowUps } from '@/ai/flows/ai-suggested-follow-ups';
 import { useFirestore } from '@/firebase';
 import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -29,21 +28,11 @@ const notificationSchema = z.object({
     link: z.string().url("O link deve ser uma URL válida."),
 });
 
-const aiFollowUpSchema = z.object({
-  opportunityDetails: z.string().min(1, "Os detalhes são obrigatórios."),
-  currentPipelineStage: z.string().min(1, "O estágio é obrigatório."),
-  pastFollowUpActions: z.string().min(1, "As ações são obrigatórias."),
-});
-
-
 export default function DevToolsPage() {
     const { createNotification } = useNotifications();
     const { user } = useUser();
     const { toast } = useToast();
     const firestore = useFirestore();
-    
-    const [aiSuggestions, setAiSuggestions] = React.useState<{ suggestedActions: string[], reasoning: string } | null>(null);
-    const [isAiLoading, setIsAiLoading] = React.useState(false);
 
     const notificationForm = useForm<z.infer<typeof notificationSchema>>({
         resolver: zodResolver(notificationSchema),
@@ -51,15 +40,6 @@ export default function DevToolsPage() {
             title: "Notificação de Teste",
             message: "Esta é uma mensagem de teste gerada pelas ferramentas de desenvolvedor.",
             link: "/dashboard",
-        }
-    });
-    
-    const aiFollowUpForm = useForm<z.infer<typeof aiFollowUpSchema>>({
-        resolver: zodResolver(aiFollowUpSchema),
-        defaultValues: {
-            opportunityDetails: "Cliente potencial de grande porte, demonstrou interesse em nossa solução de nuvem. Último contato há 2 semanas.",
-            currentPipelineStage: "Qualificação",
-            pastFollowUpActions: "E-mail de introdução enviado. Sem resposta.",
         }
     });
 
@@ -71,20 +51,6 @@ export default function DevToolsPage() {
         createNotification(user.uid, values);
         toast({ title: "Notificação Enviada", description: "Uma notificação de teste foi enviada para você." });
     };
-
-    const onAiFollowUpSubmit = async (values: z.infer<typeof aiFollowUpSchema>) => {
-        setIsAiLoading(true);
-        setAiSuggestions(null);
-        try {
-            const result = await getSuggestedFollowUps(values);
-            setAiSuggestions(result);
-        } catch (e) {
-            toast({ variant: 'destructive', title: "Erro na IA", description: "Não foi possível gerar sugestões." });
-        } finally {
-            setIsAiLoading(false);
-        }
-    }
-
 
   if (process.env.NODE_ENV !== 'development') {
     return (
@@ -253,52 +219,6 @@ export default function DevToolsPage() {
           </Card>
 
            <div className="space-y-6">
-                <Card>
-                    <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                        <Bot className="h-5 w-5" />
-                        Testador de Sugestões de IA
-                    </CardTitle>
-                    <CardDescription>
-                        Teste o fluxo de IA para gerar sugestões de acompanhamento de vendas.
-                    </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <Form {...aiFollowUpForm}>
-                            <form onSubmit={aiFollowUpForm.handleSubmit(onAiFollowUpSubmit)} className="space-y-4">
-                                <FormField control={aiFollowUpForm.control} name="opportunityDetails" render={({ field }) => (
-                                    <FormItem><FormLabel>Detalhes da Oportunidade</FormLabel><FormControl><Textarea {...field} rows={3} /></FormControl><FormMessage /></FormItem>
-                                )}/>
-                                <FormField control={aiFollowUpForm.control} name="currentPipelineStage" render={({ field }) => (
-                                    <FormItem><FormLabel>Estágio do Pipeline</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                                )}/>
-                                <FormField control={aiFollowUpForm.control} name="pastFollowUpActions" render={({ field }) => (
-                                    <FormItem><FormLabel>Ações Anteriores</FormLabel><FormControl><Textarea {...field} rows={2}/></FormControl><FormMessage /></FormItem>
-                                )}/>
-
-                                 {aiSuggestions && (
-                                    <Alert>
-                                        <AlertTitle className="font-bold">Sugestões Geradas</AlertTitle>
-                                        <AlertDescription>
-                                            <ul className="list-disc pl-5 mt-2 space-y-1">
-                                                {aiSuggestions.suggestedActions.map((s, i) => <li key={i}>{s}</li>)}
-                                            </ul>
-                                            <p className="mt-2 text-xs text-muted-foreground italic">{aiSuggestions.reasoning}</p>
-                                        </AlertDescription>
-                                    </Alert>
-                                )}
-
-                                <div className="flex justify-end">
-                                    <Button type="submit" disabled={isAiLoading}>
-                                        {isAiLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
-                                        Gerar Sugestões
-                                    </Button>
-                                </div>
-                            </form>
-                        </Form>
-                    </CardContent>
-                </Card>
-
                 <Card>
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2"><Flag className="h-5 w-5"/>Feature Flags</CardTitle>

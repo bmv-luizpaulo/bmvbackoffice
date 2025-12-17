@@ -1,7 +1,5 @@
 'use server';
 
-import { getSuggestedFollowUps, SuggestedFollowUpsInput } from "@/ai/flows/ai-suggested-follow-ups";
-import { generateDailyChatSummary } from "@/ai/flows/daily-chat-summary";
 import { getDocs, collection, addDoc, serverTimestamp, doc, setDoc } from 'firebase/firestore';
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
 import { initializeFirebase, errorEmitter, FirestorePermissionError } from "@/firebase";
@@ -118,62 +116,6 @@ export async function createUserAction(userData: Omit<User, 'id' | 'avatarUrl'>)
             errorMessage = 'O formato do e-mail é inválido.';
         }
         return { success: false, error: errorMessage };
-    }
-}
-
-
-export async function getFollowUpSuggestionsAction(project: Project) {
-    noStore();
-    try {
-        const { firestore } = initializeFirebase();
-        const tasksCollection = collection(firestore, `projects/${project.id}/tasks`);
-        const tasksSnapshot = await getDocs(tasksCollection);
-        const tasks = tasksSnapshot.docs.map(doc => doc.data() as Task);
-
-        const openTasks = tasks.filter(task => !task.isCompleted).map(task => `- ${task.name}`).join('\n');
-        const completedTasks = tasks.filter(task => task.isCompleted).map(task => `- ${task.name}`).join('\n');
-
-        const opportunityDetails = `
-            Título do Projeto: ${project.name}
-            Descrição: ${project.description}
-            Data de Início: ${new Date(project.startDate).toLocaleDateString()}
-            Tarefas Abertas: 
-            ${openTasks || 'Nenhuma'}
-        `;
-        
-        const pastFollowUpActions = `
-            O projeto foi iniciado em ${new Date(project.startDate).toLocaleDateString()}.
-            Tarefas já concluídas:
-            ${completedTasks || 'Nenhuma'}
-        `;
-
-        const input: SuggestedFollowUpsInput = {
-            opportunityDetails,
-            currentPipelineStage: "Em Andamento", 
-            pastFollowUpActions
-        };
-        
-        const result = await getSuggestedFollowUps(input);
-        
-        return { success: true, data: result };
-    } catch (error) {
-        console.error("Erro ao obter sugestões de IA:", error);
-        return { success: false, error: "Falha ao obter sugestões de IA." };
-    }
-}
-
-export async function getChatSummaryAction() {
-    noStore();
-    try {
-        const chatLog = await getChatLogForDay();
-        if (!chatLog) {
-             return { success: true, data: { summary: "Nenhuma conversa registrada hoje." } };
-        }
-        const result = await generateDailyChatSummary({ chatLog });
-        return { success: true, data: result };
-    } catch (error) {
-        console.error("Erro ao gerar resumo do chat:", error);
-        return { success: false, error: "Falha ao gerar resumo do chat." };
     }
 }
 
