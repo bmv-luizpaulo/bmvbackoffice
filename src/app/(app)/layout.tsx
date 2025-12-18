@@ -37,6 +37,7 @@ import {
   UserSquare,
   Bug,
   Shield,
+  Video,
 } from 'lucide-react';
 import Image from 'next/image';
 import React, { useEffect } from 'react';
@@ -121,6 +122,7 @@ const navSections = [
                  { href: '/projects', icon: KanbanSquare, label: 'Quadro Kanban' },
               ]
             },
+            { href: '/reunioes', icon: Video, label: 'Reuniões' },
             { href: '/tasks/completed', icon: CheckCircle2, label: 'Tarefas Concluídas' },
             { 
               href: '#', 
