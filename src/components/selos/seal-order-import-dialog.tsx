@@ -14,11 +14,14 @@ import { Button } from '@/components/ui/button';
 import { Input } from "../ui/input";
 import type { SealOrder } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, AlertCircle, PlusCircle, Trash2 } from "lucide-react";
+import { Loader2, AlertCircle, PlusCircle, Trash2, Upload, FileSpreadsheet } from "lucide-react";
 import { parse, isValid } from "date-fns";
 import { Alert, AlertTitle, AlertDescription } from "../ui/alert";
 import { ScrollArea } from "../ui/scroll-area";
 import { cn } from "@/lib/utils";
+import * as XLSX from 'xlsx';
+import { Label } from "../ui/label";
+import { Progress } from "../ui/progress";
 
 type SealOrderImportDialogProps = {
   isOpen: boolean;
@@ -27,7 +30,6 @@ type SealOrderImportDialogProps = {
 };
 
 type RowData = {
-  id: number;
   legacyId: string;
   orderDate: string;
   originName: string;
@@ -37,28 +39,33 @@ type RowData = {
   quantity: string;
   tax: string;
   total: string;
-  error?: string;
+  status?: string;
 };
 
-const COLUMNS = ['legacyId', 'orderDate', 'originName', 'program', 'uf', 'dq', 'quantity', 'tax', 'total'];
-
-const initialRow = { id: 0, legacyId: '', orderDate: '', originName: '', program: '', uf: '', dq: '', quantity: '', tax: '', total: '' };
-
-const parseDate = (dateStr: string): Date | null => {
+const parseDate = (dateStr: string | number): Date | null => {
   if (!dateStr) return null;
-  const formats = ['dd/MM/yyyy HH:mm:ss', 'dd/MM/yyyy HH:mm', 'dd/MM/yy HH:mm', 'yyyy-MM-dd HH:mm:ss'];
+  // Handle Excel's date serial number
+  if (typeof dateStr === 'number') {
+    return XLSX.SSF.parse_date_code(dateStr);
+  }
+  // Handle string dates
+  const formats = ['dd/MM/yyyy HH:mm:ss', 'dd/MM/yyyy HH:mm', 'dd/MM/yy HH:mm', 'yyyy-MM-dd HH:mm:ss', 'M/d/yy, HH:mm:ss'];
   for (const format of formats) {
     try {
       const parsedDate = parse(dateStr, format, new Date());
       if (isValid(parsedDate)) return parsedDate;
     } catch (e) { /* ignore */ }
   }
+  const genericParse = new Date(dateStr);
+  if (isValid(genericParse)) return genericParse;
+
   return null;
 };
 
-const parseNumber = (numStr: string): number => {
+const parseNumber = (numStr: string | number): number => {
+    if (typeof numStr === 'number') return numStr;
     if (!numStr) return 0;
-    const cleaned = numStr.replace(/\./g, '').replace(',', '.').replace(/R\$\s?/, '').replace(/UCS/i, '').trim();
+    const cleaned = String(numStr).replace(/\./g, '').replace(',', '.').replace(/R\$\s?/, '').replace(/UCS/i, '').trim();
     return parseFloat(cleaned) || 0;
 };
 
@@ -73,153 +80,149 @@ const extractOriginAndDocument = (text: string) => {
     return { originName: text.trim(), originDocument: '' };
 };
 
-const validateAndConvertToSealOrder = (row: RowData): Partial<SealOrder> | { error: string } => {
-  if (Object.values(row).every(v => v === '' || typeof v === 'number')) return { error: 'Linha vazia.' };
-
-  const date = parseDate(row.orderDate);
-  if (!date) return { error: `Data inválida: ${row.orderDate}` };
-
+const validateAndConvertToSealOrder = (row: RowData, index: number): Partial<SealOrder> | { error: string } => {
   const { originName, originDocument } = extractOriginAndDocument(row.originName);
 
-  return {
-    legacyId: parseInt(row.legacyId.replace('#', '')) || 0,
-    orderDate: date,
+  const order: Partial<SealOrder> = {
+    legacyId: parseInt(String(row.legacyId).replace('#', '')) || 0,
+    orderDate: parseDate(row.orderDate),
     originName: originName,
     originDocument: originDocument,
     program: row.program,
     uf: row.uf,
-    dq: row.dq.toLowerCase() === 'sim',
+    dq: String(row.dq).toLowerCase() === 'sim',
     quantity: parseNumber(row.quantity),
     tax: parseNumber(row.tax),
     total: parseNumber(row.total),
-    status: 'Pendente de Aprovação',
+    status: row.status as any || 'Pendente de Aprovação'
   };
+
+  if (!order.legacyId) return { error: `Linha ${index + 2}: 'Pedido' (ID Legado) é obrigatório e deve ser um número.` };
+  if (!order.orderDate) return { error: `Linha ${index + 2}: 'Data' inválida: ${row.orderDate}` };
+  if (!order.originName) return { error: `Linha ${index + 2}: 'Origem' é obrigatório.` };
+
+  return order;
 };
 
 export function SealOrderImportDialog({ isOpen, onOpenChange, onSave }: SealOrderImportDialogProps) {
   const { toast } = useToast();
   const [isSaving, setIsSaving] = React.useState(false);
-  const [rows, setRows] = React.useState<RowData[]>([initialRow]);
+  const [parsedRows, setParsedRows] = React.useState<Partial<SealOrder>[]>([]);
+  const [errors, setErrors] = React.useState<string[]>([]);
+  const [fileName, setFileName] = React.useState<string | null>(null);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
-  const handleAddRow = () => {
-    setRows(prev => [...prev, { ...initialRow, id: Date.now() + prev.length }]);
-  };
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
 
-  const handleRemoveRow = (id: number) => {
-    setRows(prev => prev.filter(r => r.id !== id));
-  };
-  
-  const handleInputChange = (id: number, field: keyof RowData, value: string) => {
-    setRows(prev => prev.map(row => (row.id === id ? { ...row, [field]: value } : row)));
-  };
+    setFileName(file.name);
+    setParsedRows([]);
+    setErrors([]);
+    setIsSaving(true);
 
-  const handlePaste = (e: React.ClipboardEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    const pasteData = e.clipboardData.getData('text');
-    const pastedRows = pasteData.split(/[\r\n]+/).filter(r => r.trim() !== '');
+    try {
+        const data = await file.arrayBuffer();
+        const workbook = XLSX.read(data);
+        const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+        const json: RowData[] = XLSX.utils.sheet_to_json(worksheet, {
+            header: ["legacyId", "orderDate", "originName", "program", "uf", "dq", "quantity", "tax", "total", "status"],
+            range: 1 // Pula a linha do cabeçalho
+        });
 
-    const newRows: RowData[] = pastedRows.map((line, lineIndex) => {
-      // Split by tab first, if that fails, split by multiple spaces
-      let columns = line.split('\t');
-      if (columns.length < 2) {
-          columns = line.split(/\s{2,}/); // Split by 2 or more spaces
-      }
-      
-      const rowData: any = { id: Date.now() + lineIndex };
-      COLUMNS.forEach((colKey, colIndex) => {
-        rowData[colKey] = (columns[colIndex] || '').trim();
-      });
-      return rowData as RowData;
-    });
+        const newParsedRows: Partial<SealOrder>[] = [];
+        const newErrors: string[] = [];
 
-    if (newRows.length > 0) {
-      setRows(newRows);
+        json.forEach((row, index) => {
+            const result = validateAndConvertToSealOrder(row, index);
+            if ('error' in result) {
+                newErrors.push(result.error);
+            } else {
+                newParsedRows.push(result);
+            }
+        });
+
+        setParsedRows(newParsedRows);
+        setErrors(newErrors);
+
+    } catch (error) {
+        toast({ title: "Erro ao ler arquivo", description: "Não foi possível processar o arquivo. Verifique se o formato está correto.", variant: "destructive" });
+    } finally {
+        setIsSaving(false);
+        if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
-  const validatedOrders = React.useMemo(() => {
-    return rows.map(validateAndConvertToSealOrder);
-  }, [rows]);
-
-  const hasErrors = validatedOrders.some(o => 'error' in o);
-  const validOrderCount = validatedOrders.filter(o => !('error' in o) && o.legacyId).length;
 
   const handleSave = async () => {
     setIsSaving(true);
-    const ordersToSave = validatedOrders.filter(o => !('error' in o) && o.legacyId) as Partial<SealOrder>[];
-    await onSave(ordersToSave);
+    await onSave(parsedRows);
     setIsSaving(false);
     onOpenChange(false);
   }
 
   React.useEffect(() => {
     if (!isOpen) {
-        setRows([initialRow]);
+        setFileName(null);
+        setParsedRows([]);
+        setErrors([]);
     }
   }, [isOpen]);
 
+  const hasErrors = errors.length > 0;
+  const validOrderCount = parsedRows.length;
+
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-6xl">
+      <DialogContent className="max-w-4xl">
         <DialogHeader>
           <DialogTitle>Importar Pedidos Legados</DialogTitle>
           <DialogDescription>
-            Copie os dados da sua planilha (Ctrl+C) e cole na primeira célula da tabela abaixo (Ctrl+V).
+            Envie um arquivo CSV ou XLSX com os pedidos legados para importação em massa.
           </DialogDescription>
         </DialogHeader>
-        <div className="space-y-4" onPaste={handlePaste}>
-            <ScrollArea className="h-[50vh] border rounded-md">
-                <table className="w-full text-xs">
-                    <thead className="sticky top-0 bg-muted z-10">
-                        <tr className="divide-x">
-                            <th className="p-2 w-16">Ações</th>
-                            <th className="p-2 w-24">Pedido</th>
-                            <th className="p-2 w-48">Data</th>
-                            <th className="p-2 w-96">Origem</th>
-                            <th className="p-2">PARC/PROG</th>
-                            <th className="p-2">UF</th>
-                            <th className="p-2">D.O</th>
-                            <th className="p-2">Quantidade</th>
-                            <th className="p-2">Taxa</th>
-                            <th className="p-2">Total</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y">
-                        {rows.map((row, index) => (
-                           <tr key={row.id} className="divide-x">
-                            <td className="p-1 text-center">
-                                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleRemoveRow(row.id)}>
-                                    <Trash2 className="h-3 w-3 text-destructive"/>
-                                </Button>
-                            </td>
-                            {COLUMNS.map(colKey => (
-                                <td key={colKey} className="p-0">
-                                    <Input
-                                        value={row[colKey as keyof RowData] as string}
-                                        onChange={(e) => handleInputChange(row.id, colKey as keyof RowData, e.target.value)}
-                                        className="h-full w-full border-0 rounded-none focus-visible:ring-1 focus-visible:ring-primary"
-                                    />
-                                </td>
-                            ))}
-                           </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </ScrollArea>
-             <div className="flex items-center justify-between">
-                <Button onClick={handleAddRow} variant="outline" size="sm">
-                    <PlusCircle className="mr-2 h-4 w-4"/> Adicionar Linha
-                </Button>
-                {hasErrors && (
-                    <Alert variant="destructive" className="max-w-md">
-                        <AlertCircle className="h-4 w-4" />
-                        <AlertTitle>Erros Encontrados</AlertTitle>
-                        <AlertDescription>
-                            Algumas linhas contêm dados inválidos e não serão importadas. Verifique as datas e campos obrigatórios.
-                        </AlertDescription>
-                    </Alert>
-                )}
+        <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="file-upload">Arquivo (CSV ou XLSX)</Label>
+              <Input
+                id="file-upload"
+                type="file"
+                accept=".csv, .xlsx, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel"
+                onChange={handleFileChange}
+                disabled={isSaving}
+                ref={fileInputRef}
+              />
+              <p className="text-sm text-muted-foreground">
+                O arquivo deve conter as colunas na ordem correta, sem cabeçalho na primeira linha.
+              </p>
             </div>
+            
+            {(isSaving && parsedRows.length === 0) && (
+              <div className="flex items-center justify-center p-8">
+                  <Loader2 className="mr-2 h-6 w-6 animate-spin" />
+                  <span>Analisando arquivo...</span>
+              </div>
+            )}
+
+            {(parsedRows.length > 0 || errors.length > 0) && (
+              <>
+                 <Alert variant={hasErrors ? "destructive" : "default"}>
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertTitle>Resultado da Análise do Arquivo: {fileName}</AlertTitle>
+                    <AlertDescription>
+                      Encontrados {validOrderCount} pedidos válidos e {errors.length} erros. Apenas os pedidos válidos serão importados.
+                    </AlertDescription>
+                </Alert>
+
+                {errors.length > 0 && (
+                    <ScrollArea className="h-32 border rounded-md p-2">
+                        <ul className="text-xs text-destructive space-y-1">
+                            {errors.map((err, i) => <li key={i}>{err}</li>)}
+                        </ul>
+                    </ScrollArea>
+                )}
+              </>
+            )}
         </div>
         <DialogFooter className="pt-4">
           <DialogClose asChild>
