@@ -52,7 +52,7 @@ import { format } from 'date-fns';
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { MeetingFormDialog } from './meeting-form-dialog';
 
-export default function MeetingsDataTable() {
+export function MeetingsDataTable() {
   const firestore = useFirestore();
   const { toast } = useToast();
   
