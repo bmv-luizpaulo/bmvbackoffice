@@ -12,7 +12,7 @@ import {
   ColumnFiltersState,
   getFilteredRowModel,
 } from "@tanstack/react-table"
-import { MoreHorizontal, Pencil, Trash2, Upload } from "lucide-react"
+import { MoreHorizontal, Upload, User as UserIcon } from "lucide-react"
 
 import {
   Table,
@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import type { SealOrder } from "@/lib/types";
+import type { SealOrder, Contact } from "@/lib/types";
 import { useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking } from "@/firebase";
 import { collection, query, orderBy, serverTimestamp } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
@@ -32,6 +32,8 @@ import { format, isValid } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Badge } from "../ui/badge"
 import dynamic from "next/dynamic"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../ui/dropdown-menu";
+import { ContactProfileDialog } from "../agenda/contact-profile-dialog";
 
 const SealOrderImportDialog = dynamic(() => import('./seal-order-import-dialog').then(m => m.SealOrderImportDialog), { ssr: false });
 
@@ -47,10 +49,19 @@ export function SealOrderDataTable() {
 
   const { data: sealOrdersData, isLoading } = useCollection<SealOrder>(sealOrdersQuery);
   const data = React.useMemo(() => sealOrdersData ?? [], [sealOrdersData]);
-
+  
+  const contactsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'contacts') : null, [firestore]);
+  const { data: contacts } = useCollection<Contact>(contactsQuery);
+  const contactsMapByDoc = React.useMemo(() => {
+    if (!contacts) return new Map<string, Contact>();
+    return new Map(contacts.map(c => [c.documento, c]));
+  }, [contacts]);
+  
   const [sorting, setSorting] = React.useState<SortingState>([{ id: 'orderDate', desc: true }]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
   const [isImportOpen, setIsImportOpen] = React.useState(false);
+  const [isContactProfileOpen, setIsContactProfileOpen] = React.useState(false);
+  const [selectedContact, setSelectedContact] = React.useState<Contact | null>(null);
 
   const handleImportSave = async (orders: Partial<SealOrder>[]) => {
     if (!firestore) return;
@@ -70,6 +81,20 @@ export function SealOrderDataTable() {
         });
     }
     setIsImportOpen(false);
+  };
+  
+  const handleContactClick = (order: SealOrder) => {
+    const contact = contactsMapByDoc.get(order.originDocument || '');
+    if (contact) {
+      setSelectedContact(contact);
+      setIsContactProfileOpen(true);
+    } else {
+      toast({
+        variant: "destructive",
+        title: "Contato não encontrado",
+        description: "Nenhum contato com este CPF/CNPJ foi encontrado no sistema atual."
+      })
+    }
   };
 
   const columns: ColumnDef<SealOrder>[] = React.useMemo(() => [
@@ -92,9 +117,10 @@ export function SealOrderDataTable() {
         } else if (typeof orderDate === 'object' && 'y' in orderDate && 'm' in orderDate && 'd' in orderDate) {
             // Custom map object from import
             date = new Date(orderDate.y, orderDate.m - 1, orderDate.d, orderDate.H || 0, orderDate.M || 0, orderDate.S || 0);
-        } else {
-            // Fallback for ISO string or other date formats
+        } else if (typeof orderDate === 'string') {
             date = new Date(orderDate);
+        } else {
+            return <span className="text-destructive">Data inválida</span>;
         }
 
         if (!isValid(date)) {
@@ -137,7 +163,31 @@ export function SealOrderDataTable() {
         header: "Status",
         cell: ({ row }) => <Badge>{row.original.status}</Badge>
     },
-  ], []);
+     {
+      id: "actions",
+      cell: ({ row }) => {
+        const order = row.original;
+        return (
+          <div className="text-right">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="h-8 w-8 p-0">
+                  <span className="sr-only">Abrir menu</span>
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => handleContactClick(order)} disabled={!order.originDocument}>
+                  <UserIcon className="mr-2 h-4 w-4" />
+                  Ver Contato
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        )
+      },
+    }
+  ], [contactsMapByDoc]);
 
   const table = useReactTable({
     data,
@@ -239,6 +289,14 @@ export function SealOrderDataTable() {
         onOpenChange={setIsImportOpen}
         onSave={handleImportSave}
       />
+      
+      {isContactProfileOpen && (
+          <ContactProfileDialog 
+            isOpen={isContactProfileOpen}
+            onOpenChange={setIsContactProfileOpen}
+            contact={selectedContact}
+          />
+      )}
     </div>
   )
 }
