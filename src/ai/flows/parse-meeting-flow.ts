@@ -1,9 +1,25 @@
+'use server';
 
 import { z } from 'zod';
-import { ai } from '@/ai/dev';
+import { genkit, configureGenkit } from 'genkit';
+import { googleAI } from '@genkit-ai/google-genai';
 import { ptBR } from 'date-fns/locale';
 import { format } from 'date-fns';
 import { MeetingDetails } from '@/lib/types';
+import { config } from 'dotenv';
+
+config();
+
+configureGenkit({
+  plugins: [
+    googleAI({
+      apiVersion: ['v1', 'v1beta'],
+    }),
+  ],
+  logLevel: 'debug',
+  enableTracingAndMetrics: true,
+});
+
 
 const MeetingDetailsSchema = z.object({
   name: z.string().describe('O título ou assunto principal da reunião.'),
@@ -30,7 +46,7 @@ const MeetingParseInputSchema = z.object({
   currentDateTime: z.string(),
 });
 
-const parseMeetingDetailsPrompt = ai.definePrompt({
+const parseMeetingDetailsPrompt = genkit.definePrompt({
   name: 'parseMeetingDetailsPrompt',
   input: { schema: MeetingParseInputSchema },
   output: { schema: MeetingDetailsSchema },
@@ -50,7 +66,7 @@ Texto do Convite:
 `,
 });
 
-const parseMeetingDetailsFlow = ai.defineFlow(
+const parseMeetingDetailsFlow = genkit.defineFlow(
   {
     name: 'parseMeetingDetailsFlow',
     inputSchema: z.string(),
