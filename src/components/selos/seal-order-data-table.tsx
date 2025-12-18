@@ -81,7 +81,13 @@ export function SealOrderDataTable() {
     {
       accessorKey: "orderDate",
       header: "Data",
-      cell: ({ row }) => row.original.orderDate ? format(new Date(row.original.orderDate.toDate()), 'dd/MM/yyyy HH:mm', { locale: ptBR }) : '',
+      cell: ({ row }) => {
+        const orderDate = row.original.orderDate;
+        if (!orderDate) return '';
+        // Handle both Firestore Timestamp and ISO string formats
+        const date = orderDate.toDate ? orderDate.toDate() : new Date(orderDate);
+        return format(date, 'dd/MM/yyyy HH:mm', { locale: ptBR });
+      },
     },
     {
       accessorKey: "originName",
