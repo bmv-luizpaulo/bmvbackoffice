@@ -12,6 +12,9 @@ import { isSameDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import React from 'react';
 import { useSearchParams } from 'next/navigation';
+import { Button } from '@/components/ui/button';
+import { Plus } from 'lucide-react';
+import Link from 'next/link';
 
 // Opt out of static prerendering; this page relies on client-only Firebase hooks
 export const dynamic = 'force-dynamic';
@@ -84,57 +87,74 @@ export default function TaskAgendaPage() {
   return (
     <div className="space-y-6">
       <header>
-        <div className="flex justify-between items-center">
+        <div className="flex flex-wrap gap-4 justify-between items-center">
             <div>
                 <h1 className="font-headline text-3xl font-bold tracking-tight">Agenda de Tarefas</h1>
                 <p className="text-muted-foreground">
                     Visualize as tarefas em um calendário e gerencie sua programação.
                 </p>
             </div>
-            {isGestor && (
-                <div className="w-64">
-                    <Select value={selectedUserId} onValueChange={setSelectedUserId}>
-                        <SelectTrigger>
-                            <SelectValue placeholder="Filtrar por usuário..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">Todos os Usuários</SelectItem>
-                            {allUsers?.map(user => (
-                                <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                </div>
-            )}
+            <div className='flex items-center gap-2'>
+              <Button asChild variant="outline">
+                <Link href="/tasks/new?type=meeting">
+                  <Plus className="h-4 w-4 mr-2"/>
+                  Nova Reunião
+                </Link>
+              </Button>
+              <Button asChild>
+                <Link href="/tasks/new">
+                  <Plus className="h-4 w-4 mr-2"/>
+                  Nova Tarefa
+                </Link>
+              </Button>
+            </div>
         </div>
       </header>
       
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card className="lg:col-span-2">
-            <CardContent className="p-2 sm:p-4">
-                <Calendar
-                    mode="single"
-                    selected={selectedDate}
-                    onSelect={setSelectedDate}
-                    locale={ptBR}
-                    className="p-0"
-                    classNames={{
-                        root: "w-full",
-                        months: "w-full",
-                        month: "w-full",
-                        table: "w-full",
-                        head_row: "w-full flex justify-around",
-                        row: "w-full flex justify-around mt-2"
-                    }}
-                    modifiers={{
-                        hasTask: tasksWithDates.map(t => t.dueDateObj)
-                    }}
-                    modifiersClassNames={{
-                        hasTask: "relative !flex items-center justify-center after:content-[''] after:absolute after:bottom-1 after:left-1/2 after:-translate-x-1/2 after:h-1 after:w-1 after:rounded-full after:bg-primary"
-                    }}
-                />
-            </CardContent>
-        </Card>
+        <div className="lg:col-span-2 space-y-4">
+          {isGestor && (
+              <div className="w-full sm:w-64">
+                  <Select value={selectedUserId} onValueChange={setSelectedUserId}>
+                      <SelectTrigger>
+                          <SelectValue placeholder="Filtrar por usuário..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                          <SelectItem value="all">Todos os Usuários</SelectItem>
+                          {allUsers?.map(user => (
+                              <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>
+                          ))}
+                      </SelectContent>
+                  </Select>
+              </div>
+          )}
+          <Card>
+              <CardContent className="p-2 sm:p-4">
+                  <Calendar
+                      mode="single"
+                      selected={selectedDate}
+                      onSelect={setSelectedDate}
+                      locale={ptBR}
+                      className="p-0"
+                      classNames={{
+                          root: "w-full",
+                          months: "w-full",
+                          month: "w-full",
+                          table: "w-full",
+                          head_row: "w-full flex justify-around",
+                          row: "w-full flex justify-around mt-2"
+                      }}
+                      modifiers={{
+                          hasTask: tasksWithDates.map(t => t.dueDateObj)
+                      }}
+                      modifiersClassNames={{
+                          hasTask: "relative !flex items-center justify-center after:content-[''] after:absolute after:bottom-1 after:left-1/2 after:-translate-x-1/2 after:h-1 after:w-1 after:rounded-full after:bg-primary"
+                      }}
+                  />
+              </CardContent>
+          </Card>
+        </div>
+
 
         <Card>
             <CardHeader>
