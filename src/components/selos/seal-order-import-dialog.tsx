@@ -34,7 +34,7 @@ export function SealOrderImportDialog({ isOpen, onOpenChange, onSave }: SealOrde
   const cleanValue = (value: string) => value.trim().replace(/^"|"$/g, '');
 
   const parseDate = (dateStr: string): Date | null => {
-      const formats = ['dd/MM/yyyy HH:mm', 'dd/MM/yy HH:mm'];
+      const formats = ['dd/MM/yyyy HH:mm:ss', 'dd/MM/yyyy HH:mm', 'dd/MM/yy HH:mm'];
       for (const format of formats) {
           const parsedDate = parse(dateStr, format, new Date());
           if (isValid(parsedDate)) {
@@ -45,46 +45,63 @@ export function SealOrderImportDialog({ isOpen, onOpenChange, onSave }: SealOrde
   };
 
   const parseNumber = (numStr: string): number => {
-    const cleaned = numStr.replace(/\./g, '').replace(',', '.');
+    if (!numStr) return 0;
+    const cleaned = numStr.replace(/\./g, '').replace(',', '.').replace(/R\$\s?/, '').replace(/UCS/i, '').trim();
     return parseFloat(cleaned) || 0;
   };
+  
+  const extractOriginAndDocument = (text: string) => {
+    const docRegex = /(\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}|\d{3}\.\d{3}\.\d{3}-\d{2})/;
+    const match = text.match(docRegex);
+    if (match) {
+        const doc = match[0];
+        const name = text.replace(doc, '').trim();
+        return { originName: name, originDocument: doc };
+    }
+    return { originName: text, originDocument: '' };
+  }
 
   const handleParse = () => {
       setParseError(null);
-      const lines = textData.trim().split('\n');
+      const lines = textData.trim().split('\n').filter(line => line.trim().length > 0);
       if (lines.length === 0) {
         setParsedOrders([]);
         return;
       }
-
+      
       const orders: Partial<SealOrder>[] = [];
-      for (const line of lines) {
-        const columns = line.split('\t');
-        if (columns.length < 8) {
-            setParseError('Cada linha deve ter pelo menos 8 colunas separadas por tabulação.');
+      // Ignorar a primeira linha se for o cabeçalho
+      const dataLines = lines[0].toLowerCase().includes('pedido') ? lines.slice(1) : lines;
+
+      for (const line of dataLines) {
+        const columns = line.split('\t').map(cleanValue);
+        if (columns.length < 9) {
+            setParseError(`Formato de linha inválido. Esperava 9 colunas, mas encontrou ${columns.length}. Linha: "${line}"`);
             setParsedOrders([]);
             return;
         }
 
-        const orderDate = parseDate(cleanValue(columns[1]));
+        const orderDate = parseDate(columns[1]);
         if (!orderDate) {
-            setParseError(`Formato de data inválido na linha: "${line}" (esperado dd/mm/yyyy hh:mm).`);
+            setParseError(`Formato de data inválido na linha: "${line}" (esperado dd/mm/yyyy hh:mm:ss).`);
             setParsedOrders([]);
             return;
         }
+
+        const { originName, originDocument } = extractOriginAndDocument(columns[2]);
 
         orders.push({
-            legacyId: parseInt(cleanValue(columns[0]).replace('#', '')) || 0,
+            legacyId: parseInt(columns[0].replace('#', '')) || 0,
             orderDate: orderDate,
-            originName: cleanValue(columns[2]),
-            originDocument: cleanValue(columns[3]),
-            program: cleanValue(columns[4]),
-            uf: cleanValue(columns[5]),
-            dq: false, // O campo D.Q. não está no print, assumindo false
-            quantity: parseNumber(cleanValue(columns[6])),
-            tax: 0, // O campo Imposto não está no print
-            total: parseNumber(cleanValue(columns[7])),
-            status: cleanValue(columns[8]) as any || 'Pendente de Aprovação',
+            originName: originName,
+            originDocument: originDocument,
+            program: columns[3],
+            uf: columns[4],
+            dq: columns[5].toLowerCase() === 'sim',
+            quantity: parseNumber(columns[6]),
+            tax: parseNumber(columns[7]),
+            total: parseNumber(columns[8]),
+            status: 'Pendente de Aprovação', // Status padrão inicial
         });
       }
       setParsedOrders(orders);
@@ -112,7 +129,7 @@ export function SealOrderImportDialog({ isOpen, onOpenChange, onSave }: SealOrde
         <DialogHeader>
           <DialogTitle>Importar Pedidos Legados</DialogTitle>
           <DialogDescription>
-            Copie os dados da sua planilha (incluindo cabeçalhos) e cole no campo abaixo. As colunas devem ser separadas por tabulação.
+            Copie os dados da sua planilha (incluindo cabeçalhos) e cole no campo abaixo. As colunas devem ser separadas por tabulação (Tab).
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
