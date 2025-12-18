@@ -11,12 +11,12 @@ export default function LoginPage() {
     <FirebaseClientProvider>
       <main className="relative flex min-h-screen items-center justify-center bg-background p-4">
         <Image
-          src="https://images.unsplash.com/photo-1497215728101-856f4ea42174?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3wzODE4MDB8MHwxfGFsbHx8fHx8fHx8fDE3MjM2OTIzNTV8&ixlib=rb-4.0.3&q=80&w=1080"
-          alt="Escritório moderno e colaborativo"
+          src="/image/Tech_37.jpg"
+          alt="Tecnologia e negócios"
           fill
           sizes="100vw"
           className="absolute inset-0 -z-10 h-full w-full object-cover"
-          data-ai-hint="modern office"
+          data-ai-hint="technology business"
         />
         <div className="absolute inset-0 -z-10 bg-black/60" />
         <div className="w-full max-w-5xl">
