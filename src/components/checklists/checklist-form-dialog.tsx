@@ -144,7 +144,7 @@ export function ChecklistFormDialog({ isOpen, onOpenChange, onSave, checklist, t
   
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-xl">
+      <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>{checklist ? 'Editar Checklist' : 'Criar Novo Checklist'}</DialogTitle>
            <DialogDescription>
