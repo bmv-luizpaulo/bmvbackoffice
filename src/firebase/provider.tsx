@@ -47,7 +47,7 @@ export interface FirebaseServicesAndUser {
 }
 
 // Return type for useUser() - specific to user auth state
-export interface UserHookResult { // Renamed from UserAuthHookResult for consistency if desired, or keep as UserAuthHookResult
+export interface UserHookResult { 
   user: User | null;
   isUserLoading: boolean;
   userError: Error | null;
@@ -87,7 +87,7 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
         setUserAuthState({ user: firebaseUser, isUserLoading: false, userError: null });
         if (firebaseUser) {
           try {
-            const token = await firebaseUser.getIdTokenResult(true);
+            const token = await firebaseUser.getIdTokenResult(); // Don't force refresh here
             setClaims(token.claims || {});
           } catch (e) {
             setClaims(null);
@@ -114,17 +114,18 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
   useEffect(() => {
     if (userAuthState.user) {
       const userDocRef = doc(firestore, 'users', userAuthState.user.uid);
-      const unsubscribe = onSnapshot(userDocRef, (doc) => {
+      const unsubscribe = onSnapshot(userDocRef, async (doc) => {
         const data = doc.data() as UserProfile;
         // The Cloud Function updates `_tokenRefreshed`. When it changes, force a token refresh.
         if (data && data._tokenRefreshed) {
             console.log("Detected role change, forcing token refresh...");
-            userAuthState.user?.getIdToken(true).then(async () => {
-              try {
-                const token = await userAuthState.user!.getIdTokenResult();
-                setClaims(token.claims || {});
-              } catch (_) {}
-            }); // true forces a refresh
+            try {
+              // Force refresh the token to get new claims.
+              const token = await userAuthState.user?.getIdTokenResult(true);
+              setClaims(token.claims || {});
+            } catch (e) {
+              console.error("Error refreshing token after role change:", e);
+            }
         }
       });
 
@@ -207,7 +208,7 @@ export const useFirebaseApp = (): FirebaseApp => {
  * This provides the User object, loading status, and any auth errors.
  * @returns {UserHookResult} Object with user, isUserLoading, userError.
  */
-export const useUser = (): UserHookResult => { // Renamed from useAuthUser
+export const useUser = (): UserHookResult => {
   const { user, isUserLoading, userError } = useFirebase(); // Leverages the main hook
   return { user, isUserLoading, userError };
 };
