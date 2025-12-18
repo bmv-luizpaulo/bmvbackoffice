@@ -2,7 +2,7 @@
 
 import { getDocs, collection, addDoc, serverTimestamp, doc, setDoc } from 'firebase/firestore';
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
-import { initializeFirebase, errorEmitter, FirestorePermissionError } from "@/firebase";
+import { initializeFirebase } from "@/firebase";
 import type { Project, Task, User } from "./types";
 import { unstable_noStore as noStore } from 'next/cache';
 import * as admin from 'firebase-admin';
@@ -92,7 +92,6 @@ export async function createUserAction(userData: Omit<User, 'id' | 'avatarUrl'>)
         };
         await firestore.collection("users").doc(userRecord.uid).set(newUserProfile);
         
-        // Log activity
         await ActivityLogger.profileUpdate(firestore, userRecord.uid, decodedToken.uid);
 
 
