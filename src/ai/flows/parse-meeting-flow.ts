@@ -1,7 +1,7 @@
 'use server';
 
 import { z } from 'zod';
-import { ai } from '@/ai/genkit';
+import { ai } from '@/ai/dev';
 import { ptBR } from 'date-fns/locale';
 import { format } from 'date-fns';
 import { MeetingDetails } from '@/lib/types';
