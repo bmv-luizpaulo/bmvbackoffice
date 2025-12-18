@@ -106,15 +106,7 @@ const navSections = [
         name: 'Comercial',
         items: [
             { href: '/contatos', icon: BookUser, label: 'Contatos' },
-            { 
-              href: '#', 
-              icon: Package, 
-              label: 'Produtos',
-              subItems: [
-                { href: '/products', icon: Package, label: 'Todos os Produtos' },
-                { href: '/selos', icon: Award, label: 'Gestão de Selos' },
-              ]
-            },
+            { href: '/selos', icon: Award, label: 'Selos & Produtos' },
         ]
     },
     {
@@ -139,7 +131,6 @@ const navSections = [
                 { href: '/executed-checklists', icon: History, label: 'Checklists Realizados' },
               ]
             },
-            { href: '/pedidos-de-selos', icon: Award, label: 'Pedidos de Selos' },
         ]
     },
     {
