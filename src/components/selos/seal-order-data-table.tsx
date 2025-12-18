@@ -54,12 +54,12 @@ export function SealOrderDataTable({ statusFilter }: SealOrderDataTableProps) {
       return query(baseQuery, where('status', '==', 'Arquivado'), orderBy('orderDate', 'desc'));
     }
     
-    // Use '!=' para evitar o limite de 10 itens na cláusula 'in'.
-    return query(baseQuery, where('status', '!=', 'Arquivado'), orderBy('status'), orderBy('orderDate', 'desc'));
+    // Using != requires ordering by the same field first. Since we need to order by date,
+    // we'll fetch all non-archived and sort client-side to avoid complex index requirements.
+    return query(baseQuery, where('status', '!=', 'Arquivado'));
   }, [firestore, statusFilter]);
 
   const { data: sealOrdersData, isLoading } = useCollection<SealOrder>(sealOrdersQuery);
-  const data = React.useMemo(() => sealOrdersData ?? [], [sealOrdersData]);
   
   const contactsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'contacts') : null, [firestore]);
   const { data: contacts } = useCollection<Contact>(contactsQuery);
@@ -75,6 +75,18 @@ export function SealOrderDataTable({ statusFilter }: SealOrderDataTableProps) {
   const [isContactFormOpen, setIsContactFormOpen] = React.useState(false);
   const [selectedContact, setSelectedContact] = React.useState<Contact | null>(null);
   const [prefilledContact, setPrefilledContact] = React.useState<Partial<Contact> | null>(null);
+
+  const data = React.useMemo(() => {
+    const orders = sealOrdersData ?? [];
+    if (statusFilter === 'active') {
+      return orders.sort((a, b) => {
+        const dateA = a.orderDate?.toDate ? a.orderDate.toDate() : new Date(0);
+        const dateB = b.orderDate?.toDate ? b.orderDate.toDate() : new Date(0);
+        return dateB.getTime() - dateA.getTime();
+      });
+    }
+    return orders;
+  }, [sealOrdersData, statusFilter]);
 
   const handleImportSave = async (orders: Partial<SealOrder>[]) => {
     if (!firestore) return;
