@@ -28,7 +28,7 @@ import type { SealOrder } from "@/lib/types";
 import { useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking } from "@/firebase";
 import { collection, query, orderBy, serverTimestamp } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
-import { format, parse, isValid } from 'date-fns';
+import { format, isValid } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Badge } from "../ui/badge"
 import dynamic from "next/dynamic"
@@ -83,13 +83,18 @@ export function SealOrderDataTable() {
       header: "Data",
       cell: ({ row }) => {
         const orderDate = row.original.orderDate;
-        if (!orderDate) return '';
-        
-        let date;
+        if (!orderDate) return <span className="text-muted-foreground">N/D</span>;
+
+        let date: Date;
+
         if (orderDate.toDate) { // Firestore Timestamp
             date = orderDate.toDate();
+        } else if (typeof orderDate === 'object' && 'y' in orderDate && 'm' in orderDate && 'd' in orderDate) {
+            // Custom map object from import
+            date = new Date(orderDate.y, orderDate.m - 1, orderDate.d, orderDate.H || 0, orderDate.M || 0, orderDate.S || 0);
         } else {
-            date = new Date(orderDate); // ISO string ou similar
+            // Fallback for ISO string or other date formats
+            date = new Date(orderDate);
         }
 
         if (!isValid(date)) {
