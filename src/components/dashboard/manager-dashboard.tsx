@@ -276,32 +276,31 @@ function ManagerDashboard() {
         </motion.div>
       </AnimatePresence>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-6">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="font-headline">Pipeline de Projetos</CardTitle>
-            </CardHeader>
-            <CardContent className="h-[300px] p-2">
-              <PipelineChart data={projects ? projects.map(p => ({
-                name: p.status,
-                total: 1
-              })).reduce((acc, curr) => {
-                const existing = acc.find(item => item.name === curr.name);
-                if (existing) {
-                  existing.total += 1;
-                } else {
-                  acc.push({ ...curr });
-                }
-                return acc;
-              }, [] as Array<{ name: string; total: number }>) : []} isLoading={projectsLoading} />
-            </CardContent>
-          </Card>
-          <RecentTasksCard />
-        </div>
-        <div className="lg:col-span-1 space-y-6">
-           <QuickActionsCard />
-        </div>
+      <div className="grid grid-cols-1 gap-6">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="font-headline">Pipeline de Projetos</CardTitle>
+          </CardHeader>
+          <CardContent className="h-[300px] p-2">
+            <PipelineChart data={projects ? projects.map(p => ({
+              name: p.status,
+              total: 1
+            })).reduce((acc, curr) => {
+              const existing = acc.find(item => item.name === curr.name);
+              if (existing) {
+                existing.total += 1;
+              } else {
+                acc.push({ ...curr });
+              }
+              return acc;
+            }, [] as Array<{ name: string; total: number }>) : []} isLoading={projectsLoading} />
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <RecentTasksCard />
+        <QuickActionsCard />
       </div>
     </div>
   );
