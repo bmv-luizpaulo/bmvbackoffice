@@ -11,7 +11,10 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      // Qualquer usuário autenticado pode ler os perfis
+      allow read: if request.auth != null;
+      // Apenas o próprio usuário pode escrever em seu perfil
+      allow write: if request.auth != null && request.auth.uid == userId;
 
       match /notifications/{notificationId} {
         allow read, write: if request.auth != null && request.auth.uid == userId;
