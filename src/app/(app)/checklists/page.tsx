@@ -53,7 +53,7 @@ export default function ChecklistsPage() {
   const [isEditMode, setIsEditMode] = React.useState(true);
   const [commentDebounceTimers, setCommentDebounceTimers] = React.useState<Record<string, NodeJS.Timeout>>({});
 
-  const isManager = role?.isManager || role?.isDev;
+  const isManager = role?.permissions?.isManager || role?.permissions?.isDev;
 
   const checklistsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
