@@ -45,7 +45,7 @@ export default function UsageContractReportPage() {
       <main className="p-4 sm:p-8">
         <div className="mx-auto max-w-4xl bg-white p-12 shadow-lg print:shadow-none A4-container font-sans">
           <header className="flex items-start justify-between border-b border-gray-300 pb-6">
-            <Image src="/image/BMV.png" alt="NEXUS SGI Logo" width={150} height={50} />
+            <Image src="/image/BMV.png" alt="SGI Logo" width={150} height={50} />
             <div className="text-right">
               <h1 className="font-headline text-3xl font-bold text-gray-800">Contrato de Uso de Equipamento</h1>
               <p className="text-sm text-gray-500">Contrato Nº: {contract.id.substring(0, 8).toUpperCase()}</p>
@@ -57,7 +57,7 @@ export default function UsageContractReportPage() {
               <div>
                   <h2 className="font-headline font-semibold text-lg text-gray-700">Partes Envolvidas</h2>
                   <div className="mt-2 grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
-                      <p><strong>Concedente:</strong> NEXUS SGI</p>
+                      <p><strong>Concedente:</strong> SGI</p>
                       <p><strong>Responsável:</strong> {user?.name || contract.userId}</p>
                       <p><strong>CNPJ:</strong> XX.XXX.XXX/0001-XX</p>
                       <p><strong>CPF:</strong> {user?.personalDocument || 'Não informado'}</p>
@@ -115,7 +115,7 @@ export default function UsageContractReportPage() {
                  </div>
                  <div>
                     <div className="h-12 border-b border-gray-400" />
-                     <p className="mt-2"><strong>Representante da NEXUS SGI</strong></p>
+                     <p className="mt-2"><strong>Representante da SGI</strong></p>
                     <p className="text-xs text-gray-500">CONCEDENTE</p>
                  </div>
               </div>
@@ -123,7 +123,7 @@ export default function UsageContractReportPage() {
           </section>
 
           <footer className="mt-12 border-t border-gray-300 pt-4 text-center text-xs text-gray-400">
-             NEXUS SGI | Documento confidencial de uso interno
+             SGI | Documento confidencial de uso interno
           </footer>
         </div>
       </main>

@@ -1,6 +1,6 @@
-# NEXUS SGI
+# SGI
 
-O **NEXUS SGI** é uma plataforma integrada de gestão de projetos, tarefas, contatos e comunicação interna, construída com Next.js, Firebase e IA. O sistema foi projetado para otimizar as operações de back-office e vendas.
+O **SGI** é uma plataforma integrada de gestão de projetos, tarefas, contatos e comunicação interna, construída com Next.js, Firebase e IA. O sistema foi projetado para otimizar as operações de back-office e vendas.
 
 ## Funcionalidades Desenvolvidas
 

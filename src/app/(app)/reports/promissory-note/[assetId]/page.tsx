@@ -105,7 +105,7 @@ function PromissoryNoteReportContent() {
       <main className="p-4 sm:p-8">
         <div ref={reportRef} className="mx-auto max-w-4xl bg-white p-12 shadow-lg print:shadow-none A4-container">
           <header className="flex items-start justify-between border-b border-gray-300 pb-6">
-            <Image src="/image/BMV.png" alt="NEXUS SGI Logo" width={150} height={50} />
+            <Image src="/image/BMV.png" alt="SGI Logo" width={150} height={50} />
             <div className="text-right">
               <h1 className="font-headline text-3xl font-bold text-gray-800">Nota Promissória</h1>
               <p className="text-sm text-gray-500">Emitido em: {generationDate.toLocaleDateString('pt-BR')}</p>
@@ -120,7 +120,7 @@ function PromissoryNoteReportContent() {
                     <p><strong>Valor: R$</strong> ________________</p>
                 </div>
                 <p className='leading-relaxed'>
-                    Aos ____ dias do mês de ____________ de ______, eu, <strong>{assignee.name}</strong>, inscrito(a) sob o CPF nº <strong>{assignee.personalDocument || 'Não informado'}</strong>, pagarei por esta única via de nota promissória à <strong>NEXUS SGI</strong>, a quantia de ________________________________________________ em moeda corrente deste país, referente à garantia do ativo <strong>{asset.name}</strong> (S/N: {asset.serialNumber || 'N/D'}).
+                    Aos ____ dias do mês de ____________ de ______, eu, <strong>{assignee.name}</strong>, inscrito(a) sob o CPF nº <strong>{assignee.personalDocument || 'Não informado'}</strong>, pagarei por esta única via de nota promissória à <strong>SGI</strong>, a quantia de ________________________________________________ em moeda corrente deste país, referente à garantia do ativo <strong>{asset.name}</strong> (S/N: {asset.serialNumber || 'N/D'}).
                 </p>
                  <div className='grid grid-cols-2 gap-4 text-sm'>
                     <div>
@@ -143,7 +143,7 @@ function PromissoryNoteReportContent() {
           </section>
 
           <footer className="mt-12 border-t border-gray-300 pt-4 text-center text-xs text-gray-400">
-            NEXUS SGI | Documento confidencial de uso interno
+            SGI | Documento confidencial de uso interno
           </footer>
         </div>
       </main>

@@ -6,7 +6,7 @@ import { ThemeProvider } from '@/components/theme-provider';
 
 
 export const metadata: Metadata = {
-  title: 'NEXUS SGI',
+  title: 'SGI',
   description: 'Otimize suas vendas e operações de back-office.',
 };
 
