@@ -2,7 +2,7 @@
 
 import { UseFormReturn } from "react-hook-form";
 import { z } from "zod";
-import { format } from "date-fns";
+import { format, setHours, setMinutes } from "date-fns";
 import { ptBR } from 'date-fns/locale';
 import { CalendarIcon, User, RefreshCcw, Users, Video, FolderKanban, Info } from "lucide-react";
 import React from 'react';
@@ -145,11 +145,28 @@ export function TaskFormFields({ form, projectsData, usersData }: TaskFormFields
                             <Calendar
                                 mode="single"
                                 selected={field.value}
-                                onSelect={field.onChange}
+                                onSelect={(date) => {
+                                    const currentValue = field.value || new Date();
+                                    const newDate = date || currentValue;
+                                    const updatedDate = setHours(setMinutes(newDate, currentValue.getMinutes()), currentValue.getHours());
+                                    field.onChange(updatedDate);
+                                }}
                                 locale={ptBR}
                                 initialFocus
                             />
-                            {/* Simple time picker could be added here if needed */}
+                            <div className="p-3 border-t border-border">
+                                <FormLabel>Hora</FormLabel>
+                                <Input
+                                    type="time"
+                                    defaultValue={field.value ? format(field.value, "HH:mm") : "09:00"}
+                                    onChange={(e) => {
+                                        const [hours, minutes] = e.target.value.split(':').map(Number);
+                                        const date = field.value || new Date();
+                                        const newDate = setHours(setMinutes(date, minutes), hours);
+                                        field.onChange(newDate);
+                                    }}
+                                />
+                            </div>
                             </PopoverContent>
                         </Popover>
                         <FormMessage />
