@@ -17,25 +17,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import dynamic from 'next/dynamic';
 
-// Import fonts
-import { Raleway, Montserrat } from 'next/font/google';
-
-// Configure Raleway for headings
-const raleway = Raleway({
-  weight: ['800'], // Extra bold for headings
-  subsets: ['latin'],
-  variable: '--font-raleway',
-  display: 'swap',
-});
-
-// Configure Montserrat for body text
-const montserrat = Montserrat({
-  weight: ['400', '500'], // Normal for text, medium for emphasized text
-  subsets: ['latin'],
-  variable: '--font-montserrat',
-  display: 'swap',
-});
-
 // Interface para o retorno do useCollection
 interface UseCollectionResult<T> {
   data: T[];
@@ -214,26 +195,11 @@ function ManagerDashboard() {
   }
 
   return (
-    <div className={`space-y-6 ${montserrat.className}`}>
-      {/* Cabeçalho */}
-      <div className="flex justify-between items-start">
+    <div className="space-y-6">
+      <header className="flex justify-between items-start">
         <div>
-          <motion.h1 
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3 }}
-            className={`${raleway.className} text-[35px] font-extrabold text-gray-900`}
-          >
-            Visão Geral
-          </motion.h1>
-          <motion.p 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.1, duration: 0.3 }}
-            className="text-gray-600 text-[16px] mt-2"
-          >
-            Bem-vindo de volta! Aqui está o que está acontecendo hoje.
-          </motion.p>
+          <h1 className="font-headline text-3xl font-bold tracking-tight">Visão Geral</h1>
+          <p className="text-muted-foreground">Bem-vindo de volta! Aqui está o resumo das suas atividades.</p>
         </div>
         <TooltipProvider>
           <Tooltip>
@@ -254,7 +220,7 @@ function ManagerDashboard() {
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
-      </div>
+      </header>
 
       {/* KPIs */}
       <AnimatePresence mode="wait">
@@ -268,200 +234,75 @@ function ManagerDashboard() {
         >
         <KpiCard
           title="Projetos Ativos"
-          titleClassName={raleway.className}
           value={kpis.totalProjects.toString()}
-          valueClassName="text-3xl font-extrabold text-gray-900"
-          icon={() => <FolderKanban className="h-6 w-6 text-blue-600" />}
+          icon={<FolderKanban className="h-6 w-6" />}
           description={`${kpis.completedProjects} concluídos`}
           trend={kpis.totalProjects > 0 ? 'up' : 'neutral'}
           trendValue={`${kpis.completionRate}%`}
           iconColor="text-blue-600"
-          className="bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow"
+          className="bg-white rounded-xl shadow-sm border border-gray-100"
         />
         <KpiCard
           title="Tarefas"
-          titleClassName={raleway.className}
           value={kpis.inProgressTasks.toString()}
-          valueClassName="text-3xl font-extrabold text-gray-900"
-          icon={() => <CheckCircle className="h-6 w-6 text-green-600" />}
+          icon={<CheckCircle className="h-6 w-6" />}
           description={`${kpis.completedTasks} concluídas`}
           trend={kpis.taskCompletionRate > 50 ? 'up' : 'down'}
           trendValue={`${kpis.taskCompletionRate}%`}
           iconColor="text-green-600"
-          className="bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow"
+          className="bg-white rounded-xl shadow-sm border border-gray-100"
         />
         <KpiCard
           title="Atrasados"
-          titleClassName={raleway.className}
           value={kpis.overdueTasks.toString()}
-          valueClassName="text-3xl font-extrabold text-gray-900"
-          icon={() => <Target className="h-6 w-6 text-amber-500" />}
+          icon={<Target className="h-6 w-6" />}
           description="tarefas fora do prazo"
           trend={kpis.overdueTasks > 0 ? 'down' : 'neutral'}
           trendValue={kpis.overdueTasks > 0 ? 
             `${Math.round((kpis.overdueTasks / kpis.inProgressTasks) * 100)}%` : '0%'}
           iconColor="text-amber-500"
-          className="bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow"
+          className="bg-white rounded-xl shadow-sm border border-gray-100"
         />
         <KpiCard
           title="Selo de Qualidade"
-          titleClassName={raleway.className}
           value="Ouro"
-          valueClassName="text-3xl font-extrabold text-gray-900"
-          icon={() => <Award className="h-6 w-6 text-purple-600" />}
+          icon={<Award className="h-6 w-6" />}
           description="Nível atual"
           trend="up"
           trendValue="+12%"
           iconColor="text-purple-600"
-          className="bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow"
+          className="bg-white rounded-xl shadow-sm border border-gray-100"
         />
         </motion.div>
       </AnimatePresence>
 
-      {/* Gráfico e Ações Rápidas */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-        <Card className="col-span-4 bg-white border border-gray-100 rounded-xl shadow-sm hover:shadow-md transition-shadow">
-          <CardHeader className="pb-2">
-            <div className="flex items-center justify-between">
-              <CardTitle className={`text-xl font-extrabold text-gray-900 ${raleway.className}`}>Pipeline de Projetos</CardTitle>
-              <Button variant="ghost" size="sm" className="text-muted-foreground">
-                Ver todos
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent className="h-[300px] p-6 pt-0">
-            <PipelineChart data={projects ? projects.map(p => ({
-            name: p.status,
-            total: 1
-          })).reduce((acc, curr) => {
-            const existing = acc.find(item => item.name === curr.name);
-            if (existing) {
-              existing.total += 1;
-            } else {
-              acc.push({ ...curr });
-            }
-            return acc;
-          }, [] as Array<{ name: string; total: number }>) : []} />
-          </CardContent>
-        </Card>
-        <div className="col-span-3">
-          <QuickActionsCard />
-        </div>
-      </div>
-
-      {/* Tarefas Recentes e Atividades */}
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
-        className="grid gap-4 md:grid-cols-2 lg:grid-cols-7"
-      >
-        <div className="col-span-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 space-y-6">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="font-headline">Pipeline de Projetos</CardTitle>
+            </CardHeader>
+            <CardContent className="h-[300px] p-2">
+              <PipelineChart data={projects ? projects.map(p => ({
+                name: p.status,
+                total: 1
+              })).reduce((acc, curr) => {
+                const existing = acc.find(item => item.name === curr.name);
+                if (existing) {
+                  existing.total += 1;
+                } else {
+                  acc.push({ ...curr });
+                }
+                return acc;
+              }, [] as Array<{ name: string; total: number }>) : []} isLoading={projectsLoading} />
+            </CardContent>
+          </Card>
           <RecentTasksCard />
         </div>
-        <Card className="col-span-3 bg-white border border-gray-100 rounded-xl shadow-sm hover:shadow-md transition-all duration-300">
-          <CardHeader className="pb-3 border-b">
-            <div className="flex items-center justify-between">
-              <CardTitle className={`text-xl font-extrabold text-gray-900 ${raleway.className}`}>
-                Atividades Recentes
-              </CardTitle>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="text-sm text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg px-2 py-1 -mr-2"
-              >
-                Ver todas
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent className="p-0">
-            <div className="divide-y divide-gray-100">
-              {[
-                { 
-                  id: 1, 
-                  title: 'Novo projeto criado', 
-                  description: 'Projeto de modernização iniciado com sucesso e já em andamento', 
-                  time: 'Há 2 horas',
-                  icon: '📋',
-                  color: 'bg-blue-100 text-blue-600'
-                },
-                { 
-                  id: 2, 
-                  title: 'Tarefa concluída', 
-                  description: 'Checklist de segurança finalizado e aprovado', 
-                  time: 'Hoje às 10:30',
-                  icon: '✅',
-                  color: 'bg-green-100 text-green-600'
-                },
-                { 
-                  id: 3, 
-                  title: 'Atualização de status', 
-                  description: 'Projeto aprovado na revisão de entrega', 
-                  time: 'Ontem',
-                  icon: '🔄',
-                  color: 'bg-purple-100 text-purple-600'
-                },
-                { 
-                  id: 4, 
-                  title: 'Novo membro', 
-                  description: 'João Silva foi adicionado à equipe de desenvolvimento', 
-                  time: 'Ontem',
-                  icon: '👤',
-                  color: 'bg-amber-100 text-amber-600'
-                },
-              ].map((activity, index) => (
-                <motion.div 
-                  key={activity.id}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.05 * index }}
-                  className="group relative flex items-start gap-3 p-4 hover:bg-gray-50 transition-colors duration-200"
-                >
-                  <div className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full ${activity.color} text-sm`}>
-                    {activity.icon}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="text-sm font-semibold text-gray-900 truncate">
-                        {activity.title}
-                      </p>
-                      <span className="text-xs text-gray-500 whitespace-nowrap">
-                        {activity.time}
-                      </span>
-                    </div>
-                    <p className="text-sm text-gray-600 mt-1 line-clamp-2">
-                      {activity.description}
-                    </p>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-            <div className="border-t px-6 py-3 bg-gray-50 rounded-b-xl">
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="w-full group hover:bg-white transition-colors text-blue-600 hover:text-blue-700"
-              >
-                <span className="group-hover:translate-x-1 transition-transform">
-                  Ver histórico completo
-                </span>
-                <svg 
-                  xmlns="http://www.w3.org/2000/svg" 
-                  className="h-4 w-4 ml-2 opacity-0 group-hover:opacity-100 transition-opacity" 
-                  viewBox="0 0 20 20" 
-                  fill="currentColor"
-                >
-                  <path 
-                    fillRule="evenodd" 
-                    d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z" 
-                    clipRule="evenodd" 
-                  />
-                </svg>
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </motion.div>
+        <div className="lg:col-span-1 space-y-6">
+           <QuickActionsCard />
+        </div>
+      </div>
     </div>
   );
 }
