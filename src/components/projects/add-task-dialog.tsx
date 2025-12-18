@@ -168,8 +168,6 @@ export function AddTaskDialog({ isOpen, onOpenChange, onSaveTask, stages, tasks,
         dueDate: values.dueDate?.toISOString(),
         recurrenceFrequency: values.isRecurring ? values.recurrenceFrequency : undefined,
         recurrenceEndDate: values.isRecurring ? values.recurrenceEndDate?.toISOString() : undefined,
-        meetLink: values.taskType === 'meeting' ? values.meetLink : undefined,
-        participantIds: values.taskType === 'meeting' ? values.participantIds : undefined,
     };
 
     if (!taskData.isRecurring) {
@@ -199,7 +197,7 @@ export function AddTaskDialog({ isOpen, onOpenChange, onSaveTask, stages, tasks,
           <DialogTitle>{taskToEdit ? 'Editar Item' : 'Adicionar Novo Item'}</DialogTitle>
         </DialogHeader>
         <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 max-h-[80vh] overflow-y-auto p-1 pr-4">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 max-h-[80vh] overflow-y-auto p-1 pr-4">
                 <FormField
                     control={form.control}
                     name="taskType"

@@ -194,7 +194,7 @@ export function AddProjectDialog({ isOpen, onOpenChange, onAddProject, projectTo
           <DialogTitle>{projectToEdit ? 'Editar Projeto' : 'Criar Novo Projeto'}</DialogTitle>
         </DialogHeader>
         <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 max-h-[80vh] overflow-y-auto pr-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-6">
                         <FormField
