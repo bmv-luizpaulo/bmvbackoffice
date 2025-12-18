@@ -26,7 +26,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import type { SealOrder, Contact } from "@/lib/types";
 import { useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking } from "@/firebase";
-import { collection, query, orderBy, serverTimestamp } from "firebase/firestore";
+import { collection, query, orderBy, serverTimestamp, doc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { format, isValid } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -34,6 +34,7 @@ import { Badge } from "../ui/badge"
 import dynamic from "next/dynamic"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../ui/dropdown-menu";
 import { ContactProfileDialog } from "../agenda/contact-profile-dialog";
+import { ContactFormDialog } from "../agenda/contact-form-dialog";
 
 const SealOrderImportDialog = dynamic(() => import('./seal-order-import-dialog').then(m => m.SealOrderImportDialog), { ssr: false });
 
@@ -61,7 +62,9 @@ export function SealOrderDataTable() {
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
   const [isImportOpen, setIsImportOpen] = React.useState(false);
   const [isContactProfileOpen, setIsContactProfileOpen] = React.useState(false);
+  const [isContactFormOpen, setIsContactFormOpen] = React.useState(false);
   const [selectedContact, setSelectedContact] = React.useState<Contact | null>(null);
+  const [prefilledContact, setPrefilledContact] = React.useState<Partial<Contact> | null>(null);
 
   const handleImportSave = async (orders: Partial<SealOrder>[]) => {
     if (!firestore) return;
@@ -84,7 +87,6 @@ export function SealOrderDataTable() {
   };
   
   const handleContactClick = (order: SealOrder) => {
-    // First, try to find by document (exact match)
     const contactByDoc = contactsMapByDoc.get(order.originDocument || '');
     if (contactByDoc) {
       setSelectedContact(contactByDoc);
@@ -92,7 +94,6 @@ export function SealOrderDataTable() {
       return;
     }
   
-    // If not found, try to find by name (fuzzy match)
     if (contacts && order.originName) {
       const searchName = order.originName.toLowerCase().trim();
       const contactByName = contacts.find(c => {
@@ -107,13 +108,27 @@ export function SealOrderDataTable() {
       }
     }
   
-    // If still not found, show error
-    toast({
-      variant: "destructive",
-      title: "Contato não encontrado",
-      description: "Não foi possível localizar um contato correspondente por documento ou nome."
+    const nameParts = order.originName.split(' ');
+    const firstName = nameParts[0];
+    const lastName = nameParts.slice(1).join(' ');
+
+    setPrefilledContact({
+        firstName: firstName,
+        lastName: lastName,
+        documento: order.originDocument || '',
+        tipoDocumento: (order.originDocument || '').length > 14 ? 'CNPJ' : 'CPF',
     });
+    setIsContactFormOpen(true);
   };
+  
+  const handleSaveNewContact = async (contactData: Omit<Contact, 'id'>, contactId?: string) => {
+    if (!firestore) return;
+    await addDocumentNonBlocking(collection(firestore, 'contacts'), { ...contactData, createdAt: new Date() });
+    toast({ title: "Contato Criado", description: "O novo contato foi adicionado." });
+    setIsContactFormOpen(false);
+    setPrefilledContact(null);
+  };
+
 
   const columns: ColumnDef<SealOrder>[] = React.useMemo(() => [
     {
@@ -128,23 +143,19 @@ export function SealOrderDataTable() {
         const orderDate = row.original.orderDate;
         if (!orderDate) return <span className="text-muted-foreground">N/D</span>;
 
-        let date: Date;
-
-        if (orderDate.toDate) { // Firestore Timestamp
+        let date: Date | null = null;
+        if (orderDate?.toDate) {
             date = orderDate.toDate();
         } else if (typeof orderDate === 'object' && 'y' in orderDate && 'm' in orderDate && 'd' in orderDate) {
-            // Custom map object from import
             date = new Date(orderDate.y, orderDate.m - 1, orderDate.d, orderDate.H || 0, orderDate.M || 0, orderDate.S || 0);
         } else if (typeof orderDate === 'string') {
             date = new Date(orderDate);
-        } else {
-            return <span className="text-destructive">Data inválida</span>;
-        }
-
-        if (!isValid(date)) {
-            return <span className="text-destructive">Data inválida</span>;
         }
         
+        if (!date || !isValid(date)) {
+            return <span className="text-destructive">Data inválida</span>
+        }
+
         return format(date, 'dd/MM/yyyy HH:mm', { locale: ptBR });
       },
     },
@@ -313,6 +324,16 @@ export function SealOrderDataTable() {
             isOpen={isContactProfileOpen}
             onOpenChange={setIsContactProfileOpen}
             contact={selectedContact}
+          />
+      )}
+      
+      {isContactFormOpen && (
+          <ContactFormDialog
+            isOpen={isContactFormOpen}
+            onOpenChange={setIsContactFormOpen}
+            onSave={handleSaveNewContact}
+            contact={prefilledContact as Contact}
+            type="cliente"
           />
       )}
     </div>
