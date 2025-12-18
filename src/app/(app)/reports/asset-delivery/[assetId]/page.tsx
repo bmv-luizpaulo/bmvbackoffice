@@ -105,7 +105,7 @@ function AssetDeliveryReportContent() {
       <main className="p-4 sm:p-8">
         <div ref={reportRef} className="mx-auto max-w-4xl bg-white p-12 shadow-lg print:shadow-none A4-container">
           <header className="flex items-start justify-between border-b border-gray-300 pb-6">
-            <Image src="/image/BMV.png" alt="BMV Logo" width={150} height={50} />
+            <Image src="/image/BMV.png" alt="NEXUS SGI Logo" width={150} height={50} />
             <div className="text-right">
               <h1 className="font-headline text-3xl font-bold text-gray-800">Termo de Entrega de Ativo</h1>
               <p className="text-sm text-gray-500">Emitido em: {generationDate.toLocaleDateString('pt-BR')}</p>
@@ -114,7 +114,7 @@ function AssetDeliveryReportContent() {
 
           <section className="mt-8 space-y-6 text-gray-800">
             <p className="leading-relaxed">
-              Pelo presente instrumento, a <strong>BMV Global</strong>, doravante denominada CONCEDENTE, entrega ao(à) colaborador(a) <strong>{assignee.name}</strong>, portador(a) do CPF nº <strong>{assignee.personalDocument || 'Não informado'}</strong>, doravante denominado(a) RESPONSÁVEL, o ativo abaixo descrito para uso exclusivo no desempenho de suas funções.
+              Pelo presente instrumento, a <strong>NEXUS SGI</strong>, doravante denominada CONCEDENTE, entrega ao(à) colaborador(a) <strong>{assignee.name}</strong>, portador(a) do CPF nº <strong>{assignee.personalDocument || 'Não informado'}</strong>, doravante denominado(a) RESPONSÁVEL, o ativo abaixo descrito para uso exclusivo no desempenho de suas funções.
             </p>
 
             <div className="space-y-4 rounded-lg border bg-gray-50 p-6">
@@ -153,7 +153,7 @@ function AssetDeliveryReportContent() {
                  </div>
                  <div>
                     <div className="h-12 border-b border-gray-400" />
-                     <p className="mt-2"><strong>Representante da BMV Global</strong></p>
+                     <p className="mt-2"><strong>Representante da NEXUS SGI</strong></p>
                     <p className="text-xs text-gray-500">CONCEDENTE</p>
                  </div>
               </div>
@@ -161,7 +161,7 @@ function AssetDeliveryReportContent() {
           </section>
           
           <footer className="mt-12 border-t border-gray-300 pt-4 text-center text-xs text-gray-400">
-            BMV Global | Documento confidencial de uso interno
+            NEXUS SGI | Documento confidencial de uso interno
           </footer>
         </div>
       </main>

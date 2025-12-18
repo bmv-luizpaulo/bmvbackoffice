@@ -47,26 +47,21 @@ const parseDate = (dateStr: string | number | object): Date | null => {
   // Handle complex date object from Firestore
   if (typeof dateStr === 'object' && dateStr !== null && 'y' in dateStr && 'm' in dateStr && 'd' in dateStr) {
       const { y, m, d, H, M, S } = dateStr as { y: number, m: number, d: number, H?: number, M?: number, S?: number };
-      // Firestore month is 1-12, JS month is 0-11
       const date = new Date(y, m - 1, d, H || 0, M || 0, S || 0);
       if (isValid(date)) return date;
   }
   
-  // Handle Excel's date serial number
   if (typeof dateStr === 'number') {
     const excelDate = XLSX.SSF.parse_date_code(dateStr);
     if (excelDate) {
-        // JS month is 0-indexed, excelDate.m is 1-indexed
         return new Date(excelDate.y, excelDate.m - 1, excelDate.d, excelDate.H, excelDate.M, excelDate.S);
     }
   }
 
   if (typeof dateStr === 'string') {
-      // Handle ISO string
       const isoDate = parseISO(dateStr);
       if (isValid(isoDate)) return isoDate;
 
-      // Handle custom string formats
       const formats = ['dd/MM/yyyy HH:mm:ss', 'dd/MM/yyyy HH:mm', 'dd/MM/yy HH:mm', 'yyyy-MM-dd HH:mm:ss', 'M/d/yy, HH:mm:ss'];
       for (const format of formats) {
         try {
@@ -76,7 +71,6 @@ const parseDate = (dateStr: string | number | object): Date | null => {
       }
   }
 
-  // Fallback for any other case
   const genericParse = new Date(dateStr as any);
   if (isValid(genericParse)) return genericParse;
 

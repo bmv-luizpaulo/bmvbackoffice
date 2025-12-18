@@ -23,8 +23,8 @@ export default function LoginPage() {
           <Card className="w-full bg-background/90 backdrop-blur-sm md:grid md:grid-cols-2">
             <div className="flex items-center justify-center p-6 md:p-10 border-b md:border-b-0 md:border-r">
                 <div className="flex flex-col items-center justify-center gap-4 text-center">
-                    <Image src="/image/BMV.png" alt="BMV Logo" width={200} height={200} className="rounded-md" />
-                    <h1 className="font-headline text-5xl md:text-6xl font-bold tracking-tight text-foreground">Nexus</h1>
+                    <Image src="/image/BMV.png" alt="NEXUS SGI Logo" width={200} height={200} className="rounded-md" />
+                    <h1 className="font-headline text-5xl md:text-6xl font-bold tracking-tight text-foreground">NEXUS SGI</h1>
                 </div>
             </div>
               <div className="flex flex-col justify-center p-6 md:p-10">

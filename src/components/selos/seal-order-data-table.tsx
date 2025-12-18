@@ -49,7 +49,6 @@ const parseOrderDate = (orderDateValue: any): Date | null => {
     if (orderDateValue.toDate && typeof orderDateValue.toDate === 'function') {
         return orderDateValue.toDate();
     }
-    // Handle complex date object
     if (typeof orderDateValue === 'object' && 'y' in orderDateValue && 'm' in orderDateValue && 'd' in orderDateValue) {
         const { y, m, d, H, M, S } = orderDateValue as { y: number, m: number, d: number, H?: number, M?: number, S?: number };
         const date = new Date(y, m - 1, d, H || 0, M || 0, S || 0);
@@ -70,7 +69,6 @@ export function SealOrderDataTable({ statusFilter }: SealOrderDataTableProps) {
 
   const sealOrdersQuery = useMemoFirebase(() => {
     if (!firestore) return null;
-    // Fetch all documents and filter on the client to avoid composite index issues
     return collection(firestore, 'sealOrders');
   }, [firestore]);
 
@@ -93,12 +91,15 @@ export function SealOrderDataTable({ statusFilter }: SealOrderDataTableProps) {
   
   const data = React.useMemo(() => {
     const orders = allSealOrders ?? [];
-    return orders.filter(order => {
+    const filtered = orders.filter(order => {
         if (statusFilter === 'archived') {
             return order.status === 'Arquivado';
         }
         return order.status !== 'Arquivado';
-    }).sort((a, b) => {
+    });
+    
+    // Sort client-side
+    return filtered.sort((a, b) => {
         const dateA = parseOrderDate(a.orderDate) || new Date(0);
         const dateB = parseOrderDate(b.orderDate) || new Date(0);
         return dateB.getTime() - dateA.getTime();
@@ -210,6 +211,7 @@ export function SealOrderDataTable({ statusFilter }: SealOrderDataTableProps) {
         }
         return format(date, 'dd/MM/yyyy HH:mm', { locale: ptBR });
       },
+      sortingFn: 'datetime'
     },
     {
       accessorKey: "originName",

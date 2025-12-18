@@ -93,7 +93,7 @@ function SetPasswordForm() {
   return (
     <Card className="w-full max-w-md bg-background/90 backdrop-blur-sm">
       <CardHeader className="text-center">
-        <Image src="/image/BMV.png" alt="BMV Logo" width={100} height={100} className="mx-auto mb-4" />
+        <Image src="/image/BMV.png" alt="NEXUS SGI Logo" width={100} height={100} className="mx-auto mb-4" />
         <CardTitle className="font-headline text-3xl">
           {isLoading ? 'Verificando...' : isValidCode ? 'Defina sua Senha' : 'Link Inválido'}
         </CardTitle>

@@ -228,7 +228,7 @@ export type SealOrder = {
   quantity: number;
   tax?: number;
   total: number;
-  status: 'Pendente de Aprovação' | 'Pendente de Pagamento' | 'Pag. Efetuados' | 'Pré-processados' | 'Processados' | 'Falhas' | 'Negados' | 'Arquivados';
+  status: 'Pendente de Aprovação' | 'Pendente de Pagamento' | 'Pag. Efetuados' | 'Pré-processados' | 'Processados' | 'Falhas' | 'Negados' | 'Arquivado';
 };
 
 export type Checklist = {
