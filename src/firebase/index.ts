@@ -5,7 +5,7 @@ import { getAuth, type Auth } from 'firebase/auth';
 import { 
   getFirestore, 
   initializeFirestore, 
-  persistentLocalCache, 
+  memoryLocalCache, // Alterado de persistentLocalCache
   persistentMultipleTabManager, 
   type Firestore,
   setDoc,
@@ -44,8 +44,9 @@ function getFirebaseServices(): FirebaseServices {
   const auth = getAuth(app);
   let firestore: Firestore;
   try {
+      // Alterado para usar cache de memória, desativando a persistência offline.
       firestore = initializeFirestore(app, {
-          localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
+          localCache: memoryLocalCache(),
       });
   } catch (e) {
       // This can happen if firestore is already initialized.
