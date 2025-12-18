@@ -17,6 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, AlertCircle } from "lucide-react";
 import { parse, isValid } from "date-fns";
 import { Alert, AlertTitle, AlertDescription } from "../ui/alert";
+import { format } from 'date-fns/format';
 
 type SealOrderImportDialogProps = {
   isOpen: boolean;
@@ -36,9 +37,13 @@ export function SealOrderImportDialog({ isOpen, onOpenChange, onSave }: SealOrde
   const parseDate = (dateStr: string): Date | null => {
       const formats = ['dd/MM/yyyy HH:mm:ss', 'dd/MM/yyyy HH:mm', 'dd/MM/yy HH:mm'];
       for (const format of formats) {
-          const parsedDate = parse(dateStr, format, new Date());
-          if (isValid(parsedDate)) {
-              return parsedDate;
+          try {
+            const parsedDate = parse(dateStr, format, new Date());
+            if (isValid(parsedDate)) {
+                return parsedDate;
+            }
+          } catch (e) {
+            // Ignore parse errors from date-fns for invalid formats
           }
       }
       return null;
@@ -74,7 +79,9 @@ export function SealOrderImportDialog({ isOpen, onOpenChange, onSave }: SealOrde
       const dataLines = lines[0].toLowerCase().includes('pedido') ? lines.slice(1) : lines;
 
       for (const line of dataLines) {
-        const columns = line.split('\t').map(cleanValue);
+        // Split by tab or multiple spaces
+        const columns = line.split(/\t|\s{2,}/).map(cleanValue);
+        
         if (columns.length < 9) {
             setParseError(`Formato de linha inválido. Esperava 9 colunas, mas encontrou ${columns.length}. Linha: "${line}"`);
             setParsedOrders([]);
