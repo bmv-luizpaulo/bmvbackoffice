@@ -31,7 +31,7 @@ function ContactDataTableSkeleton() {
 }
 
 export default function ContatosPage() {
-  const [tab, setTab] = React.useState<'todos' | 'clientes' | 'fornecedores' | 'parceiros'>('todos');
+  const [tab, setTab] = React.useState<'clientes' | 'fornecedores' | 'parceiros'>('clientes');
   const [isPending, startTransition] = (React as any).useTransition ? (React as any).useTransition() : [false, (fn: any) => fn()];
 
   return (
@@ -42,24 +42,12 @@ export default function ContatosPage() {
           Gerencie seus clientes, fornecedores e parceiros em um só lugar.
         </p>
       </header>
-      <Tabs defaultValue="todos" onValueChange={(v) => startTransition(() => setTab(v as any))}>
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="todos">Todos</TabsTrigger>
+      <Tabs defaultValue="clientes" onValueChange={(v) => startTransition(() => setTab(v as any))}>
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="clientes">Clientes</TabsTrigger>
           <TabsTrigger value="fornecedores">Fornecedores</TabsTrigger>
           <TabsTrigger value="parceiros">Parceiros</TabsTrigger>
         </TabsList>
-         <TabsContent value="todos">
-          <Card>
-            <CardHeader>
-              <CardTitle>Todos os Contatos</CardTitle>
-              <CardDescription>Visualize todos os contatos cadastrados.</CardDescription>
-            </CardHeader>
-            <CardContent>
-                {tab === 'todos' && <ContactDataTable key="todos" />}
-            </CardContent>
-          </Card>
-        </TabsContent>
         <TabsContent value="clientes">
           <Card>
             <CardHeader>
