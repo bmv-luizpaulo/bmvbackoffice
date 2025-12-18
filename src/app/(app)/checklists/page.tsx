@@ -55,7 +55,6 @@ export default function ChecklistsPage() {
 
   const isManager = role?.isManager || role?.isDev;
 
-  // Simplified query to fetch all checklists. Filtering will happen on the client.
   const checklistsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
     return query(collection(firestore, 'checklists'), orderBy('name'));
@@ -68,7 +67,6 @@ export default function ChecklistsPage() {
     if (isManager || !filterParam) {
       return allChecklists;
     }
-    // Client-side filtering for non-managers on the 'me' view
     if (filterParam === 'me') {
       const userTeamIds = userProfile?.teamIds || [];
       return allChecklists.filter(c => userTeamIds.includes(c.teamId));
@@ -109,10 +107,11 @@ export default function ChecklistsPage() {
 
 
   React.useEffect(() => {
-    if (!selectedChecklist && currentChecklistList.length > 0) {
-        setSelectedChecklist(currentChecklistList[0]);
-    } else if (selectedChecklist && !currentChecklistList.some(c => c.id === selectedChecklist.id)) {
-        setSelectedChecklist(currentChecklistList[0] || null);
+    const list = currentChecklistList || [];
+    if (!selectedChecklist && list.length > 0) {
+      setSelectedChecklist(list[0]);
+    } else if (selectedChecklist && !list.some(c => c.id === selectedChecklist.id)) {
+      setSelectedChecklist(list[0] || null);
     }
   }, [currentChecklistList, selectedChecklist]);
 
@@ -142,7 +141,10 @@ export default function ChecklistsPage() {
     deleteDocumentNonBlocking(doc(firestore, 'checklists', checklistToDelete.id));
     toast({ title: "Checklist Excluído", variant: "destructive" });
     setChecklistToDelete(null);
-  }, [firestore, toast, checklistToDelete]);
+    if (selectedChecklist?.id === checklistToDelete.id) {
+      setSelectedChecklist(null);
+    }
+  }, [firestore, toast, checklistToDelete, selectedChecklist]);
 
   const handleToggleArchive = React.useCallback((checklist: Checklist) => {
     if (!firestore) return;
@@ -151,7 +153,7 @@ export default function ChecklistsPage() {
     toast({ title: `Checklist ${newStatus === 'ativo' ? 'Restaurado' : 'Arquivado'}` });
   }, [firestore, toast]);
 
-  const handleAddNewItem = async () => {
+  const handleAddNewItem = React.useCallback(async () => {
     if (!firestore || !selectedChecklist || !newItemText.trim()) return;
     
     const itemsCollection = collection(firestore, `checklists/${selectedChecklist.id}/items`);
@@ -173,26 +175,26 @@ export default function ChecklistsPage() {
 
     await addDocumentNonBlocking(itemsCollection, newItem);
     setNewItemText('');
-  };
+  }, [firestore, selectedChecklist, newItemText, newItemType, checklistItems]);
 
-  const handleDeleteItem = (itemId: string) => {
+  const handleDeleteItem = React.useCallback((itemId: string) => {
     if (!firestore || !selectedChecklist) return;
     deleteDocumentNonBlocking(doc(firestore, `checklists/${selectedChecklist.id}/items`, itemId));
-  };
+  }, [firestore, selectedChecklist]);
   
-  const handleToggleItem = (item: ChecklistItem) => {
+  const handleToggleItem = React.useCallback((item: ChecklistItem) => {
     if (!firestore || !selectedChecklist || item.type !== 'item') return;
     const itemRef = doc(firestore, `checklists/${selectedChecklist.id}/items`, item.id);
     updateDocumentNonBlocking(itemRef, { isCompleted: !item.isCompleted });
-  };
+  }, [firestore, selectedChecklist]);
   
-  const handleAnswerItem = (item: ChecklistItem, answer: 'yes' | 'no') => {
+  const handleAnswerItem = React.useCallback((item: ChecklistItem, answer: 'yes' | 'no') => {
     if (!firestore || !selectedChecklist || item.type !== 'yes_no') return;
     const itemRef = doc(firestore, `checklists/${selectedChecklist.id}/items`, item.id);
     updateDocumentNonBlocking(itemRef, { answer });
-  };
+  }, [firestore, selectedChecklist]);
   
-  const handleCommentChange = (item: ChecklistItem, comment: string) => {
+  const handleCommentChange = React.useCallback((item: ChecklistItem, comment: string) => {
     if (!firestore || !selectedChecklist || item.type !== 'yes_no') return;
     
     if (commentDebounceTimers[item.id]) {
@@ -205,7 +207,8 @@ export default function ChecklistsPage() {
     }, 1000); 
 
     setCommentDebounceTimers(prev => ({ ...prev, [item.id]: timer }));
-  };
+  }, [firestore, selectedChecklist, commentDebounceTimers]);
+
 
   const canEdit = isManager && isEditMode;
 
