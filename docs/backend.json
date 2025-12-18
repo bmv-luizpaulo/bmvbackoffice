@@ -212,8 +212,6 @@
       "required": [
         "name",
         "description",
-        "projectId",
-        "stageId",
         "isCompleted",
         "createdAt"
       ]
@@ -886,6 +884,10 @@
     "/projects/{projectId}": {
       "schema": { "$ref": "#/entities/Project" },
       "description": "Represents a project. Includes the 'id', 'name', 'description', 'startDate', 'endDate', 'ownerId', 'teamMembers', 'contactPhone', 'technicalDetails'."
+    },
+    "/tasks/{taskId}": {
+      "schema": { "$ref": "#/entities/Task" },
+      "description": "Represents a task or meeting that may or may not be associated with a project."
     },
     "/projects/{projectId}/stages/{stageId}": {
       "schema": { "$ref": "#/entities/Stage" },

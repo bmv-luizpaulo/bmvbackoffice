@@ -45,7 +45,7 @@ type AddTaskDialogProps = {
   onSaveTask: (task: Omit<Task, 'id' | 'isCompleted'>, taskId?: string) => void;
   stages: Stage[];
   tasks: Task[];
-  projectId: string;
+  projectId?: string;
   taskToEdit?: Task | null;
   dependencyId?: string | null;
 };
@@ -54,7 +54,7 @@ const formSchema = z.object({
   taskType: z.enum(['task', 'meeting']).default('task'),
   name: z.string().min(1, "O nome é obrigatório."),
   description: z.string().optional(),
-  stageId: z.string({ required_error: "A etapa é obrigatória." }),
+  stageId: z.string().optional(),
   dependentTaskIds: z.array(z.string()).optional(),
   assignee: z.string().optional(),
   dueDate: z.date().optional(),
@@ -293,28 +293,30 @@ export function AddTaskDialog({ isOpen, onOpenChange, onSaveTask, stages, tasks,
                 )}
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormField
-                        control={form.control}
-                        name="stageId"
-                        render={({ field }) => (
-                            <FormItem>
-                            <FormLabel>Etapa</FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value}>
-                                <FormControl>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Selecione uma etapa" />
-                                </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                {stages.map(stage => (
-                                    <SelectItem key={stage.id} value={stage.id}>{stage.name}</SelectItem>
-                                ))}
-                                </SelectContent>
-                            </Select>
-                            <FormMessage />
-                            </FormItem>
-                        )}
-                    />
+                    {taskType === 'task' && (
+                        <FormField
+                            control={form.control}
+                            name="stageId"
+                            render={({ field }) => (
+                                <FormItem>
+                                <FormLabel>Etapa</FormLabel>
+                                <Select onValueChange={field.onChange} value={field.value}>
+                                    <FormControl>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Selecione uma etapa" />
+                                    </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                    {stages.map(stage => (
+                                        <SelectItem key={stage.id} value={stage.id}>{stage.name}</SelectItem>
+                                    ))}
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                    )}
                     <FormField
                         control={form.control}
                         name="assignee"
@@ -349,22 +351,24 @@ export function AddTaskDialog({ isOpen, onOpenChange, onSaveTask, stages, tasks,
                     />
                 </div>
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormField
-                        control={form.control}
-                        name="dependentTaskIds"
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Depende de</FormLabel>
-                                <MultiSelect
-                                    options={taskOptions}
-                                    selected={field.value || []}
-                                    onChange={field.onChange}
-                                    placeholder="Selecione as tarefas..."
-                                />
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
+                    {taskType === 'task' && (
+                        <FormField
+                            control={form.control}
+                            name="dependentTaskIds"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Depende de</FormLabel>
+                                    <MultiSelect
+                                        options={taskOptions}
+                                        selected={field.value || []}
+                                        onChange={field.onChange}
+                                        placeholder="Selecione as tarefas..."
+                                    />
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                    )}
                     <FormField
                         control={form.control}
                         name="dueDate"
@@ -494,7 +498,7 @@ export function AddTaskDialog({ isOpen, onOpenChange, onSaveTask, stages, tasks,
                     <DialogClose asChild>
                         <Button type="button" variant="outline">Cancelar</Button>
                     </DialogClose>
-                    <Button type="submit">Salvar Tarefa</Button>
+                    <Button type="submit">Salvar</Button>
                 </DialogFooter>
             </form>
         </Form>

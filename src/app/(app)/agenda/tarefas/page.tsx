@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { useUser, useCollection, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, collectionGroup, doc, query, where } from 'firebase/firestore';
+import { collection, query, where, or } from 'firebase/firestore';
 import type { Task, User, Project, Role } from '@/lib/types';
 import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -47,9 +47,9 @@ export default function TaskAgendaPage() {
   }, [filterParam, authUser?.uid]);
 
   const tasksQuery = useMemoFirebase(() => {
-    if (!firestore || !role || !authUser?.uid) return null; // Wait for role to be loaded
+    if (!firestore || !role || !authUser?.uid) return null;
 
-    const tasksCollection = collectionGroup(firestore, 'tasks');
+    const tasksCollection = collection(firestore, 'tasks');
     
     if (role.permissions?.isManager || role.permissions?.isDev) {
       if (selectedUserId === 'all') {
@@ -58,7 +58,10 @@ export default function TaskAgendaPage() {
       return query(tasksCollection, where('assigneeId', '==', selectedUserId));
     }
     
-    return query(tasksCollection, where('assigneeId', '==', authUser.uid));
+    return query(tasksCollection, or(
+        where('assigneeId', '==', authUser.uid),
+        where('participantIds', 'array-contains', authUser.uid)
+    ));
   }, [firestore, role, selectedUserId, authUser?.uid]);
   
   const { data: tasksData, isLoading: isLoadingTasks } = useCollection<Task>(tasksQuery);
@@ -171,7 +174,7 @@ export default function TaskAgendaPage() {
                         <TaskAgendaItem 
                             key={task.id}
                             task={task}
-                            project={projectsMap.get(task.projectId)}
+                            project={task.projectId ? projectsMap.get(task.projectId) : undefined}
                             assignee={usersMap.get(task.assigneeId || '')}
                         />
                     ))

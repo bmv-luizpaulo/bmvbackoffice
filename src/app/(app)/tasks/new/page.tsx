@@ -8,7 +8,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useCollection, useUser, useMemoFirebase, addDocumentNonBlocking } from '@/firebase';
 import type { Task, Project, User as UserType, Stage } from '@/lib/types';
-import { collection, query, getDocs } from 'firebase/firestore';
+import { collection, query, getDocs, serverTimestamp } from 'firebase/firestore';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form } from '@/components/ui/form';
 import { Button } from '@/components/ui/button';
@@ -78,7 +78,11 @@ export default function NewTaskPage() {
 
     try {
         let stageId: string | undefined = undefined;
+        let collectionPath = 'tasks';
+        
+        // Se for uma tarefa, ela precisa de um projeto e de uma etapa (stage).
         if (values.taskType === 'task' && values.projectId) {
+            collectionPath = `projects/${values.projectId}/tasks`;
             const stagesCollection = collection(firestore, 'projects', values.projectId, 'stages');
             const stagesSnapshot = await getDocs(stagesCollection);
             
@@ -97,7 +101,6 @@ export default function NewTaskPage() {
             stageId = defaultStage.id;
         }
 
-
         const { assignee, ...rest } = values;
         let assigneeId: string | undefined;
         let teamId: string | undefined;
@@ -112,7 +115,7 @@ export default function NewTaskPage() {
             teamId: teamId,
             stageId: stageId,
             isCompleted: false,
-            createdAt: new Date().toISOString(),
+            createdAt: serverTimestamp(),
             description: values.description || '',
             dueDate: values.dueDate?.toISOString(),
             isRecurring: values.isRecurring,
@@ -120,7 +123,7 @@ export default function NewTaskPage() {
             recurrenceEndDate: values.isRecurring ? values.recurrenceEndDate?.toISOString() : undefined,
         };
 
-        const docRef = await addDocumentNonBlocking(collection(firestore, 'tasks'), taskData);
+        const docRef = await addDocumentNonBlocking(collection(firestore, collectionPath), taskData);
 
         if (taskData.assigneeId) {
             const project = projectsData?.find(p => p.id === values.projectId);

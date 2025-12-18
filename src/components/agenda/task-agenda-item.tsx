@@ -22,8 +22,9 @@ export function TaskAgendaItem({ task, project, assignee }: TaskAgendaItemProps)
   const firestore = useFirestore();
 
   const handleToggleComplete = () => {
-    if (!firestore || !project || task.taskType === 'meeting') return;
-    const taskRef = doc(firestore, 'projects', project.id, 'tasks', task.id);
+    if (!firestore || task.taskType === 'meeting') return;
+    const collectionPath = task.projectId ? `projects/${task.projectId}/tasks` : 'tasks';
+    const taskRef = doc(firestore, collectionPath, task.id);
     updateDocumentNonBlocking(taskRef, { isCompleted: !task.isCompleted });
   };
   
