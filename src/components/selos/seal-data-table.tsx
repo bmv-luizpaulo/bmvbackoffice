@@ -20,9 +20,8 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-  DropdownMenuCheckboxItem
 } from "@/components/ui/dropdown-menu"
-import { MoreHorizontal, Pencil, Trash2 } from "lucide-react"
+import { MoreHorizontal, Pencil, Trash2, Phone } from "lucide-react"
 import { format, isPast, isToday, differenceInDays } from 'date-fns';
 
 import {
@@ -53,6 +52,8 @@ import { Badge } from "../ui/badge";
 import { addDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase";
 import { useNotifications } from "../notifications/notifications-provider";
 import dynamic from "next/dynamic";
+import { cn } from "@/lib/utils";
+import { ContactProfileDialog } from "../agenda/contact-profile-dialog";
 
 const SealFormDialog = dynamic(() => import('./seal-form-dialog').then(m => m.SealFormDialog), { ssr: false });
 
@@ -82,7 +83,7 @@ export function SealDataTable() {
   const usersMap = React.useMemo(() => new Map(usersData?.map(u => [u.id, u])), [usersData]);
 
   const productsMap = React.useMemo(() => new Map(products?.map(p => [p.id, p.name])), [products]);
-  const contactsMap = React.useMemo(() => new Map(contacts?.map(c => [c.id, c.personType === 'Pessoa Física' ? c.fullName : c.tradeName])), [contacts]);
+  const contactsMap = React.useMemo(() => new Map(contacts?.map(c => [c.id, c])), [contacts]);
 
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
@@ -94,7 +95,9 @@ export function SealDataTable() {
   
   const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [isAlertOpen, setIsAlertOpen] = React.useState(false);
+  const [isContactProfileOpen, setIsContactProfileOpen] = React.useState(false);
   const [selectedSeal, setSelectedSeal] = React.useState<Seal | null>(null);
+  const [selectedContact, setSelectedContact] = React.useState<Contact | null>(null);
 
   const isLoading = isLoadingSeals;
 
@@ -107,6 +110,16 @@ export function SealDataTable() {
     setSelectedSeal(seal);
     setIsAlertOpen(true);
   }, []);
+
+  const handleContactClick = React.useCallback((seal: Seal) => {
+    const contact = contactsMap.get(seal.contactId);
+    if (contact) {
+      setSelectedContact(contact);
+      setIsContactProfileOpen(true);
+    } else {
+      toast({ title: "Contato não encontrado", variant: 'destructive' });
+    }
+  }, [contactsMap, toast]);
 
   const handleSaveSeal = React.useCallback(async (sealData: Omit<Seal, 'id'>, sealId?: string) => {
     if (!firestore || !authUser) return;
@@ -124,7 +137,7 @@ export function SealDataTable() {
     const daysLeft = differenceInDays(expiryDate, new Date());
     if (daysLeft <= 30 && daysLeft >= 0) {
       const productName = productsMap.get(sealData.productId) || 'desconhecido';
-      const contactName = contactsMap.get(sealData.contactId) || 'desconhecido';
+      const contactName = contactsMap.get(sealData.contactId)?.firstName || 'desconhecido';
 
       // Find a manager to notify
       const manager = usersData?.find(u => (u as any).role === 'Gestor');
@@ -165,9 +178,9 @@ export function SealDataTable() {
     {
       accessorKey: "contactId",
       header: "Cliente",
-      cell: ({ row }) => contactsMap.get(row.original.contactId) || 'Desconhecido',
+      cell: ({ row }) => contactsMap.get(row.original.contactId)?.firstName || 'Desconhecido',
       filterFn: (row, id, value) => {
-          const contactName = contactsMap.get(row.original.contactId) || '';
+          const contactName = contactsMap.get(row.original.contactId)?.firstName || '';
           return contactName.toLowerCase().includes(value.toLowerCase());
       }
     },
@@ -199,18 +212,26 @@ export function SealDataTable() {
         const expiryDate = new Date(row.original.expiryDate);
         const daysLeft = differenceInDays(expiryDate, new Date());
 
-        let status: 'Ativo' | 'Vencendo' | 'Vencido' = 'Ativo';
+        let calculatedStatus: 'Ativo' | 'Vencendo' | 'Vencido' | 'Em Renovação' | 'Solicitado' = row.original.status as any;
         let variant: "default" | "destructive" | "outline" = 'default';
 
-        if (isPast(expiryDate) && !isToday(expiryDate)) {
-          status = 'Vencido';
-          variant = 'destructive';
-        } else if (daysLeft <= 30) {
-          status = 'Vencendo';
-          variant = 'outline';
+        if (row.original.status === 'Ativo') {
+          if (isPast(expiryDate) && !isToday(expiryDate)) {
+              calculatedStatus = 'Vencido';
+              variant = 'destructive';
+          } else if (daysLeft <= 30) {
+              calculatedStatus = 'Vencendo';
+              variant = 'outline';
+          }
+        }
+        
+        switch(row.original.status) {
+            case 'Vencido': variant = 'destructive'; break;
+            case 'Em Renovação': variant = 'secondary'; break;
+            case 'Solicitado': variant = 'secondary'; break;
         }
 
-        return <Badge variant={variant}>{row.original.status}</Badge>
+        return <Badge variant={variant}>{calculatedStatus}</Badge>
       }
     },
     {
@@ -227,6 +248,10 @@ export function SealDataTable() {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>Ações</DropdownMenuLabel>
+              <DropdownMenuItem onClick={() => handleContactClick(seal)}>
+                <Phone className="mr-2 h-4 w-4" />
+                Contatar Cliente
+              </DropdownMenuItem>
               <DropdownMenuItem onClick={() => handleEditClick(seal)}>
                 <Pencil className="mr-2 h-4 w-4" />
                 Editar
@@ -244,7 +269,7 @@ export function SealDataTable() {
         )
       },
     },
-  ], [productsMap, contactsMap, handleEditClick, handleDeleteClick]);
+  ], [productsMap, contactsMap, handleEditClick, handleDeleteClick, handleContactClick]);
 
   const table = useReactTable({
     data,
@@ -409,6 +434,12 @@ export function SealDataTable() {
         seal={selectedSeal}
         products={products || []}
         contacts={contacts || []}
+      />}
+
+      {isContactProfileOpen && <ContactProfileDialog
+        isOpen={isContactProfileOpen}
+        onOpenChange={setIsContactProfileOpen}
+        contact={selectedContact}
       />}
       
       {isAlertOpen && <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>

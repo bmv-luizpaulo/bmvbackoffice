@@ -61,15 +61,6 @@ export type Contact = {
     bairro: string;
     pais: string;
   };
-  // Campos antigos para manter a compatibilidade se necessário, mas que devem ser migrados.
-  // Podem ser removidos após a migração dos dados.
-  fullName?: string;
-  personType?: 'Pessoa Física' | 'Pessoa Jurídica';
-  cpf?: string;
-  cnpj?: string;
-  legalName?: string;
-  tradeName?: string;
-  phone?: string;
 };
 
 export type Opportunity = {
