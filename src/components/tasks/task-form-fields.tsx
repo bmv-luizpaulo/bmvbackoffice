@@ -1,0 +1,327 @@
+'use client';
+
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm, UseFormReturn } from "react-hook-form";
+import { z } from "zod";
+import { format } from "date-fns";
+import { ptBR } from 'date-fns/locale';
+import { CalendarIcon, User, RefreshCcw, Users, Video } from "lucide-react";
+import React from 'react';
+
+import {
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from "../ui/textarea";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
+import type { Task, User as UserType, Team, Project, Stage } from "@/lib/types";
+import { MultiSelect } from "../ui/multi-select";
+import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
+import { Calendar } from "../ui/calendar";
+import { cn } from "@/lib/utils";
+import { Separator } from "../ui/separator";
+import { Switch } from "../ui/switch";
+import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
+
+const formSchema = z.object({
+  taskType: z.enum(['task', 'meeting']).default('task'),
+  name: z.string().min(1, "O nome é obrigatório."),
+  description: z.string().optional(),
+  projectId: z.string({ required_error: "O projeto é obrigatório." }),
+  assignee: z.string().optional(),
+  dueDate: z.date().optional(),
+  meetLink: z.string().url("URL inválida.").optional().or(z.literal('')),
+  participantIds: z.array(z.string()).optional(),
+  isRecurring: z.boolean().default(false),
+  recurrenceFrequency: z.enum(['diaria', 'semanal', 'mensal']).optional(),
+  recurrenceEndDate: z.date().optional(),
+});
+
+
+type TaskFormFieldsProps = {
+    form: UseFormReturn<z.infer<typeof formSchema>>;
+    projectsData: Project[];
+    usersData: UserType[];
+}
+
+export function TaskFormFields({ form, projectsData, usersData }: TaskFormFieldsProps) {
+    
+    const taskType = form.watch("taskType");
+    const isRecurring = form.watch("isRecurring");
+
+    const projectOptions = projectsData.map(p => ({ value: p.id, label: p.name }));
+    const userOptions = usersData.map(u => ({ value: u.id, label: u.name }));
+    const participantOptions = usersData.map(u => ({ value: u.id, label: u.name }));
+
+
+    return (
+        <div className="space-y-4">
+             <FormField
+                control={form.control}
+                name="taskType"
+                render={({ field }) => (
+                    <FormItem className="space-y-3">
+                    <FormLabel>Tipo de Item</FormLabel>
+                    <FormControl>
+                        <RadioGroup
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                        className="flex space-x-4"
+                        >
+                        <FormItem className="flex items-center space-x-2 space-y-0">
+                            <FormControl>
+                            <RadioGroupItem value="task" />
+                            </FormControl>
+                            <FormLabel className="font-normal">Tarefa</FormLabel>
+                        </FormItem>
+                        <FormItem className="flex items-center space-x-2 space-y-0">
+                            <FormControl>
+                            <RadioGroupItem value="meeting" />
+                            </FormControl>
+                            <FormLabel className="font-normal">Reunião</FormLabel>
+                        </FormItem>
+                        </RadioGroup>
+                    </FormControl>
+                    <FormMessage />
+                    </FormItem>
+                )}
+            />
+
+            <FormField
+                control={form.control}
+                name="projectId"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Projeto</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                        <SelectTrigger>
+                            <SelectValue placeholder="Selecione um projeto" />
+                        </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                        {projectOptions.map(option => (
+                            <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                        ))}
+                        </SelectContent>
+                    </Select>
+                    <FormMessage />
+                    </FormItem>
+                )}
+            />
+
+            <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Nome da {taskType === 'meeting' ? 'Reunião' : 'Tarefa'}</FormLabel>
+                    <FormControl>
+                        <Input placeholder={taskType === 'meeting' ? "Ex: Reunião de alinhamento semanal" : "Ex: Desenvolver página de login"} {...field} />
+                    </FormControl>
+                    <FormMessage />
+                    </FormItem>
+                )}
+            />
+            <FormField
+                control={form.control}
+                name="description"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Descrição</FormLabel>
+                    <FormControl>
+                        <Textarea placeholder="Adicione mais detalhes..." {...field} />
+                    </FormControl>
+                    <FormMessage />
+                    </FormItem>
+                )}
+            />
+             {taskType === 'meeting' && (
+                <>
+                    <FormField
+                    control={form.control}
+                    name="meetLink"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Link da Reunião (Google Meet)</FormLabel>
+                        <FormControl>
+                            <Input placeholder="https://meet.google.com/..." {...field} />
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                    />
+                    <FormField
+                    control={form.control}
+                    name="participantIds"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel className="flex items-center gap-2"><Users className="h-4 w-4" />Participantes</FormLabel>
+                            <MultiSelect
+                                options={participantOptions}
+                                selected={field.value || []}
+                                onChange={field.onChange}
+                                placeholder="Selecione os participantes..."
+                            />
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                    />
+                </>
+            )}
+
+             <FormField
+                control={form.control}
+                name="assignee"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Responsável</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                        <SelectTrigger>
+                            <SelectValue placeholder="Atribuir a..." />
+                        </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                        <SelectItem value="unassigned">Não atribuído</SelectItem>
+                        {userOptions.map(option => (
+                            <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                        ))}
+                        </SelectContent>
+                    </Select>
+                    <FormMessage />
+                    </FormItem>
+                )}
+            />
+             <FormField
+                control={form.control}
+                name="dueDate"
+                render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                    <FormLabel>Data de Entrega</FormLabel>
+                    <Popover>
+                        <PopoverTrigger asChild>
+                        <FormControl>
+                            <Button
+                            variant={"outline"}
+                            className={cn(
+                                "w-full pl-3 text-left font-normal",
+                                !field.value && "text-muted-foreground"
+                            )}
+                            >
+                            {field.value ? (
+                                format(field.value, "PPP", { locale: ptBR })
+                            ) : (
+                                <span>Escolha uma data</span>
+                            )}
+                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            </Button>
+                        </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                            mode="single"
+                            selected={field.value}
+                            onSelect={field.onChange}
+                            locale={ptBR}
+                            initialFocus
+                        />
+                        </PopoverContent>
+                    </Popover>
+                    <FormMessage />
+                    </FormItem>
+                )}
+            />
+
+            <Separator />
+
+             <FormField
+                control={form.control}
+                name="isRecurring"
+                render={({ field }) => (
+                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                        <div className="space-y-0.5">
+                            <FormLabel className="flex items-center gap-2"><RefreshCcw className="h-4 w-4"/>Tarefa Recorrente</FormLabel>
+                        </div>
+                        <FormControl>
+                            <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                            />
+                        </FormControl>
+                    </FormItem>
+                )}
+            />
+            {isRecurring && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-3 border rounded-lg">
+                     <FormField
+                        control={form.control}
+                        name="recurrenceFrequency"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Frequência</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                                <FormControl>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Selecione a frequência" />
+                                </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                    <SelectItem value="diaria">Diária</SelectItem>
+                                    <SelectItem value="semanal">Semanal</SelectItem>
+                                    <SelectItem value="mensal">Mensal</SelectItem>
+                                </SelectContent>
+                            </Select>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={form.control}
+                        name="recurrenceEndDate"
+                        render={({ field }) => (
+                            <FormItem className="flex flex-col">
+                            <FormLabel>Data de Término</FormLabel>
+                            <Popover>
+                                <PopoverTrigger asChild>
+                                <FormControl>
+                                    <Button
+                                    variant={"outline"}
+                                    className={cn(
+                                        "w-full pl-3 text-left font-normal",
+                                        !field.value && "text-muted-foreground"
+                                    )}
+                                    >
+                                    {field.value ? (
+                                        format(field.value, "PPP", { locale: ptBR })
+                                    ) : (
+                                        <span>Escolha uma data</span>
+                                    )}
+                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                    </Button>
+                                </FormControl>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0" align="start">
+                                <Calendar
+                                    mode="single"
+                                    selected={field.value}
+                                    onSelect={field.onChange}
+                                    locale={ptBR}
+                                    initialFocus
+                                />
+                                </PopoverContent>
+                            </Popover>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                        />
+                </div>
+            )}
+        </div>
+    )
+}
