@@ -116,18 +116,25 @@ export function SealOrderImportDialog({ isOpen, onOpenChange, onSave }: SealOrde
   const handlePaste = (e: React.ClipboardEvent<HTMLDivElement>) => {
     e.preventDefault();
     const pasteData = e.clipboardData.getData('text');
-    const pastedRows = pasteData.split('\n').filter(r => r.trim() !== '');
+    const pastedRows = pasteData.split(/[\r\n]+/).filter(r => r.trim() !== '');
 
     const newRows: RowData[] = pastedRows.map((line, lineIndex) => {
-      const columns = line.split('\t');
+      // Split by tab first, if that fails, split by multiple spaces
+      let columns = line.split('\t');
+      if (columns.length < 2) {
+          columns = line.split(/\s{2,}/); // Split by 2 or more spaces
+      }
+      
       const rowData: any = { id: Date.now() + lineIndex };
       COLUMNS.forEach((colKey, colIndex) => {
-        rowData[colKey] = columns[colIndex] || '';
+        rowData[colKey] = (columns[colIndex] || '').trim();
       });
       return rowData as RowData;
     });
 
-    setRows(newRows);
+    if (newRows.length > 0) {
+      setRows(newRows);
+    }
   };
 
   const validatedOrders = React.useMemo(() => {
