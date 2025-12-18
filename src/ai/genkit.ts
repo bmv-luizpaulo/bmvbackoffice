@@ -1,4 +1,15 @@
-// This file is intentionally left blank to avoid compilation errors
-// due to the removal of Genkit dependencies. You can re-initialize Genkit here
-// once the dependency conflicts are fully resolved with a compatible version.
-export {};
+'use server';
+import { genkit, configureGenkit } from 'genkit';
+import { googleAI } from '@genkit-ai/google-genai';
+
+configureGenkit({
+  plugins: [
+    googleAI({
+      apiVersion: ['v1', 'v1beta'],
+    }),
+  ],
+  logLevel: 'debug',
+  enableTracingAndMetrics: true,
+});
+
+export { genkit as ai };

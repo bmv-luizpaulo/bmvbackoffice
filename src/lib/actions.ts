@@ -8,6 +8,8 @@ import { unstable_noStore as noStore } from 'next/cache';
 import * as admin from 'firebase-admin';
 import { headers } from 'next/headers';
 import { ActivityLogger } from './activity-logger';
+import { ai } from '@/ai/genkit';
+import { parseMeetingDetailsFlow } from '@/ai/flows/parse-meeting-flow';
 
 // This is a placeholder for a real chat log fetching mechanism
 const getChatLogForDay = async (): Promise<string> => {
@@ -52,24 +54,7 @@ export async function createUserAction(userData: Omit<User, 'id' | 'avatarUrl'>)
         }
         const decodedToken = await auth.verifyIdToken(idToken);
         
-        const userRef = firestore.collection('users').doc(decodedToken.uid);
-        const callingUserDoc = await userRef.get();
-        
-        if (!callingUserDoc.exists) {
-            return { success: false, error: 'Usuário autor da chamada não encontrado.' };
-        }
-        
-        const callingUserRoleId = callingUserDoc.data()?.roleId;
-
-        if (!callingUserRoleId) {
-             return { success: false, error: 'Permissão negada. Função do usuário não encontrada.' };
-        }
-
-        const roleRef = firestore.collection('roles').doc(callingUserRoleId);
-        const callingUserRoleDoc = await roleRef.get();
-        const permissions = callingUserRoleDoc.data()?.permissions || {};
-        
-        if (!permissions.canManageUsers && !permissions.isDev) {
+        if (!decodedToken.canManageUsers && !decodedToken.isDev) {
             return { success: false, error: 'Permissão negada. Você não tem autorização para criar novos usuários.' };
         }
 
@@ -244,5 +229,16 @@ export async function uploadContractFileAction(formData: FormData) {
     } catch (error) {
         console.error("Erro no upload de contrato:", error);
         return { success: false, error: 'Falha ao enviar o arquivo do contrato.' };
+    }
+}
+
+export async function parseMeetingDetailsAction(meetingText: string) {
+    noStore();
+    try {
+        const result = await parseMeetingDetailsFlow(meetingText);
+        return { success: true, data: result };
+    } catch (error: any) {
+        console.error("Error in parseMeetingDetailsAction:", error);
+        return { success: false, error: error.message || 'Falha ao analisar os detalhes da reunião.' };
     }
 }
