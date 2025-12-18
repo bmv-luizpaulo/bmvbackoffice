@@ -3,12 +3,13 @@
 import * as React from 'react';
 import { useParams } from 'next/navigation';
 import { useFirestore, useDoc, useMemoFirebase, FirebaseClientProvider } from '@/firebase';
-import { collection, doc } from 'firebase/firestore';
+import { doc } from 'firebase/firestore';
 import type { Asset, User } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Loader2, Download } from 'lucide-react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import Image from 'next/image';
 
 function PromissoryNoteReportContent() {
   const params = useParams();
@@ -16,7 +17,6 @@ function PromissoryNoteReportContent() {
   const assetId = params.assetId as string;
   const reportRef = React.useRef<HTMLDivElement>(null);
   const [isGeneratingPdf, setIsGeneratingPdf] = React.useState(false);
-  const [selectedTemplateId, setSelectedTemplateId] = React.useState<string>('');
 
   const assetRef = useMemoFirebase(
     () => (firestore && assetId ? doc(firestore, 'assets', assetId) : null),
@@ -29,15 +29,6 @@ function PromissoryNoteReportContent() {
     [firestore, asset?.assigneeId]
   );
   const { data: assignee, isLoading: isLoadingAssignee } = useDoc<User>(assigneeRef);
-  const noteTemplates = React.useMemo(() => ([
-    {
-      id: 'default_note',
-      name: 'Nota Promissória Padrão',
-      type: 'promissory_note',
-      content: 'Pagarei a quantia referente ao {{asset.name}} ao favorecido, conforme condições acordadas. Devedor: {{user.name}}. Data: {{today}}.',
-    },
-  ]), []);
-  const activeTemplate = React.useMemo(() => noteTemplates.find((t: any) => t.id === selectedTemplateId), [noteTemplates, selectedTemplateId]);
 
   const isLoading = isLoadingAsset || isLoadingAssignee;
   const [generationDate] = React.useState(new Date());
@@ -48,23 +39,34 @@ function PromissoryNoteReportContent() {
     try {
       const canvas = await html2canvas(reportRef.current, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
       const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
+      
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4',
+      });
+      
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = pdf.internal.pageSize.getHeight();
-      const ratio = canvas.width / canvas.height;
-      const imgWidth = pdfWidth - 20;
-      const imgHeight = imgWidth / ratio;
+      const canvasWidth = canvas.width;
+      const canvasHeight = canvas.height;
+      const ratio = canvasWidth / canvasHeight;
+      const imgWidth = pdfWidth;
+      let imgHeight = imgWidth / ratio;
       let heightLeft = imgHeight;
-      let position = 10;
-      pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
-      heightLeft -= (pdfHeight - 20);
+      let position = 0;
+
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pdfHeight;
+
       while (heightLeft > 0) {
-        position = -heightLeft - 10;
+        position = -imgHeight + heightLeft;
         pdf.addPage();
-        pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
-        heightLeft -= (pdfHeight - 20);
+        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+        heightLeft -= pdfHeight;
       }
-      pdf.save(`Nota_Promissoria_${assignee?.name || 'responsavel'}.pdf`);
+      
+      pdf.save(`Nota_Promissoria_${assignee?.name?.replace(/\s/g, '_') || 'responsavel'}.pdf`);
     } finally {
       setIsGeneratingPdf(false);
     }
@@ -73,106 +75,78 @@ function PromissoryNoteReportContent() {
   if (isLoading) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-white">
-        <Loader2 className="h-8 w-8 animate-spin text-gray-700" />
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
 
-  if (!asset) {
+  if (!asset || !assignee) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-white p-8">
         <div className="text-center">
-          <h1 className="text-xl font-bold">Dados não encontrados</h1>
+          <h1 className="font-headline text-xl font-bold">Ativo ou responsável não encontrado</h1>
+          <p className="text-muted-foreground">Não foi possível gerar o documento.</p>
           <Button onClick={() => window.history.back()} className="mt-4">Voltar</Button>
         </div>
       </div>
     );
   }
 
-  const merge = (content: string) => {
-    if (!content) return '';
-    return content
-      .replace(/\{\{asset.name\}\}/g, asset?.name || '')
-      .replace(/\{\{asset.serialNumber\}\}/g, asset?.serialNumber || '')
-      .replace(/\{\{asset.type\}\}/g, asset?.type || '')
-      .replace(/\{\{user.name\}\}/g, assignee?.name || '')
-      .replace(/\{\{user.email\}\}/g, assignee?.email || '')
-      .replace(/\{\{user.phone\}\}/g, assignee?.phone || '');
-  };
-
   return (
-    <div className="min-h-screen bg-gray-100 print:bg-white">
-      <header className="bg-gray-100 p-4 print:hidden flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sticky top-0 z-20">
-        <div className="flex items-center gap-2">
-          <select
-            className="h-9 rounded-md border bg-background px-2 text-sm"
-            value={selectedTemplateId}
-            onChange={(e) => setSelectedTemplateId(e.target.value)}
-          >
-            <option value="">Modelo padrão</option>
-            {noteTemplates.map((t: any) => (
-              <option key={t.id} value={t.id}>{t.name}</option>
-            ))}
-          </select>
-        </div>
+    <div className="min-h-screen bg-gray-100 print:bg-white font-sans">
+      <header className="bg-gray-100 p-4 print:hidden flex items-center justify-between sticky top-0 z-20">
+        <h2 className='font-headline text-lg'>Preview: Nota Promissória</h2>
         <Button onClick={handleGeneratePdf} disabled={isGeneratingPdf}>
           {isGeneratingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
           {isGeneratingPdf ? 'Gerando...' : 'Gerar PDF'}
         </Button>
       </header>
 
-      <div className="p-4 sm:p-8">
-        <div ref={reportRef} className="mx-auto max-w-3xl bg-white p-10 shadow-lg print:shadow-none">
-          <header className="flex items-start justify-between border-b pb-4">
-            <img src="/image/BMV.png" alt="BMV Logo" style={{ width: '150px', height: 'auto' }} />
+      <main className="p-4 sm:p-8">
+        <div ref={reportRef} className="mx-auto max-w-4xl bg-white p-12 shadow-lg print:shadow-none A4-container">
+          <header className="flex items-start justify-between border-b border-gray-300 pb-6">
+            <Image src="/image/BMV.png" alt="BMV Logo" width={150} height={50} />
             <div className="text-right">
-              <h1 className="text-2xl font-bold text-gray-800">Nota Promissória</h1>
-              <p className="text-sm text-gray-500">Data de Emissão: {generationDate.toLocaleDateString('pt-BR')}</p>
+              <h1 className="font-headline text-3xl font-bold text-gray-800">Nota Promissória</h1>
+              <p className="text-sm text-gray-500">Emitido em: {generationDate.toLocaleDateString('pt-BR')}</p>
             </div>
           </header>
 
-          <main className="mt-8 space-y-6 text-gray-800">
-            <section>
-              <h2 className="font-semibold">Devedor</h2>
-              <div className="mt-2 text-sm">
-                <p><strong>Nome:</strong> {assignee?.name || 'N/D'}</p>
-                <p><strong>Email:</strong> {assignee?.email || 'N/D'}</p>
-                <p><strong>Telefone:</strong> {assignee?.phone || 'N/D'}</p>
-              </div>
-            </section>
-
-            <section>
-              <h2 className="font-semibold">Detalhes</h2>
-              <div className="mt-2 text-sm">
-                <p><strong>Valor:</strong> R$ ____________</p>
-                <p><strong>Vencimento:</strong> ____/____/______</p>
-                <p><strong>Referente a:</strong> {asset?.name || 'Ativo'}</p>
-              </div>
-            </section>
-
-            <section>
-              {activeTemplate?.content ? (
-                <div className="mt-2 text-sm leading-relaxed whitespace-pre-wrap">{merge(activeTemplate.content)}</div>
-              ) : (
-                <p className="mt-2 text-sm leading-relaxed">
-                  Pelo presente, prometo pagar a quantia acima especificada, na data de vencimento indicada, ao favorecido, livre de quaisquer impostos e encargos.
+          <section className="mt-8 space-y-8 text-gray-800">
+            <div className='border-2 border-dashed p-4 space-y-6'>
+                <div className='grid grid-cols-3 gap-4 text-sm'>
+                    <p><strong>Nº:</strong> _____________</p>
+                    <p><strong>Vencimento:</strong> ____/____/______</p>
+                    <p><strong>Valor: R$</strong> ________________</p>
+                </div>
+                <p className='leading-relaxed'>
+                    Aos ____ dias do mês de ____________ de ______, eu, <strong>{assignee.name}</strong>, inscrito(a) sob o CPF nº <strong>{assignee.personalDocument || 'Não informado'}</strong>, pagarei por esta única via de nota promissória à <strong>BMV Global</strong>, a quantia de ________________________________________________ em moeda corrente deste país, referente à garantia do ativo <strong>{asset.name}</strong> (S/N: {asset.serialNumber || 'N/D'}).
                 </p>
-              )}
-            </section>
+                 <div className='grid grid-cols-2 gap-4 text-sm'>
+                    <div>
+                        <p><strong>Emitente:</strong> {assignee.name}</p>
+                        <p><strong>CPF:</strong> {assignee.personalDocument || 'Não informado'}</p>
+                    </div>
+                    <div className='text-right'>
+                        <p><strong>Local de Pagamento:</strong> ___________________</p>
+                    </div>
+                 </div>
+            </div>
+            
+            <div className="pt-24 text-center text-sm">
+              <div className="mx-auto max-w-xs">
+                <div className="h-12 border-b border-gray-400" />
+                <p className="mt-2"><strong>{assignee.name}</strong></p>
+                <p className="text-xs text-gray-500">Assinatura do Emitente</p>
+              </div>
+            </div>
+          </section>
 
-            <section className="grid grid-cols-2 gap-12 mt-12">
-              <div>
-                <div className="h-12 border-b" />
-                <p className="text-center text-sm mt-2">Assinatura do Devedor</p>
-              </div>
-              <div>
-                <div className="h-12 border-b" />
-                <p className="text-center text-sm mt-2">Assinatura da Empresa</p>
-              </div>
-            </section>
-          </main>
+          <footer className="mt-12 border-t border-gray-300 pt-4 text-center text-xs text-gray-400">
+            BMV Global | Documento confidencial de uso interno
+          </footer>
         </div>
-      </div>
+      </main>
     </div>
   );
 }

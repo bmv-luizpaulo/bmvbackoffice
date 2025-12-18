@@ -3,12 +3,13 @@
 import * as React from 'react';
 import { useParams } from 'next/navigation';
 import { useFirestore, useDoc, useMemoFirebase, FirebaseClientProvider } from '@/firebase';
-import { collection, doc } from 'firebase/firestore';
+import { doc } from 'firebase/firestore';
 import type { Asset, User } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Loader2, Download } from 'lucide-react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import Image from 'next/image';
 
 function AssetReturnReportContent() {
   const params = useParams();
@@ -16,7 +17,6 @@ function AssetReturnReportContent() {
   const assetId = params.assetId as string;
   const reportRef = React.useRef<HTMLDivElement>(null);
   const [isGeneratingPdf, setIsGeneratingPdf] = React.useState(false);
-  const [selectedTemplateId, setSelectedTemplateId] = React.useState<string>('');
 
   const assetRef = useMemoFirebase(
     () => (firestore && assetId ? doc(firestore, 'assets', assetId) : null),
@@ -29,15 +29,6 @@ function AssetReturnReportContent() {
     [firestore, asset?.assigneeId]
   );
   const { data: assignee, isLoading: isLoadingAssignee } = useDoc<User>(assigneeRef);
-  const returnTemplates = React.useMemo(() => ([
-    {
-      id: 'default_return',
-      name: 'Termo de Devolução Padrão',
-      type: 'return_term',
-      content: 'Declaro a devolução do {{asset.name}} (SN {{asset.serialNumber}}) por {{user.name}} em {{today}}.',
-    },
-  ]), []);
-  const activeTemplate = React.useMemo(() => returnTemplates.find((t: any) => t.id === selectedTemplateId), [returnTemplates, selectedTemplateId]);
 
   const isLoading = isLoadingAsset || isLoadingAssignee;
   const [generationDate] = React.useState(new Date());
@@ -48,23 +39,34 @@ function AssetReturnReportContent() {
     try {
       const canvas = await html2canvas(reportRef.current, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
       const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
+      
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4',
+      });
+      
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = pdf.internal.pageSize.getHeight();
-      const ratio = canvas.width / canvas.height;
-      const imgWidth = pdfWidth - 20;
-      const imgHeight = imgWidth / ratio;
+      const canvasWidth = canvas.width;
+      const canvasHeight = canvas.height;
+      const ratio = canvasWidth / canvasHeight;
+      const imgWidth = pdfWidth;
+      let imgHeight = imgWidth / ratio;
       let heightLeft = imgHeight;
-      let position = 10;
-      pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
-      heightLeft -= (pdfHeight - 20);
+      let position = 0;
+
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pdfHeight;
+
       while (heightLeft > 0) {
-        position = -heightLeft - 10;
+        position = -imgHeight + heightLeft;
         pdf.addPage();
-        pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
-        heightLeft -= (pdfHeight - 20);
+        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+        heightLeft -= pdfHeight;
       }
-      pdf.save(`Termo_Devolucao_${asset?.name || assetId}.pdf`);
+      
+      pdf.save(`Termo_Devolucao_${asset?.name?.replace(/\s/g, '_') || assetId}.pdf`);
     } finally {
       setIsGeneratingPdf(false);
     }
@@ -73,111 +75,90 @@ function AssetReturnReportContent() {
   if (isLoading) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-white">
-        <Loader2 className="h-8 w-8 animate-spin text-gray-700" />
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
 
-  if (!asset) {
+  if (!asset || !assignee) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-white p-8">
         <div className="text-center">
-          <h1 className="text-xl font-bold">Ativo não encontrado</h1>
+          <h1 className="font-headline text-xl font-bold">Ativo ou responsável não encontrado</h1>
+          <p className="text-muted-foreground">Não foi possível gerar o termo.</p>
           <Button onClick={() => window.history.back()} className="mt-4">Voltar</Button>
         </div>
       </div>
     );
   }
 
-  const merge = (content: string) => {
-    if (!content) return '';
-    return content
-      .replace(/\{\{asset.name\}\}/g, asset?.name || '')
-      .replace(/\{\{asset.serialNumber\}\}/g, asset?.serialNumber || '')
-      .replace(/\{\{asset.type\}\}/g, asset?.type || '')
-      .replace(/\{\{asset.status\}\}/g, asset?.status || '')
-      .replace(/\{\{asset.location\}\}/g, asset?.location || '')
-      .replace(/\{\{user.name\}\}/g, assignee?.name || '')
-      .replace(/\{\{user.email\}\}/g, assignee?.email || '')
-      .replace(/\{\{user.phone\}\}/g, assignee?.phone || '');
-  };
-
   return (
-    <div className="min-h-screen bg-gray-100 print:bg-white">
-      <header className="bg-gray-100 p-4 print:hidden flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sticky top-0 z-20">
-        <div className="flex items-center gap-2">
-          <select
-            className="h-9 rounded-md border bg-background px-2 text-sm"
-            value={selectedTemplateId}
-            onChange={(e) => setSelectedTemplateId(e.target.value)}
-          >
-            <option value="">Modelo padrão</option>
-            {returnTemplates.map((t: any) => (
-              <option key={t.id} value={t.id}>{t.name}</option>
-            ))}
-          </select>
-        </div>
+    <div className="min-h-screen bg-gray-100 print:bg-white font-sans">
+      <header className="bg-gray-100 p-4 print:hidden flex items-center justify-between sticky top-0 z-20">
+        <h2 className='font-headline text-lg'>Preview: Termo de Devolução</h2>
         <Button onClick={handleGeneratePdf} disabled={isGeneratingPdf}>
           {isGeneratingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
           {isGeneratingPdf ? 'Gerando...' : 'Gerar PDF'}
         </Button>
       </header>
 
-      <div className="p-4 sm:p-8">
-        <div ref={reportRef} className="mx-auto max-w-3xl bg-white p-10 shadow-lg print:shadow-none">
-          <header className="flex items-start justify-between border-b pb-4">
-            <img src="/image/BMV.png" alt="BMV Logo" style={{ width: '150px', height: 'auto' }} />
+      <main className="p-4 sm:p-8">
+        <div ref={reportRef} className="mx-auto max-w-4xl bg-white p-12 shadow-lg print:shadow-none A4-container">
+          <header className="flex items-start justify-between border-b border-gray-300 pb-6">
+            <Image src="/image/BMV.png" alt="BMV Logo" width={150} height={50} />
             <div className="text-right">
-              <h1 className="text-2xl font-bold text-gray-800">Termo de Devolução de Ativo</h1>
-              <p className="text-sm text-gray-500">Data de Emissão: {generationDate.toLocaleDateString('pt-BR')}</p>
+              <h1 className="font-headline text-3xl font-bold text-gray-800">Termo de Devolução de Ativo</h1>
+              <p className="text-sm text-gray-500">Emitido em: {generationDate.toLocaleDateString('pt-BR')}</p>
             </div>
           </header>
 
-          <main className="mt-8 space-y-6 text-gray-800">
-            <section>
-              <h2 className="font-semibold">Dados do Ativo</h2>
-              <div className="mt-2 text-sm">
-                <p><strong>Nome:</strong> {asset.name}</p>
-                <p><strong>Nº de Série:</strong> {asset.serialNumber || 'N/D'}</p>
-                <p><strong>Tipo:</strong> {asset.type}</p>
-                <p><strong>Status:</strong> {asset.status}</p>
-                <p><strong>Localização:</strong> {asset.location || 'N/D'}</p>
-              </div>
-            </section>
+          <section className="mt-8 space-y-6 text-gray-800">
+            <p className="leading-relaxed">
+              Pelo presente instrumento, o(a) colaborador(a) <strong>{assignee.name}</strong>, CPF nº <strong>{assignee.personalDocument || 'Não informado'}</strong>, doravante denominado(a) RESPONSÁVEL, formaliza a devolução à <strong>BMV Global</strong>, doravante CONCEDENTE, do ativo que esteve sob sua guarda e responsabilidade.
+            </p>
 
-            <section>
-              <h2 className="font-semibold">Responsável</h2>
-              <div className="mt-2 text-sm">
-                <p><strong>Nome:</strong> {assignee?.name || 'N/D'}</p>
-                <p><strong>Email:</strong> {assignee?.email || 'N/D'}</p>
-                <p><strong>Telefone:</strong> {assignee?.phone || 'N/D'}</p>
-              </div>
-            </section>
-
-            <section>
-              <h2 className="font-semibold">Declaração</h2>
-              {activeTemplate?.content ? (
-                <div className="mt-2 text-sm leading-relaxed whitespace-pre-wrap">{merge(activeTemplate.content)}</div>
-              ) : (
-                <p className="mt-2 text-sm leading-relaxed">
-                  Declaro que estou devolvendo o ativo acima especificado nas mesmas condições em que foi entregue, salvo desgaste natural decorrente do uso adequado.
-                </p>
-              )}
-            </section>
-
-            <section className="grid grid-cols-2 gap-12 mt-12">
+            <div className="space-y-4 rounded-lg border bg-gray-50 p-6">
               <div>
-                <div className="h-12 border-b" />
-                <p className="text-center text-sm mt-2">Assinatura do Responsável</p>
+                <h2 className="font-headline font-semibold text-lg text-gray-700">Dados do Ativo</h2>
+                <div className="mt-2 grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
+                  <p><strong>Nome:</strong> {asset.name}</p>
+                  <p><strong>Nº de Série:</strong> {asset.serialNumber || 'N/D'}</p>
+                  <p><strong>Tipo:</strong> {asset.type}</p>
+                </div>
               </div>
-              <div>
-                <div className="h-12 border-b" />
-                <p className="text-center text-sm mt-2">Assinatura da Empresa</p>
+            </div>
+
+            <div className="space-y-2">
+              <h3 className="font-headline font-semibold text-lg text-gray-700">Condições de Devolução</h3>
+              <p className="text-sm leading-relaxed">
+                O(A) RESPONSÁVEL declara devolver o ativo nas condições vistoriadas pela CONCEDENTE na presente data. A assinatura deste termo quita as obrigações do(a) RESPONSÁVEL quanto à guarda do equipamento, salvo por danos ocultos ou de mau uso identificados posteriormente.
+              </p>
+              <div className="pt-4">
+                <p className="text-sm"><strong>Estado do Ativo na Devolução:</strong> _________________________________________</p>
               </div>
-            </section>
-          </main>
+            </div>
+
+            <div className="pt-24 text-center text-sm space-y-12">
+              <div className="grid grid-cols-2 gap-12">
+                 <div>
+                    <div className="h-12 border-b border-gray-400" />
+                    <p className="mt-2"><strong>{assignee.name}</strong></p>
+                    <p className="text-xs text-gray-500">RESPONSÁVEL</p>
+                 </div>
+                 <div>
+                    <div className="h-12 border-b border-gray-400" />
+                     <p className="mt-2"><strong>Representante da BMV Global</strong></p>
+                    <p className="text-xs text-gray-500">CONCEDENTE</p>
+                 </div>
+              </div>
+            </div>
+          </section>
+          
+          <footer className="mt-12 border-t border-gray-300 pt-4 text-center text-xs text-gray-400">
+            BMV Global | Documento confidencial de uso interno
+          </footer>
         </div>
-      </div>
+      </main>
     </div>
   );
 }
