@@ -33,6 +33,13 @@ import {
 } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import type { Contact } from "@/lib/types";
 import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { collection, doc, query, where } from "firebase/firestore";
@@ -287,7 +294,36 @@ export function ContactDataTable({ type }: ContactDataTableProps) {
           </TableBody>
         </Table>
       </div>
-      <div className="flex items-center justify-end space-x-2 py-4">
+       <div className="flex items-center justify-end space-x-2 py-4">
+        <div className="flex items-center space-x-2">
+          <p className="text-sm font-medium">Linhas por página</p>
+          <Select
+            value={`${table.getState().pagination.pageSize}`}
+            onValueChange={(value) => {
+              if (value === 'all') {
+                table.setPageSize(data.length);
+              } else {
+                table.setPageSize(Number(value));
+              }
+            }}
+          >
+            <SelectTrigger className="h-8 w-[70px]">
+              <SelectValue placeholder={table.getState().pagination.pageSize} />
+            </SelectTrigger>
+            <SelectContent side="top">
+              {[10, 30, 40, 50, 100].map((pageSize) => (
+                <SelectItem key={pageSize} value={`${pageSize}`}>
+                  {pageSize}
+                </SelectItem>
+              ))}
+              <SelectItem value="all">Todos</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex w-[100px] items-center justify-center text-sm font-medium">
+          Página {table.getState().pagination.pageIndex + 1} de{" "}
+          {table.getPageCount()}
+        </div>
         <Button
           variant="outline"
           size="sm"
