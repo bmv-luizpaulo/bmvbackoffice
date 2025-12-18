@@ -4,9 +4,6 @@ import { initializeApp, getApps, getApp, type FirebaseApp } from 'firebase/app';
 import { getAuth, type Auth } from 'firebase/auth';
 import { 
   getFirestore, 
-  initializeFirestore, 
-  persistentLocalCache, // Revert back to persistent cache
-  persistentMultipleTabManager, // Use multi-tab manager
   type Firestore,
   setDoc,
   addDoc,
@@ -42,18 +39,7 @@ function getFirebaseServices(): FirebaseServices {
 
   const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
   const auth = getAuth(app);
-  let firestore: Firestore;
-  try {
-      // Use persistent cache with multi-tab management
-      firestore = initializeFirestore(app, {
-          localCache: persistentLocalCache({
-              tabManager: persistentMultipleTabManager(),
-          }),
-      });
-  } catch (e) {
-      // This can happen if firestore is already initialized.
-      firestore = getFirestore(app);
-  }
+  const firestore = getFirestore(app);
 
   const services: FirebaseServices = { firebaseApp: app, auth, firestore };
   globalWithFirebase[FIREBASE_SERVICES_SYMBOL] = services;
