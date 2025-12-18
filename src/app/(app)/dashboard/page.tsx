@@ -59,7 +59,7 @@ function DashboardPage() {
     return <DashboardSkeleton />;
   }
   
-  const isManager = role?.isManager || role?.isDev;
+  const isManager = role?.permissions?.isManager || role?.permissions?.isDev;
 
   return (
     <Suspense fallback={<DashboardSkeleton />}>

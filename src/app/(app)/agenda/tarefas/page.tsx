@@ -48,7 +48,7 @@ export default function TaskAgendaPage() {
 
     const tasksCollection = collectionGroup(firestore, 'tasks');
     
-    if (role.isManager || role.isDev) {
+    if (role.permissions?.isManager || role.permissions?.isDev) {
       if (selectedUserId === 'all') {
         return query(tasksCollection);
       }
@@ -79,7 +79,7 @@ export default function TaskAgendaPage() {
       .sort((a, b) => a.dueDateObj!.getTime() - b.dueDateObj!.getTime());
   }, [tasksWithDates, selectedDate]);
   
-  const isGestor = role?.isManager || role?.isDev;
+  const isGestor = role?.permissions?.isManager || role?.permissions?.isDev;
 
   return (
     <div className="space-y-6">

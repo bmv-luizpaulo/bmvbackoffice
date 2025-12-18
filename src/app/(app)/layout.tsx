@@ -306,26 +306,9 @@ function InnerLayout({ children }: { children: React.ReactNode }) {
   const roleDocQuery = useMemoFirebase(() => (firestore && userProfile?.roleId) ? doc(firestore, 'roles', userProfile.roleId) : null, [firestore, userProfile?.roleId]);
   const { data: roleData, isLoading: isLoadingRole } = useDoc<Role>(roleDocQuery);
   
-  const roleIsManager = !!roleData?.permissions?.isManager;
-  const roleIsDev = !!roleData?.permissions?.isDev;
+  const isManager = !!roleData?.permissions?.isManager;
+  const isDev = !!roleData?.permissions?.isDev;
 
-  const [claimIsManager, setClaimIsManager] = React.useState<boolean>(false);
-  const [claimIsDev, setClaimIsDev] = React.useState<boolean>(false);
-
-  useEffect(() => {
-    const fetchClaims = async () => {
-      try {
-        if (!auth?.currentUser) return;
-        const token = await auth.currentUser.getIdTokenResult(true);
-        setClaimIsManager(!!(token?.claims as any)?.isManager);
-        setClaimIsDev(!!(token?.claims as any)?.isDev);
-      } catch (_) {}
-    };
-    fetchClaims();
-  }, [auth?.currentUser, userProfile?._tokenRefreshed]); // Re-fetch claims if token refresh is triggered
-
-  const isManager = roleIsManager || claimIsManager;
-  const isDev = roleIsDev || claimIsDev;
   const isLoadingPermissions = isUserLoading || isLoadingProfile || isLoadingRole;
 
   useEffect(() => {
@@ -385,9 +368,8 @@ function InnerLayout({ children }: { children: React.ReactNode }) {
           <SidebarContent>
              <SidebarMenu>
                  {navSections.map((section, index) => {
-                    const isManagerOrDev = true; // Temporary override
                     const visibleItems = section.items.filter((item: any) => 
-                      (!item.managerOnly || isManagerOrDev) && 
+                      (!item.managerOnly || isManager || isDev) && 
                       (!item.devOnly || process.env.NODE_ENV === 'development')
                     );
                     if (!visibleItems.length) return null;
@@ -397,7 +379,7 @@ function InnerLayout({ children }: { children: React.ReactNode }) {
                         <SidebarSeparator />
                         <SidebarGroupLabel>{section.name}</SidebarGroupLabel>
                         {visibleItems.map((item: any) => (
-                           <NavItem key={item.label} item={item} pathname={pathname} isManager={isManagerOrDev} isDev={isManagerOrDev} />
+                           <NavItem key={item.label} item={item} pathname={pathname} isManager={isManager} isDev={isDev} />
                         ))}
                       </SidebarGroup>
                     );

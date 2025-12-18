@@ -106,7 +106,7 @@ export function ProfileSettings({ user }: ProfileSettingsProps) {
     }
   }, [userProfile, form]);
 
-  const handleCepLookup = async (cep: string) => {
+  const handleCepLookup = React.useCallback(async (cep: string) => {
     const cepDigits = cep.replace(/\D/g, '');
     if (cepDigits.length !== 8) {
       return;
@@ -125,7 +125,7 @@ export function ProfileSettings({ user }: ProfileSettingsProps) {
       toast({ variant: "destructive", title: "Erro", description: result.error || "CEP não encontrado." });
     }
     setIsCepLoading(false);
-  };
+  }, [form, toast]);
 
   async function onSubmit(data: ProfileFormValues) {
     if (!userProfileRef) return;
@@ -179,7 +179,7 @@ export function ProfileSettings({ user }: ProfileSettingsProps) {
               </CardDescription>
             </div>
             {userRole && (
-                <Badge variant={userRole.isManager ? 'default' : 'secondary'} className="flex items-center gap-2">
+                <Badge variant={userRole.permissions?.isManager ? 'default' : 'secondary'} className="flex items-center gap-2">
                     <Shield className="h-4 w-4"/>
                     <span>{userRole.name}</span>
                 </Badge>

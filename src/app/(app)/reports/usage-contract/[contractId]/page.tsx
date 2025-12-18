@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { useParams } from 'next/navigation';
-import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import type { User } from '@/lib/types';
 import { Button } from '@/components/ui/button';
@@ -17,12 +17,10 @@ export default function UsageContractReportPage() {
   const firestore = useFirestore();
 
   const contractDocQuery = useMemoFirebase(() => firestore && contractId ? doc(firestore, 'assetUsageContracts', contractId) : null, [firestore, contractId]);
-  const { data: contractArr, isLoading: isLoadingContract } = useCollection<any>(contractDocQuery as any);
-  const contract = contractArr?.[0];
+  const { data: contract, isLoading: isLoadingContract } = useDoc<any>(contractDocQuery);
 
   const userDocQuery = useMemoFirebase(() => firestore && contract?.userId ? doc(firestore, 'users', contract.userId) : null, [firestore, contract?.userId]);
-  const { data: userArr, isLoading: isLoadingUser } = useCollection<User>(userDocQuery as any);
-  const user = userArr?.[0];
+  const { data: user, isLoading: isLoadingUser } = useDoc<User>(userDocQuery);
 
   const isLoading = isLoadingContract || isLoadingUser;
   

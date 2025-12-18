@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, useUser } from '@/firebase';
+import { useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, useUser, useDoc } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
 import type { Asset, User } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -21,8 +21,7 @@ export default function NewUsageContractPage() {
   const { user: authUser } = useUser();
 
   const assetDocQuery = useMemoFirebase(() => firestore && assetId ? doc(firestore, 'assets', assetId) : null, [firestore, assetId]);
-  const { data: assetArr, isLoading: isLoadingAsset } = useCollection<Asset>(assetDocQuery as any);
-  const asset = assetArr?.[0];
+  const { data: asset, isLoading: isLoadingAsset } = useDoc<Asset>(assetDocQuery);
 
   const usersQuery = useMemoFirebase(() => firestore ? collection(firestore, 'users') : null, [firestore]);
   const { data: users, isLoading: isLoadingUsers } = useCollection<User>(usersQuery);
@@ -47,11 +46,12 @@ export default function NewUsageContractPage() {
 
   // Role check: only managers/devs can create contracts
   const userDocQuery = useMemoFirebase(() => firestore && authUser ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser]);
-  const { data: userProfile } = useCollection<User>(userDocQuery as any);
-  const roleId = userProfile?.[0]?.roleId;
+  const { data: userProfile } = useDoc<User>(userDocQuery);
+  const roleId = userProfile?.roleId;
+  
   const roleDocQuery = useMemoFirebase(() => firestore && roleId ? doc(firestore, 'roles', roleId) : null, [firestore, roleId]);
-  const { data: roleData } = useCollection<any>(roleDocQuery as any);
-  const isManager = !!roleData?.[0]?.isManager;
+  const { data: roleData } = useDoc<any>(roleDocQuery);
+  const isManager = !!roleData?.permissions?.isManager;
 
   const [search, setSearch] = useState('');
   const filteredUsers = useMemo(() => {

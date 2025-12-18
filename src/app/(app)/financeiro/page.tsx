@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import { useFirestore, useCollection, useMemoFirebase, useUser as useAuthUser } from '@/firebase';
+import { useFirestore, useCollection, useMemoFirebase, useUser as useAuthUser, useDoc } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
 import type { Reimbursement, Role, User } from '@/lib/types';
 import { KpiCard } from '@/components/dashboard/kpi-card';
@@ -20,12 +20,12 @@ export default function FinanceiroPage() {
   const { user: authUser } = useAuthUser();
 
   const userProfileQuery = useMemoFirebase(() => firestore && authUser ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser]);
-  const { data: userProfile, isLoading: isLoadingProfile } = useCollection<User>(userProfileQuery as any);
-  const roleId = userProfile?.[0]?.roleId;
+  const { data: userProfile, isLoading: isLoadingProfile } = useDoc<User>(userProfileQuery);
+  const roleId = userProfile?.roleId;
 
   const roleQuery = useMemoFirebase(() => firestore && roleId ? doc(firestore, 'roles', roleId) : null, [firestore, roleId]);
-  const { data: roleData, isLoading: isLoadingRole } = useCollection<Role>(roleQuery as any);
-  const isManager = roleData?.[0]?.isManager;
+  const { data: roleData, isLoading: isLoadingRole } = useDoc<Role>(roleQuery);
+  const isManager = roleData?.permissions?.isManager;
 
   const reimbursementsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'reimbursements') : null, [firestore]);
   const { data: reimbursements, isLoading: isLoadingReimb } = useCollection<Reimbursement>(reimbursementsQuery);
