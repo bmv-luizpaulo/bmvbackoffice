@@ -84,17 +84,35 @@ export function SealOrderDataTable() {
   };
   
   const handleContactClick = (order: SealOrder) => {
-    const contact = contactsMapByDoc.get(order.originDocument || '');
-    if (contact) {
-      setSelectedContact(contact);
+    // First, try to find by document (exact match)
+    const contactByDoc = contactsMapByDoc.get(order.originDocument || '');
+    if (contactByDoc) {
+      setSelectedContact(contactByDoc);
       setIsContactProfileOpen(true);
-    } else {
-      toast({
-        variant: "destructive",
-        title: "Contato não encontrado",
-        description: "Nenhum contato com este CPF/CNPJ foi encontrado no sistema atual."
-      })
+      return;
     }
+  
+    // If not found, try to find by name (fuzzy match)
+    if (contacts && order.originName) {
+      const searchName = order.originName.toLowerCase().trim();
+      const contactByName = contacts.find(c => {
+        const fullName = `${c.firstName || ''} ${c.lastName || ''}`.toLowerCase().trim();
+        return fullName.includes(searchName) || searchName.includes(fullName);
+      });
+  
+      if (contactByName) {
+        setSelectedContact(contactByName);
+        setIsContactProfileOpen(true);
+        return;
+      }
+    }
+  
+    // If still not found, show error
+    toast({
+      variant: "destructive",
+      title: "Contato não encontrado",
+      description: "Não foi possível localizar um contato correspondente por documento ou nome."
+    });
   };
 
   const columns: ColumnDef<SealOrder>[] = React.useMemo(() => [
@@ -177,7 +195,7 @@ export function SealOrderDataTable() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => handleContactClick(order)} disabled={!order.originDocument}>
+                <DropdownMenuItem onClick={() => handleContactClick(order)}>
                   <UserIcon className="mr-2 h-4 w-4" />
                   Ver Contato
                 </DropdownMenuItem>
@@ -187,7 +205,7 @@ export function SealOrderDataTable() {
         )
       },
     }
-  ], [contactsMapByDoc]);
+  ], [contactsMapByDoc, contacts, handleContactClick]);
 
   const table = useReactTable({
     data,
