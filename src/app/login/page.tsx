@@ -11,7 +11,7 @@ export default function LoginPage() {
     <FirebaseClientProvider>
       <main className="relative flex min-h-screen items-center justify-center bg-background p-4">
         <Image
-          src="/image/Tech_37.jpg"
+          src="https://picsum.photos/seed/loginpage/1920/1080"
           alt="Tecnologia e negócios"
           fill
           sizes="100vw"
