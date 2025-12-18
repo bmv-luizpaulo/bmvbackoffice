@@ -225,6 +225,21 @@ export type Seal = {
     status: 'Solicitado' | 'Ativo' | 'Vencido' | 'Em Renovação';
 };
 
+export type SealOrder = {
+  id: string;
+  legacyId: number;
+  orderDate: any;
+  originName: string;
+  originDocument?: string;
+  program?: string;
+  uf?: string;
+  dq: boolean;
+  quantity: number;
+  tax?: number;
+  total: number;
+  status: 'Pendente de Aprovação' | 'Pendente de Pagamento' | 'Pag. Efetuados' | 'Pré-processados' | 'Processados' | 'Falhas' | 'Negados' | 'Arquivados';
+};
+
 export type Checklist = {
   id: string;
   name: string;

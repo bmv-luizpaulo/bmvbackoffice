@@ -573,6 +573,29 @@
       },
       "required": ["productId", "contactId", "issueDate", "expiryDate", "status"]
     },
+     "SealOrder": {
+      "title": "SealOrder",
+      "type": "object",
+      "description": "Represents a legacy seal order.",
+      "properties": {
+        "legacyId": { "type": "number", "description": "The original ID from the legacy system (e.g., #885)." },
+        "orderDate": { "type": "string", "format": "date-time", "description": "Timestamp of the order." },
+        "originName": { "type": "string", "description": "Name of the originating company/contact." },
+        "originDocument": { "type": "string", "description": "Document number (CNPJ/CPF) of the origin." },
+        "program": { "type": "string", "description": "Program or partner name (e.g., 'Maricá (Mumbuca Verde)')." },
+        "uf": { "type": "string", "description": "State abbreviation (e.g., 'RJ')." },
+        "dq": { "type": "boolean", "description": "Boolean flag 'D.Q'." },
+        "quantity": { "type": "number", "description": "Quantity of seals (UCS)." },
+        "tax": { "type": "number", "description": "Tax value." },
+        "total": { "type": "number", "description": "Total order value." },
+        "status": {
+          "type": "string",
+          "enum": ["Pendente de Aprovação", "Pendente de Pagamento", "Pag. Efetuados", "Pré-processados", "Processados", "Falhas", "Negados", "Arquivados"],
+          "description": "The status of the seal order."
+        }
+      },
+      "required": ["legacyId", "orderDate", "originName", "quantity", "total", "status"]
+    },
     "Checklist": {
       "title": "Checklist",
       "type": "object",
@@ -870,6 +893,10 @@
     "/seals/{sealId}": {
         "schema": { "$ref": "#/entities/Seal" },
         "description": "Stores all certification seals issued."
+    },
+    "/sealOrders/{sealOrderId}": {
+        "schema": { "$ref": "#/entities/SealOrder" },
+        "description": "Stores legacy seal orders."
     },
     "/checklists/{checklistId}": {
       "schema": { "$ref": "#/entities/Checklist" },

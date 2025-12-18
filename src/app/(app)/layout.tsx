@@ -139,6 +139,7 @@ const navSections = [
                 { href: '/executed-checklists', icon: History, label: 'Checklists Realizados' },
               ]
             },
+            { href: '/pedidos-de-selos', icon: Award, label: 'Pedidos de Selos' },
         ]
     },
     {
@@ -360,7 +361,7 @@ function InnerLayout({ children }: { children: React.ReactNode }) {
       <SidebarProvider>
         <Sidebar collapsible="icon">
           <SidebarHeader>
-            <div className="flex h-14 items-center justify-center p-2 group-data-[state=expanded]:w-[var(--sidebar-width)] group-data-[state=collapsed]:w-[var(--sidebar-width-icon)] transition-all">
+            <div className="flex h-14 items-center p-2 group-data-[state=expanded]:w-[var(--sidebar-width)] group-data-[state=collapsed]:w-[var(--sidebar-width-icon)] transition-all">
               <Image src="/image/BMV.png" alt="BMV Logo" width={120} height={40} className="group-data-[state=collapsed]:hidden" />
               <Image src="/image/BMV.png" alt="BMV Logo" width={32} height={32} className="hidden group-data-[state=collapsed]:block" />
             </div>
