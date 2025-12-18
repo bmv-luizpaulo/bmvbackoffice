@@ -101,8 +101,8 @@ export type Task = {
     taskType?: 'task' | 'meeting';
     name: string;
     description?: string;
-    projectId: string;
-    stageId: string;
+    projectId?: string; // Tornar opcional
+    stageId?: string; // Tornar opcional
     isCompleted: boolean;
     createdAt: any;
     completedAt?: any;

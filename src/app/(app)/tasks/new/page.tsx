@@ -23,7 +23,7 @@ const formSchema = z.object({
   taskType: z.enum(['task', 'meeting']).default('task'),
   name: z.string().min(1, "O nome é obrigatório."),
   description: z.string().optional(),
-  projectId: z.string({ required_error: "O projeto é obrigatório." }),
+  projectId: z.string().optional(),
   assignee: z.string().optional(),
   dueDate: z.date().optional(),
   meetLink: z.string().url("URL inválida.").optional().or(z.literal('')),
@@ -31,6 +31,14 @@ const formSchema = z.object({
   isRecurring: z.boolean().default(false),
   recurrenceFrequency: z.enum(['diaria', 'semanal', 'mensal']).optional(),
   recurrenceEndDate: z.date().optional(),
+}).refine(data => {
+    if (data.taskType === 'task') {
+        return !!data.projectId;
+    }
+    return true;
+}, {
+    message: "O projeto é obrigatório para tarefas.",
+    path: ["projectId"],
 });
 
 export default function NewTaskPage() {
@@ -69,21 +77,26 @@ export default function NewTaskPage() {
     if (!firestore || !authUser) return;
 
     try {
-        const stagesCollection = collection(firestore, 'projects', values.projectId, 'stages');
-        const stagesSnapshot = await getDocs(stagesCollection);
-        
-        if (stagesSnapshot.empty) {
-            toast({ variant: 'destructive', title: "Erro de Configuração", description: "O projeto selecionado não possui etapas (stages) configuradas. Adicione etapas ao projeto antes de criar tarefas." });
-            return;
+        let stageId: string | undefined = undefined;
+        if (values.taskType === 'task' && values.projectId) {
+            const stagesCollection = collection(firestore, 'projects', values.projectId, 'stages');
+            const stagesSnapshot = await getDocs(stagesCollection);
+            
+            if (stagesSnapshot.empty) {
+                toast({ variant: 'destructive', title: "Erro de Configuração", description: "O projeto selecionado não possui etapas (stages) configuradas. Adicione etapas ao projeto antes de criar tarefas." });
+                return;
+            }
+
+            const stages = stagesSnapshot.docs.map(d => ({...d.data(), id: d.id}) as Stage).sort((a,b) => a.order - b.order);
+            const defaultStage = stages[0];
+
+            if (!defaultStage) {
+                toast({ variant: 'destructive', title: "Erro", description: "Não foi possível encontrar a etapa inicial do projeto." });
+                return;
+            }
+            stageId = defaultStage.id;
         }
 
-        const stages = stagesSnapshot.docs.map(d => ({...d.data(), id: d.id}) as Stage).sort((a,b) => a.order - b.order);
-        const defaultStage = stages[0];
-
-        if (!defaultStage) {
-            toast({ variant: 'destructive', title: "Erro", description: "Não foi possível encontrar a etapa inicial do projeto." });
-            return;
-        }
 
         const { assignee, ...rest } = values;
         let assigneeId: string | undefined;
@@ -94,9 +107,10 @@ export default function NewTaskPage() {
 
         const taskData: Omit<Task, 'id'> = {
             ...rest,
+            projectId: values.projectId || undefined,
             assigneeId: assigneeId,
             teamId: teamId,
-            stageId: defaultStage.id,
+            stageId: stageId,
             isCompleted: false,
             createdAt: new Date().toISOString(),
             description: values.description || '',
@@ -106,19 +120,19 @@ export default function NewTaskPage() {
             recurrenceEndDate: values.isRecurring ? values.recurrenceEndDate?.toISOString() : undefined,
         };
 
-        const docRef = await addDocumentNonBlocking(collection(firestore, 'projects', values.projectId, 'tasks'), taskData);
+        const docRef = await addDocumentNonBlocking(collection(firestore, 'tasks'), taskData);
 
         if (taskData.assigneeId) {
             const project = projectsData?.find(p => p.id === values.projectId);
             createNotification(taskData.assigneeId, {
                 title: 'Nova Tarefa Atribuída',
-                message: `Você foi atribuído à tarefa "${values.name}" no projeto "${project?.name}".`,
+                message: `Você foi atribuído à tarefa "${values.name}"${project ? ` no projeto "${project.name}"` : ''}.`,
                 link: `/projects?projectId=${values.projectId}&taskId=${docRef.id}`
             });
         }
 
         toast({ title: "Item Criado", description: `Sua nova ${values.taskType === 'meeting' ? 'reunião' : 'tarefa'} foi adicionada.` });
-        router.push(`/projects`);
+        router.push(values.taskType === 'meeting' || !values.projectId ? '/agenda/tarefas' : `/projects`);
 
     } catch (error) {
       console.error("Erro ao criar item:", error);
@@ -165,7 +179,7 @@ export default function NewTaskPage() {
         <CardHeader>
           <CardTitle>Detalhes do Item</CardTitle>
           <CardDescription>
-            Selecione o projeto, o tipo de item e preencha as informações.
+            Selecione o tipo de item e preencha as informações.
           </CardDescription>
         </CardHeader>
         <CardContent>

@@ -1,11 +1,10 @@
 'use client';
 
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm, UseFormReturn } from "react-hook-form";
+import { UseFormReturn } from "react-hook-form";
 import { z } from "zod";
 import { format } from "date-fns";
 import { ptBR } from 'date-fns/locale';
-import { CalendarIcon, User, RefreshCcw, Users, Video } from "lucide-react";
+import { CalendarIcon, User, RefreshCcw, Users, Video, FolderKanban, Info } from "lucide-react";
 import React from 'react';
 
 import {
@@ -18,8 +17,8 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from "../ui/textarea";
-import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
-import type { Task, User as UserType, Team, Project, Stage } from "@/lib/types";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
+import type { User as UserType, Project } from "@/lib/types";
 import { MultiSelect } from "../ui/multi-select";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { Calendar } from "../ui/calendar";
@@ -27,12 +26,14 @@ import { cn } from "@/lib/utils";
 import { Separator } from "../ui/separator";
 import { Switch } from "../ui/switch";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
+import { Alert, AlertDescription } from "../ui/alert";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "../ui/accordion";
 
 const formSchema = z.object({
   taskType: z.enum(['task', 'meeting']).default('task'),
   name: z.string().min(1, "O nome é obrigatório."),
   description: z.string().optional(),
-  projectId: z.string({ required_error: "O projeto é obrigatório." }),
+  projectId: z.string().optional(),
   assignee: z.string().optional(),
   dueDate: z.date().optional(),
   meetLink: z.string().url("URL inválida.").optional().or(z.literal('')),
@@ -40,6 +41,14 @@ const formSchema = z.object({
   isRecurring: z.boolean().default(false),
   recurrenceFrequency: z.enum(['diaria', 'semanal', 'mensal']).optional(),
   recurrenceEndDate: z.date().optional(),
+}).refine(data => {
+    if (data.taskType === 'task') {
+        return !!data.projectId;
+    }
+    return true;
+}, {
+    message: "O projeto é obrigatório para tarefas.",
+    path: ["projectId"],
 });
 
 
@@ -94,33 +103,10 @@ export function TaskFormFields({ form, projectsData, usersData }: TaskFormFields
 
             <FormField
                 control={form.control}
-                name="projectId"
-                render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Projeto</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                        <SelectTrigger>
-                            <SelectValue placeholder="Selecione um projeto" />
-                        </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                        {projectOptions.map(option => (
-                            <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
-                        ))}
-                        </SelectContent>
-                    </Select>
-                    <FormMessage />
-                    </FormItem>
-                )}
-            />
-
-            <FormField
-                control={form.control}
                 name="name"
                 render={({ field }) => (
                     <FormItem>
-                    <FormLabel>Nome da {taskType === 'meeting' ? 'Reunião' : 'Tarefa'}</FormLabel>
+                    <FormLabel>Título</FormLabel>
                     <FormControl>
                         <Input placeholder={taskType === 'meeting' ? "Ex: Reunião de alinhamento semanal" : "Ex: Desenvolver página de login"} {...field} />
                     </FormControl>
@@ -128,27 +114,97 @@ export function TaskFormFields({ form, projectsData, usersData }: TaskFormFields
                     </FormItem>
                 )}
             />
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+                 <FormField
+                    control={form.control}
+                    name="dueDate"
+                    render={({ field }) => (
+                        <FormItem className="flex flex-col">
+                        <FormLabel>Data e Hora</FormLabel>
+                        <Popover>
+                            <PopoverTrigger asChild>
+                            <FormControl>
+                                <Button
+                                variant={"outline"}
+                                className={cn(
+                                    "w-full pl-3 text-left font-normal",
+                                    !field.value && "text-muted-foreground"
+                                )}
+                                >
+                                {field.value ? (
+                                    format(field.value, "PPP, HH:mm", { locale: ptBR })
+                                ) : (
+                                    <span>Escolha uma data e hora</span>
+                                )}
+                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                </Button>
+                            </FormControl>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                                mode="single"
+                                selected={field.value}
+                                onSelect={field.onChange}
+                                locale={ptBR}
+                                initialFocus
+                            />
+                            {/* Simple time picker could be added here if needed */}
+                            </PopoverContent>
+                        </Popover>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                />
+
+                {taskType === 'task' && (
+                    <FormField
+                        control={form.control}
+                        name="projectId"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel className="flex items-center gap-2"><FolderKanban className="h-4 w-4" /> Projeto</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                                <FormControl>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Selecione um projeto" />
+                                </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                {projectOptions.map(option => (
+                                    <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                                ))}
+                                </SelectContent>
+                            </Select>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                )}
+            </div>
+
             <FormField
                 control={form.control}
                 name="description"
                 render={({ field }) => (
                     <FormItem>
-                    <FormLabel>Descrição</FormLabel>
+                    <FormLabel>Descrição / Pauta</FormLabel>
                     <FormControl>
-                        <Textarea placeholder="Adicione mais detalhes..." {...field} />
+                        <Textarea placeholder="Adicione mais detalhes, pautas ou notas..." {...field} />
                     </FormControl>
                     <FormMessage />
                     </FormItem>
                 )}
             />
-             {taskType === 'meeting' && (
+            
+            {taskType === 'meeting' && (
                 <>
                     <FormField
                     control={form.control}
                     name="meetLink"
                     render={({ field }) => (
                         <FormItem>
-                        <FormLabel>Link da Reunião (Google Meet)</FormLabel>
+                        <FormLabel className="flex items-center gap-2"><Video className="h-4 w-4" /> Link da Reunião</FormLabel>
                         <FormControl>
                             <Input placeholder="https://meet.google.com/..." {...field} />
                         </FormControl>
@@ -175,153 +231,123 @@ export function TaskFormFields({ form, projectsData, usersData }: TaskFormFields
                 </>
             )}
 
-             <FormField
-                control={form.control}
-                name="assignee"
-                render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Responsável</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                        <SelectTrigger>
-                            <SelectValue placeholder="Atribuir a..." />
-                        </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                        <SelectItem value="unassigned">Não atribuído</SelectItem>
-                        {userOptions.map(option => (
-                            <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
-                        ))}
-                        </SelectContent>
-                    </Select>
-                    <FormMessage />
-                    </FormItem>
-                )}
-            />
-             <FormField
-                control={form.control}
-                name="dueDate"
-                render={({ field }) => (
-                    <FormItem className="flex flex-col">
-                    <FormLabel>Data de Entrega</FormLabel>
-                    <Popover>
-                        <PopoverTrigger asChild>
-                        <FormControl>
-                            <Button
-                            variant={"outline"}
-                            className={cn(
-                                "w-full pl-3 text-left font-normal",
-                                !field.value && "text-muted-foreground"
-                            )}
-                            >
-                            {field.value ? (
-                                format(field.value, "PPP", { locale: ptBR })
-                            ) : (
-                                <span>Escolha uma data</span>
-                            )}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                            </Button>
-                        </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                            mode="single"
-                            selected={field.value}
-                            onSelect={field.onChange}
-                            locale={ptBR}
-                            initialFocus
-                        />
-                        </PopoverContent>
-                    </Popover>
-                    <FormMessage />
-                    </FormItem>
-                )}
-            />
-
-            <Separator />
-
-             <FormField
-                control={form.control}
-                name="isRecurring"
-                render={({ field }) => (
-                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
-                        <div className="space-y-0.5">
-                            <FormLabel className="flex items-center gap-2"><RefreshCcw className="h-4 w-4"/>Tarefa Recorrente</FormLabel>
+            <Accordion type="single" collapsible className="w-full">
+                <AccordionItem value="item-1">
+                    <AccordionTrigger>
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <Info className="h-4 w-4"/>
+                            <span>Opções Adicionais</span>
                         </div>
-                        <FormControl>
-                            <Switch
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                            />
-                        </FormControl>
-                    </FormItem>
-                )}
-            />
-            {isRecurring && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-3 border rounded-lg">
-                     <FormField
-                        control={form.control}
-                        name="recurrenceFrequency"
-                        render={({ field }) => (
-                            <FormItem>
-                            <FormLabel>Frequência</FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value}>
-                                <FormControl>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Selecione a frequência" />
-                                </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                    <SelectItem value="diaria">Diária</SelectItem>
-                                    <SelectItem value="semanal">Semanal</SelectItem>
-                                    <SelectItem value="mensal">Mensal</SelectItem>
-                                </SelectContent>
-                            </Select>
-                            <FormMessage />
-                            </FormItem>
-                        )}
-                    />
-                    <FormField
-                        control={form.control}
-                        name="recurrenceEndDate"
-                        render={({ field }) => (
-                            <FormItem className="flex flex-col">
-                            <FormLabel>Data de Término</FormLabel>
-                            <Popover>
-                                <PopoverTrigger asChild>
-                                <FormControl>
-                                    <Button
-                                    variant={"outline"}
-                                    className={cn(
-                                        "w-full pl-3 text-left font-normal",
-                                        !field.value && "text-muted-foreground"
-                                    )}
-                                    >
-                                    {field.value ? (
-                                        format(field.value, "PPP", { locale: ptBR })
-                                    ) : (
-                                        <span>Escolha uma data</span>
-                                    )}
-                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                    </Button>
-                                </FormControl>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0" align="start">
-                                <Calendar
-                                    mode="single"
-                                    selected={field.value}
-                                    onSelect={field.onChange}
-                                    locale={ptBR}
-                                    initialFocus
-                                />
-                                </PopoverContent>
-                            </Popover>
-                            <FormMessage />
-                            </FormItem>
-                        )}
+                    </AccordionTrigger>
+                    <AccordionContent className="pt-4 space-y-4">
+                         <FormField
+                            control={form.control}
+                            name="assignee"
+                            render={({ field }) => (
+                                <FormItem>
+                                <FormLabel>Responsável</FormLabel>
+                                <Select onValueChange={field.onChange} value={field.value}>
+                                    <FormControl>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Atribuir a..." />
+                                    </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                    <SelectItem value="unassigned">Não atribuído</SelectItem>
+                                    {userOptions.map(option => (
+                                        <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                                    ))}
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage />
+                                </FormItem>
+                            )}
                         />
-                </div>
-            )}
+                         <FormField
+                            control={form.control}
+                            name="isRecurring"
+                            render={({ field }) => (
+                                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                                    <div className="space-y-0.5">
+                                        <FormLabel className="flex items-center gap-2"><RefreshCcw className="h-4 w-4"/>Item Recorrente</FormLabel>
+                                    </div>
+                                    <FormControl>
+                                        <Switch
+                                        checked={field.value}
+                                        onCheckedChange={field.onChange}
+                                        />
+                                    </FormControl>
+                                </FormItem>
+                            )}
+                        />
+                        {isRecurring && (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-3 border rounded-lg">
+                                <FormField
+                                    control={form.control}
+                                    name="recurrenceFrequency"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                        <FormLabel>Frequência</FormLabel>
+                                        <Select onValueChange={field.onChange} value={field.value}>
+                                            <FormControl>
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Selecione a frequência" />
+                                            </SelectTrigger>
+                                            </FormControl>
+                                            <SelectContent>
+                                                <SelectItem value="diaria">Diária</SelectItem>
+                                                <SelectItem value="semanal">Semanal</SelectItem>
+                                                <SelectItem value="mensal">Mensal</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                        <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={form.control}
+                                    name="recurrenceEndDate"
+                                    render={({ field }) => (
+                                        <FormItem className="flex flex-col">
+                                        <FormLabel>Data de Término</FormLabel>
+                                        <Popover>
+                                            <PopoverTrigger asChild>
+                                            <FormControl>
+                                                <Button
+                                                variant={"outline"}
+                                                className={cn(
+                                                    "w-full pl-3 text-left font-normal",
+                                                    !field.value && "text-muted-foreground"
+                                                )}
+                                                >
+                                                {field.value ? (
+                                                    format(field.value, "PPP", { locale: ptBR })
+                                                ) : (
+                                                    <span>Escolha uma data</span>
+                                                )}
+                                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                                </Button>
+                                            </FormControl>
+                                            </PopoverTrigger>
+                                            <PopoverContent className="w-auto p-0" align="start">
+                                            <Calendar
+                                                mode="single"
+                                                selected={field.value}
+                                                onSelect={field.onChange}
+                                                locale={ptBR}
+                                                initialFocus
+                                            />
+                                            </PopoverContent>
+                                        </Popover>
+                                        <FormMessage />
+                                        </FormItem>
+                                    )}
+                                    />
+                            </div>
+                        )}
+                    </AccordionContent>
+                </AccordionItem>
+            </Accordion>
         </div>
     )
 }
