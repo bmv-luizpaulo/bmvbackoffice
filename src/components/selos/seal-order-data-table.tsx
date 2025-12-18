@@ -49,13 +49,13 @@ export function SealOrderDataTable({ statusFilter }: SealOrderDataTableProps) {
   const sealOrdersQuery = useMemoFirebase(() => {
     if (!firestore) return null;
     const baseQuery = collection(firestore, 'sealOrders');
-    const nonArchivedStatuses = ["Pendente de Aprovação", "Pendente de Pagamento", "Pag. Efetuados", "Pré-processados", "Processados", "Falhas", "Negados", "Vai Renovar", "Em Tratativa", "Não Tem Interesse"];
 
     if (statusFilter === 'archived') {
       return query(baseQuery, where('status', '==', 'Arquivado'), orderBy('orderDate', 'desc'));
     }
-    // Para a aba "ativa", pegamos tudo que NÃO é "Arquivado".
-    return query(baseQuery, where('status', 'in', nonArchivedStatuses), orderBy('orderDate', 'desc'));
+    
+    // Use '!=' para evitar o limite de 10 itens na cláusula 'in'.
+    return query(baseQuery, where('status', '!=', 'Arquivado'), orderBy('status'), orderBy('orderDate', 'desc'));
   }, [firestore, statusFilter]);
 
   const { data: sealOrdersData, isLoading } = useCollection<SealOrder>(sealOrdersQuery);
