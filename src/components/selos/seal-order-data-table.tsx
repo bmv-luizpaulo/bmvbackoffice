@@ -12,7 +12,7 @@ import {
   ColumnFiltersState,
   getFilteredRowModel,
 } from "@tanstack/react-table"
-import { MoreHorizontal, Upload, User as UserIcon } from "lucide-react"
+import { MoreHorizontal, Upload, User as UserIcon, Archive } from "lucide-react"
 
 import {
   Table,
@@ -25,28 +25,38 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import type { SealOrder, Contact } from "@/lib/types";
-import { useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking } from "@/firebase";
-import { collection, query, orderBy, serverTimestamp, doc } from "firebase/firestore";
+import { useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase";
+import { collection, query, orderBy, where } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { format, isValid } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Badge } from "../ui/badge"
 import dynamic from "next/dynamic"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "../ui/dropdown-menu";
 import { ContactProfileDialog } from "../agenda/contact-profile-dialog";
 import { ContactFormDialog } from "../agenda/contact-form-dialog";
 
 const SealOrderImportDialog = dynamic(() => import('./seal-order-import-dialog').then(m => m.SealOrderImportDialog), { ssr: false });
 
+interface SealOrderDataTableProps {
+  statusFilter: 'active' | 'archived';
+}
 
-export function SealOrderDataTable() {
+export function SealOrderDataTable({ statusFilter }: SealOrderDataTableProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
-  
-  const sealOrdersQuery = useMemoFirebase(() => 
-    firestore ? query(collection(firestore, 'sealOrders'), orderBy('orderDate', 'desc')) : null, 
-    [firestore]
-  );
+
+  const sealOrdersQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    const baseQuery = collection(firestore, 'sealOrders');
+    const nonArchivedStatuses = ["Pendente de Aprovação", "Pendente de Pagamento", "Pag. Efetuados", "Pré-processados", "Processados", "Falhas", "Negados", "Vai Renovar", "Em Tratativa", "Não Tem Interesse"];
+
+    if (statusFilter === 'archived') {
+      return query(baseQuery, where('status', '==', 'Arquivado'), orderBy('orderDate', 'desc'));
+    }
+    // Para a aba "ativa", pegamos tudo que NÃO é "Arquivado".
+    return query(baseQuery, where('status', 'in', nonArchivedStatuses), orderBy('orderDate', 'desc'));
+  }, [firestore, statusFilter]);
 
   const { data: sealOrdersData, isLoading } = useCollection<SealOrder>(sealOrdersQuery);
   const data = React.useMemo(() => sealOrdersData ?? [], [sealOrdersData]);
@@ -121,12 +131,18 @@ export function SealOrderDataTable() {
     setIsContactFormOpen(true);
   };
   
-  const handleSaveNewContact = async (contactData: Omit<Contact, 'id'>, contactId?: string) => {
+  const handleSaveNewContact = async (contactData: Omit<Contact, 'id'>) => {
     if (!firestore) return;
     await addDocumentNonBlocking(collection(firestore, 'contacts'), { ...contactData, createdAt: new Date() });
     toast({ title: "Contato Criado", description: "O novo contato foi adicionado." });
     setIsContactFormOpen(false);
     setPrefilledContact(null);
+  };
+
+  const handleStatusUpdate = async (orderId: string, newStatus: SealOrder['status']) => {
+    if (!firestore) return;
+    await updateDocumentNonBlocking(doc(firestore, 'sealOrders', orderId), { status: newStatus });
+    toast({ title: 'Status do Pedido Atualizado', description: `O pedido foi marcado como "${newStatus}".` });
   };
 
 
@@ -147,7 +163,7 @@ export function SealOrderDataTable() {
         if (orderDate?.toDate) {
             date = orderDate.toDate();
         } else if (typeof orderDate === 'object' && 'y' in orderDate && 'm' in orderDate && 'd' in orderDate) {
-            date = new Date(orderDate.y, orderDate.m - 1, orderDate.d, orderDate.H || 0, orderDate.M || 0, orderDate.S || 0);
+            date = new Date(orderDate.y, (orderDate.m - 1), orderDate.d, orderDate.H || 0, orderDate.M || 0, orderDate.S || 0);
         } else if (typeof orderDate === 'string') {
             date = new Date(orderDate);
         }
@@ -196,6 +212,7 @@ export function SealOrderDataTable() {
       id: "actions",
       cell: ({ row }) => {
         const order = row.original;
+        const currentStatus = order.status;
         return (
           <div className="text-right">
             <DropdownMenu>
@@ -209,6 +226,16 @@ export function SealOrderDataTable() {
                 <DropdownMenuItem onClick={() => handleContactClick(order)}>
                   <UserIcon className="mr-2 h-4 w-4" />
                   Ver Contato
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel>Alterar Status</DropdownMenuLabel>
+                <DropdownMenuItem disabled={currentStatus === 'Vai Renovar'} onClick={() => handleStatusUpdate(order.id, 'Vai Renovar')}>Vai Renovar</DropdownMenuItem>
+                <DropdownMenuItem disabled={currentStatus === 'Em Tratativa'} onClick={() => handleStatusUpdate(order.id, 'Em Tratativa')}>Em Tratativa</DropdownMenuItem>
+                <DropdownMenuItem disabled={currentStatus === 'Não Tem Interesse'} onClick={() => handleStatusUpdate(order.id, 'Não Tem Interesse')}>Não Tem Interesse</DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem className="text-amber-600" onClick={() => handleStatusUpdate(order.id, 'Arquivado')}>
+                  <Archive className="mr-2 h-4 w-4" />
+                  Arquivar
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

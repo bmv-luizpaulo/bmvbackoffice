@@ -590,7 +590,19 @@
         "total": { "type": "number", "description": "Total order value." },
         "status": {
           "type": "string",
-          "enum": ["Pendente de Aprovação", "Pendente de Pagamento", "Pag. Efetuados", "Pré-processados", "Processados", "Falhas", "Negados", "Arquivados"],
+          "enum": [
+            "Pendente de Aprovação",
+            "Pendente de Pagamento",
+            "Pag. Efetuados",
+            "Pré-processados",
+            "Processados",
+            "Falhas",
+            "Negados",
+            "Arquivado",
+            "Vai Renovar",
+            "Em Tratativa",
+            "Não Tem Interesse"
+          ],
           "description": "The status of the seal order."
         }
       },
