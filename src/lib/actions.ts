@@ -9,7 +9,7 @@ import * as admin from 'firebase-admin';
 import { headers } from 'next/headers';
 import { ActivityLogger } from './activity-logger';
 import { ai } from '@/ai/genkit';
-import { parseMeetingDetailsFlow } from '@/ai/flows/parse-meeting-flow';
+import { parseMeetingDetails } from '@/ai/flows/parse-meeting-flow';
 
 // This is a placeholder for a real chat log fetching mechanism
 const getChatLogForDay = async (): Promise<string> => {
@@ -54,7 +54,12 @@ export async function createUserAction(userData: Omit<User, 'id' | 'avatarUrl'>)
         }
         const decodedToken = await auth.verifyIdToken(idToken);
         
-        if (!decodedToken.canManageUsers && !decodedToken.isDev) {
+        const userDoc = await firestore.collection('users').doc(decodedToken.uid).get();
+        const userProfile = userDoc.data() as User;
+        const roleDoc = userProfile?.roleId ? await firestore.collection('roles').doc(userProfile.roleId).get() : null;
+        const permissions = roleDoc?.data()?.permissions;
+
+        if (!permissions?.canManageUsers && !permissions?.isDev) {
             return { success: false, error: 'Permissão negada. Você não tem autorização para criar novos usuários.' };
         }
 
@@ -235,7 +240,7 @@ export async function uploadContractFileAction(formData: FormData) {
 export async function parseMeetingDetailsAction(meetingText: string) {
     noStore();
     try {
-        const result = await parseMeetingDetailsFlow(meetingText);
+        const result = await parseMeetingDetails(meetingText);
         return { success: true, data: result };
     } catch (error: any) {
         console.error("Error in parseMeetingDetailsAction:", error);

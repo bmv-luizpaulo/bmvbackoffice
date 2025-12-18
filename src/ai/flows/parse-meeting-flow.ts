@@ -46,7 +46,7 @@ Texto do Convite:
 `,
 });
 
-export const parseMeetingDetailsFlow = ai.defineFlow(
+const parseMeetingDetailsFlow = ai.defineFlow(
   {
     name: 'parseMeetingDetailsFlow',
     inputSchema: z.string(),
@@ -60,3 +60,8 @@ export const parseMeetingDetailsFlow = ai.defineFlow(
     return output;
   }
 );
+
+
+export async function parseMeetingDetails(meetingText: string): Promise<MeetingDetails> {
+  return parseMeetingDetailsFlow(meetingText);
+}
