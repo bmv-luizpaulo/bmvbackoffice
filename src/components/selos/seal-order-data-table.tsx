@@ -189,14 +189,17 @@ export function SealOrderDataTable({ statusFilter }: SealOrderDataTableProps) {
         </Button>
       ),
       cell: ({ row }) => {
-        const orderDate = row.original.orderDate;
-        if (!orderDate) return <span className="text-muted-foreground">N/D</span>;
+        const orderDateValue = row.original.orderDate;
+        if (!orderDateValue) return <span className="text-muted-foreground">N/D</span>;
 
         let date: Date | null = null;
-        if (orderDate?.toDate) {
-            date = orderDate.toDate();
-        } else if (typeof orderDate === 'string') {
-            date = new Date(orderDate);
+        // Firebase Timestamp object
+        if (orderDateValue && typeof orderDateValue.toDate === 'function') {
+            date = orderDateValue.toDate();
+        } 
+        // ISO string or other date string
+        else if (typeof orderDateValue === 'string') {
+            date = new Date(orderDateValue);
         }
         
         if (!date || !isValid(date)) {
