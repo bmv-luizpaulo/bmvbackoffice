@@ -55,9 +55,19 @@ export async function createUserAction(userData: Omit<User, 'id' | 'avatarUrl'>)
         const decodedToken = await auth.verifyIdToken(idToken);
         
         const userDoc = await firestore.collection('users').doc(decodedToken.uid).get();
+        if (!userDoc.exists) {
+            return { success: false, error: 'Perfil do usuário solicitante não encontrado.' };
+        }
         const userProfile = userDoc.data() as User;
-        const roleDoc = userProfile?.roleId ? await firestore.collection('roles').doc(userProfile.roleId).get() : null;
-        const permissions = roleDoc?.data()?.permissions;
+        
+        if (!userProfile.roleId) {
+             return { success: false, error: 'Permissão negada. Você não tem um cargo definido.' };
+        }
+        const roleDoc = await firestore.collection('roles').doc(userProfile.roleId).get();
+        if (!roleDoc.exists) {
+             return { success: false, error: 'Permissão negada. Seu cargo não foi encontrado no sistema.' };
+        }
+        const permissions = roleDoc.data()?.permissions;
 
         if (!permissions?.canManageUsers && !permissions?.isDev) {
             return { success: false, error: 'Permissão negada. Você não tem autorização para criar novos usuários.' };
@@ -81,6 +91,10 @@ export async function createUserAction(userData: Omit<User, 'id' | 'avatarUrl'>)
             createdAt: admin.firestore.FieldValue.serverTimestamp()
         };
         await firestore.collection("users").doc(userRecord.uid).set(newUserProfile);
+        
+        // Log activity
+        await ActivityLogger.profileUpdate(firestore, userRecord.uid, decodedToken.uid);
+
 
         // Generate custom password reset link
         const actionCodeSettings = {
@@ -93,15 +107,6 @@ export async function createUserAction(userData: Omit<User, 'id' | 'avatarUrl'>)
     } catch (error: any) {
         console.error("Erro ao criar usuário:", error);
         
-        if (error.code === 'permission-denied') {
-             const permissionError = new FirestorePermissionError({
-                path: error.customData?.path || 'roles ou users',
-                operation: 'get',
-            });
-            errorEmitter.emit('permission-error', permissionError);
-            return { success: false, error: 'Permissão negada ao verificar o cargo do usuário.' };
-        }
-
         let errorMessage = 'Ocorreu um erro ao criar o usuário.';
         if (error.code === 'auth/email-already-exists') {
             errorMessage = 'Este e-mail já está em uso por outra conta.';
