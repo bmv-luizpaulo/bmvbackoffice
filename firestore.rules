@@ -2,8 +2,15 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+    
+    // Regra geral para a maioria das coleções (ainda permissiva para o desenvolvimento)
     match /{document=**} {
-      allow read, write;
+      allow read, write: if true;
+    }
+
+    // Regra específica e explícita para a coleção de tarefas/reuniões
+    match /tasks/{taskId} {
+      allow read, create, update, delete: if request.auth != null;
     }
   }
 }
