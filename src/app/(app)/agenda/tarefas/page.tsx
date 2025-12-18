@@ -1,9 +1,10 @@
+
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
 import { useUser, useCollection, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, where, or } from 'firebase/firestore';
-import type { Task, User, Project, Role } from '@/lib/types';
+import { collection, query, where, or, collectionGroup } from 'firebase/firestore';
+import type { Task, User, Project, Role, Meeting } from '@/lib/types';
 import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -48,53 +49,72 @@ export default function TaskAgendaPage() {
 
   const tasksQuery = useMemoFirebase(() => {
     if (!firestore || !role || !authUser?.uid) return null;
+    
+    let q = query(collection(firestore, 'tasks'));
 
-    const tasksCollection = collection(firestore, 'tasks');
-    
     if (role.permissions?.isManager || role.permissions?.isDev) {
-      if (selectedUserId === 'all') {
-        return query(tasksCollection);
+      if (selectedUserId !== 'all') {
+        q = query(q, where('assigneeId', '==', selectedUserId));
       }
-      return query(tasksCollection, where('assigneeId', '==', selectedUserId));
+    } else {
+      q = query(q, where('assigneeId', '==', authUser.uid));
     }
-    
-    return query(tasksCollection, or(
-        where('assigneeId', '==', authUser.uid),
-        where('participantIds', 'array-contains', authUser.uid)
-    ));
+    return q;
   }, [firestore, role, selectedUserId, authUser?.uid]);
-  
   const { data: tasksData, isLoading: isLoadingTasks } = useCollection<Task>(tasksQuery);
   
+  const meetingsQuery = useMemoFirebase(() => {
+    if (!firestore || !role || !authUser?.uid) return null;
+
+    let q = query(collection(firestore, 'meetings'));
+
+    if (role.permissions?.isManager || role.permissions?.isDev) {
+      if (selectedUserId !== 'all') {
+         q = query(q, where('participantIds', 'array-contains', selectedUserId));
+      }
+    } else {
+       q = query(q, where('participantIds', 'array-contains', authUser.uid));
+    }
+    return q;
+  }, [firestore, role, selectedUserId, authUser?.uid]);
+  const { data: meetingsData, isLoading: isLoadingMeetings } = useCollection<Meeting>(meetingsQuery);
+
   const projectsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'projects') : null, [firestore]);
   const { data: projectsData } = useCollection<Project>(projectsQuery);
 
   const projectsMap = useMemo(() => new Map(projectsData?.map(p => [p.id, p])), [projectsData]);
   const usersMap = useMemo(() => new Map(allUsers?.map(u => [u.id, u])), [allUsers]);
 
-  const tasksWithDates = useMemo(() => {
-    return tasksData
+  const combinedAgendaItems = useMemo(() => {
+    const tasksWithDates = tasksData
       ?.filter(t => !!t.dueDate)
-      .map(t => ({...t, dueDateObj: new Date(t.dueDate!)})) || [];
-  }, [tasksData]);
+      .map(t => ({...t, dueDateObj: new Date(t.dueDate!), itemType: 'task' as const })) || [];
 
-  const selectedDayTasks = useMemo(() => {
+    const meetingsWithDates = meetingsData
+      ?.filter(m => !!m.dueDate)
+      .map(m => ({...m, dueDateObj: new Date(m.dueDate!), itemType: 'meeting' as const })) || [];
+
+    return [...tasksWithDates, ...meetingsWithDates];
+  }, [tasksData, meetingsData]);
+
+  const selectedDayItems = useMemo(() => {
     if (!selectedDate) return [];
-    return tasksWithDates
-      .filter(task => task.dueDateObj && isSameDay(task.dueDateObj, selectedDate))
+    return combinedAgendaItems
+      .filter(item => item.dueDateObj && isSameDay(item.dueDateObj, selectedDate))
       .sort((a, b) => a.dueDateObj!.getTime() - b.dueDateObj!.getTime());
-  }, [tasksWithDates, selectedDate]);
+  }, [combinedAgendaItems, selectedDate]);
   
   const isGestor = role?.permissions?.isManager || role?.permissions?.isDev;
+  const isLoading = isLoadingTasks || isLoadingMeetings;
 
   return (
     <div className="space-y-6">
       <header>
         <div className="flex flex-wrap gap-4 justify-between items-center">
             <div>
-                <h1 className="font-headline text-3xl font-bold tracking-tight">Agenda de Tarefas</h1>
+                <h1 className="font-headline text-3xl font-bold tracking-tight">Agenda</h1>
                 <p className="text-muted-foreground">
-                    Visualize as tarefas em um calendário e gerencie sua programação.
+                    Visualize suas tarefas e reuniões em um calendário e gerencie sua programação.
                 </p>
             </div>
             <div className='flex items-center gap-2'>
@@ -148,7 +168,7 @@ export default function TaskAgendaPage() {
                           row: "w-full flex justify-around mt-2"
                       }}
                       modifiers={{
-                          hasTask: tasksWithDates.map(t => t.dueDateObj)
+                          hasTask: combinedAgendaItems.map(t => t.dueDateObj)
                       }}
                       modifiersClassNames={{
                           hasTask: "relative !flex items-center justify-center after:content-[''] after:absolute after:bottom-1 after:left-1/2 after:-translate-x-1/2 after:h-1 after:w-1 after:rounded-full after:bg-primary"
@@ -161,25 +181,25 @@ export default function TaskAgendaPage() {
 
         <Card>
             <CardHeader>
-                <CardTitle>Tarefas do dia</CardTitle>
+                <CardTitle>Agenda do dia</CardTitle>
                 <CardDescription>
                     {selectedDate ? selectedDate.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' }) : "Selecione um dia"}
                 </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3 max-h-[450px] overflow-y-auto">
-                {isLoadingTasks ? (
-                    <p>Carregando tarefas...</p>
-                ) : selectedDayTasks.length > 0 ? (
-                    selectedDayTasks.map(task => (
+                {isLoading ? (
+                    <p>Carregando...</p>
+                ) : selectedDayItems.length > 0 ? (
+                    selectedDayItems.map(item => (
                         <TaskAgendaItem 
-                            key={task.id}
-                            task={task}
-                            project={task.projectId ? projectsMap.get(task.projectId) : undefined}
-                            assignee={usersMap.get(task.assigneeId || '')}
+                            key={item.id}
+                            item={item}
+                            project={item.itemType === 'task' ? projectsMap.get(item.projectId || '') : undefined}
+                            assignee={item.itemType === 'task' ? usersMap.get(item.assigneeId || '') : undefined}
                         />
                     ))
                 ) : (
-                    <p className="text-muted-foreground text-sm">Nenhuma tarefa para este dia.</p>
+                    <p className="text-muted-foreground text-sm">Nenhum item na agenda para este dia.</p>
                 )}
             </CardContent>
         </Card>

@@ -125,13 +125,8 @@
     "Task": {
       "title": "Task",
       "type": "object",
-      "description": "Represents a task within a project.",
+      "description": "Represents a task, potentially within a project.",
       "properties": {
-        "taskType": {
-          "type": "string",
-          "enum": ["task", "meeting"],
-          "description": "The type of the item, either a task or a meeting."
-        },
         "name": {
           "type": "string",
           "description": "Name of the task."
@@ -142,11 +137,11 @@
         },
         "projectId": {
           "type": "string",
-          "description": "Reference to Project. (Relationship: Project 1:N Task)"
+          "description": "Reference to Project. (Relationship: Project 1:N Task). Optional."
         },
         "stageId": {
           "type": "string",
-          "description": "Reference to Stage. (Relationship: Stage 1:N Task)"
+          "description": "Reference to Stage within a project. (Relationship: Stage 1:N Task)"
         },
         "isCompleted": {
           "type": "boolean",
@@ -164,7 +159,7 @@
         },
         "dependentTaskIds": {
           "type": "array",
-          "description": "References to other Tasks that must be completed before this task can be started. (Relationship: Task 1:N Task)",
+          "description": "References to other Tasks that must be completed before this task can be started.",
           "items": {
             "type": "string"
           }
@@ -195,26 +190,63 @@
             "type": "string",
             "description": "The end date for the recurrence.",
             "format": "date-time"
-        },
-        "meetLink": {
-          "type": "string",
-          "format": "uri",
-          "description": "URL for the Google Meet meeting."
-        },
-        "participantIds": {
-          "type": "array",
-          "description": "An array of user IDs participating in the meeting.",
-          "items": {
-            "type": "string"
-          }
         }
       },
       "required": [
         "name",
-        "description",
         "isCompleted",
         "createdAt"
       ]
+    },
+    "Meeting": {
+        "title": "Meeting",
+        "type": "object",
+        "description": "Represents a scheduled meeting.",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Name or title of the meeting."
+          },
+          "description": {
+            "type": "string",
+            "description": "Agenda or description of the meeting."
+          },
+          "dueDate": {
+              "type": "string",
+              "description": "The date and time of the meeting.",
+              "format": "date-time"
+          },
+          "meetLink": {
+            "type": "string",
+            "format": "uri",
+            "description": "URL for the Google Meet meeting."
+          },
+          "participantIds": {
+            "type": "array",
+            "description": "An array of user IDs participating in the meeting.",
+            "items": { "type": "string" }
+          },
+          "isRecurring": {
+            "type": "boolean",
+            "description": "Indicates if the meeting is recurring."
+          },
+          "recurrenceFrequency": {
+              "type": "string",
+              "description": "The frequency of the recurrence.",
+              "enum": ["diaria", "semanal", "mensal"]
+          },
+          "recurrenceEndDate": {
+              "type": "string",
+              "description": "The end date for the recurrence.",
+              "format": "date-time"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Timestamp when the meeting was created."
+          }
+        },
+        "required": [ "name", "dueDate", "participantIds", "createdAt" ]
     },
     "Stage": {
       "title": "Stage",
@@ -887,7 +919,11 @@
     },
     "/tasks/{taskId}": {
       "schema": { "$ref": "#/entities/Task" },
-      "description": "Represents a task or meeting that may or may not be associated with a project."
+      "description": "Represents a task that may or may not be associated with a project."
+    },
+    "/meetings/{meetingId}": {
+        "schema": { "$ref": "#/entities/Meeting" },
+        "description": "Represents a scheduled meeting."
     },
     "/projects/{projectId}/stages/{stageId}": {
       "schema": { "$ref": "#/entities/Stage" },
@@ -895,7 +931,7 @@
     },
     "/projects/{projectId}/tasks/{taskId}": {
       "schema": { "$ref": "#/entities/Task" },
-      "description": "Represents a task within a stage. Contains 'id', 'name', 'description', 'projectId', 'stageId', 'isCompleted', 'assigneeId', 'dueDate', and 'dependentTaskIds'."
+      "description": "DEPRECATED. Use the root /tasks collection instead. Represents a task within a stage."
     },
     "/projects/{projectId}/files/{fileId}": {
       "schema": { "$ref": "#/entities/ProjectFile" },

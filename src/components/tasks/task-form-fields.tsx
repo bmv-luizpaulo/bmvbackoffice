@@ -1,3 +1,4 @@
+
 'use client';
 
 import { UseFormReturn } from "react-hook-form";
@@ -26,7 +27,6 @@ import { cn } from "@/lib/utils";
 import { Separator } from "../ui/separator";
 import { Switch } from "../ui/switch";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
-import { Alert, AlertDescription } from "../ui/alert";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "../ui/accordion";
 
 const formSchema = z.object({
@@ -41,14 +41,6 @@ const formSchema = z.object({
   isRecurring: z.boolean().default(false),
   recurrenceFrequency: z.enum(['diaria', 'semanal', 'mensal']).optional(),
   recurrenceEndDate: z.date().optional(),
-}).refine(data => {
-    if (data.taskType === 'task') {
-        return !!data.projectId;
-    }
-    return true;
-}, {
-    message: "O projeto é obrigatório para tarefas.",
-    path: ["projectId"],
 });
 
 
@@ -180,7 +172,7 @@ export function TaskFormFields({ form, projectsData, usersData }: TaskFormFields
                         name="projectId"
                         render={({ field }) => (
                             <FormItem>
-                            <FormLabel className="flex items-center gap-2"><FolderKanban className="h-4 w-4" /> Projeto</FormLabel>
+                            <FormLabel className="flex items-center gap-2"><FolderKanban className="h-4 w-4" /> Projeto (Opcional)</FormLabel>
                             <Select onValueChange={field.onChange} value={field.value}>
                                 <FormControl>
                                 <SelectTrigger>
@@ -188,6 +180,7 @@ export function TaskFormFields({ form, projectsData, usersData }: TaskFormFields
                                 </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
+                                <SelectItem value="unassigned">Nenhum</SelectItem>
                                 {projectOptions.map(option => (
                                     <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
                                 ))}

@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -7,7 +8,7 @@ import { z } from "zod";
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useCollection, useUser, useMemoFirebase, addDocumentNonBlocking } from '@/firebase';
-import type { Task, Project, User as UserType, Stage } from '@/lib/types';
+import type { Task, Project, User as UserType, Stage, Meeting } from '@/lib/types';
 import { collection, query, getDocs, serverTimestamp } from 'firebase/firestore';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form } from '@/components/ui/form';
@@ -31,14 +32,6 @@ const formSchema = z.object({
   isRecurring: z.boolean().default(false),
   recurrenceFrequency: z.enum(['diaria', 'semanal', 'mensal']).optional(),
   recurrenceEndDate: z.date().optional(),
-}).refine(data => {
-    if (data.taskType === 'task') {
-        return !!data.projectId;
-    }
-    return true;
-}, {
-    message: "O projeto é obrigatório para tarefas.",
-    path: ["projectId"],
 });
 
 export default function NewTaskPage() {
@@ -77,65 +70,71 @@ export default function NewTaskPage() {
     if (!firestore || !authUser) return;
 
     try {
-        let stageId: string | undefined = undefined;
-        let collectionPath = 'tasks';
-        
-        // Se for uma tarefa, ela precisa de um projeto e de uma etapa (stage).
-        if (values.taskType === 'task' && values.projectId) {
-            collectionPath = `projects/${values.projectId}/tasks`;
-            const stagesCollection = collection(firestore, 'projects', values.projectId, 'stages');
-            const stagesSnapshot = await getDocs(stagesCollection);
-            
-            if (stagesSnapshot.empty) {
-                toast({ variant: 'destructive', title: "Erro de Configuração", description: "O projeto selecionado não possui etapas (stages) configuradas. Adicione etapas ao projeto antes de criar tarefas." });
-                return;
+        if (values.taskType === 'meeting') {
+            const meetingData: Omit<Meeting, 'id'> = {
+                name: values.name,
+                description: values.description || '',
+                dueDate: values.dueDate?.toISOString() || new Date().toISOString(),
+                meetLink: values.meetLink,
+                participantIds: values.participantIds || [],
+                isRecurring: values.isRecurring,
+                recurrenceFrequency: values.isRecurring ? values.recurrenceFrequency : undefined,
+                recurrenceEndDate: values.isRecurring ? values.recurrenceEndDate?.toISOString() : undefined,
+                createdAt: serverTimestamp(),
+            };
+            await addDocumentNonBlocking(collection(firestore, 'meetings'), meetingData);
+            toast({ title: "Reunião Criada", description: "Sua nova reunião foi adicionada." });
+        } else {
+            let stageId: string | undefined = undefined;
+            if (values.projectId) {
+                const stagesCollection = collection(firestore, 'projects', values.projectId, 'stages');
+                const stagesSnapshot = await getDocs(stagesCollection);
+                
+                if (stagesSnapshot.empty) {
+                    toast({ variant: 'destructive', title: "Erro de Configuração", description: "O projeto selecionado não possui etapas (stages) configuradas. Adicione etapas ao projeto antes de criar tarefas." });
+                    return;
+                }
+                const stages = stagesSnapshot.docs.map(d => ({...d.data(), id: d.id}) as Stage).sort((a,b) => a.order - b.order);
+                stageId = stages[0]?.id;
             }
 
-            const stages = stagesSnapshot.docs.map(d => ({...d.data(), id: d.id}) as Stage).sort((a,b) => a.order - b.order);
-            const defaultStage = stages[0];
+            const { assignee, ...rest } = values;
+            let assigneeId: string | undefined;
+            let teamId: string | undefined;
 
-            if (!defaultStage) {
-                toast({ variant: 'destructive', title: "Erro", description: "Não foi possível encontrar a etapa inicial do projeto." });
-                return;
+            if (assignee?.startsWith('user-')) assigneeId = assignee.replace('user-', '');
+            if (assignee?.startsWith('team-')) teamId = assignee.replace('team-', '');
+
+            const taskData: Omit<Task, 'id'> = {
+                name: rest.name,
+                description: rest.description || '',
+                projectId: values.projectId || undefined,
+                assigneeId: assigneeId,
+                teamId: teamId,
+                stageId: stageId,
+                isCompleted: false,
+                createdAt: serverTimestamp(),
+                dueDate: values.dueDate?.toISOString(),
+                isRecurring: values.isRecurring,
+                recurrenceFrequency: values.isRecurring ? values.recurrenceFrequency : undefined,
+                recurrenceEndDate: values.isRecurring ? values.recurrenceEndDate?.toISOString() : undefined,
+            };
+
+            const docRef = await addDocumentNonBlocking(collection(firestore, 'tasks'), taskData);
+
+            if (taskData.assigneeId) {
+                const project = projectsData?.find(p => p.id === values.projectId);
+                createNotification(taskData.assigneeId, {
+                    title: 'Nova Tarefa Atribuída',
+                    message: `Você foi atribuído à tarefa "${values.name}"${project ? ` no projeto "${project.name}"` : ''}.`,
+                    link: `/projects?projectId=${values.projectId}&taskId=${docRef.id}`
+                });
             }
-            stageId = defaultStage.id;
+
+            toast({ title: "Tarefa Criada", description: "Sua nova tarefa foi adicionada." });
         }
 
-        const { assignee, ...rest } = values;
-        let assigneeId: string | undefined;
-        let teamId: string | undefined;
-
-        if (assignee?.startsWith('user-')) assigneeId = assignee.replace('user-', '');
-        if (assignee?.startsWith('team-')) teamId = assignee.replace('team-', '');
-
-        const taskData: Omit<Task, 'id'> = {
-            ...rest,
-            projectId: values.projectId || undefined,
-            assigneeId: assigneeId,
-            teamId: teamId,
-            stageId: stageId,
-            isCompleted: false,
-            createdAt: serverTimestamp(),
-            description: values.description || '',
-            dueDate: values.dueDate?.toISOString(),
-            isRecurring: values.isRecurring,
-            recurrenceFrequency: values.isRecurring ? values.recurrenceFrequency : undefined,
-            recurrenceEndDate: values.isRecurring ? values.recurrenceEndDate?.toISOString() : undefined,
-        };
-
-        const docRef = await addDocumentNonBlocking(collection(firestore, collectionPath), taskData);
-
-        if (taskData.assigneeId) {
-            const project = projectsData?.find(p => p.id === values.projectId);
-            createNotification(taskData.assigneeId, {
-                title: 'Nova Tarefa Atribuída',
-                message: `Você foi atribuído à tarefa "${values.name}"${project ? ` no projeto "${project.name}"` : ''}.`,
-                link: `/projects?projectId=${values.projectId}&taskId=${docRef.id}`
-            });
-        }
-
-        toast({ title: "Item Criado", description: `Sua nova ${values.taskType === 'meeting' ? 'reunião' : 'tarefa'} foi adicionada.` });
-        router.push(values.taskType === 'meeting' || !values.projectId ? '/agenda/tarefas' : `/projects`);
+        router.push('/agenda/tarefas');
 
     } catch (error) {
       console.error("Erro ao criar item:", error);

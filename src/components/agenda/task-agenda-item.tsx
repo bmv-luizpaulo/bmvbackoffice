@@ -1,6 +1,7 @@
+
 'use client';
 
-import type { Task, Project, User } from '@/lib/types';
+import type { Task, Project, User, Meeting } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
@@ -12,23 +13,25 @@ import { useFirestore } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { Button } from '../ui/button';
 
+type AgendaItem = (Task & { itemType: 'task' }) | (Meeting & { itemType: 'meeting' });
+
 interface TaskAgendaItemProps {
-  task: Task;
+  item: AgendaItem;
   project?: Project;
   assignee?: User;
 }
 
-export function TaskAgendaItem({ task, project, assignee }: TaskAgendaItemProps) {
+export function TaskAgendaItem({ item, project, assignee }: TaskAgendaItemProps) {
   const firestore = useFirestore();
 
   const handleToggleComplete = () => {
-    if (!firestore || task.taskType === 'meeting') return;
-    const collectionPath = task.projectId ? `projects/${task.projectId}/tasks` : 'tasks';
-    const taskRef = doc(firestore, collectionPath, task.id);
-    updateDocumentNonBlocking(taskRef, { isCompleted: !task.isCompleted });
+    if (!firestore || item.itemType !== 'task') return;
+    const collectionPath = item.projectId ? `projects/${item.projectId}/tasks` : 'tasks';
+    const taskRef = doc(firestore, collectionPath, item.id);
+    updateDocumentNonBlocking(taskRef, { isCompleted: !item.isCompleted });
   };
   
-  const isMeeting = task.taskType === 'meeting';
+  const isMeeting = item.itemType === 'meeting';
 
   return (
     <div className="flex items-start gap-3 rounded-md border p-3 transition-colors hover:bg-muted/50">
@@ -38,21 +41,21 @@ export function TaskAgendaItem({ task, project, assignee }: TaskAgendaItemProps)
         ) : (
           <div
             role="checkbox"
-            aria-checked={task.isCompleted}
+            aria-checked={item.isCompleted}
             onClick={handleToggleComplete}
             onKeyDown={(e) => (e.key === ' ' || e.key === 'Enter') && handleToggleComplete()}
             tabIndex={0}
             className={cn(
               "peer h-4 w-4 shrink-0 rounded-sm border border-primary ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer flex items-center justify-center",
-              task.isCompleted ? "bg-primary text-primary-foreground" : "bg-transparent"
+              item.isCompleted ? "bg-primary text-primary-foreground" : "bg-transparent"
             )}
           >
-            {task.isCompleted && <Check className="h-4 w-4" />}
+            {item.isCompleted && <Check className="h-4 w-4" />}
           </div>
         )}
       </div>
       <div className="flex-1">
-        <p className={cn("font-medium", task.isCompleted && "line-through text-muted-foreground")}>{task.name}</p>
+        <p className={cn("font-medium", item.itemType === 'task' && item.isCompleted && "line-through text-muted-foreground")}>{item.name}</p>
         <div className="text-xs text-muted-foreground flex items-center gap-2 mt-1">
           {project && (
             <div className="flex items-center gap-1">
@@ -61,9 +64,9 @@ export function TaskAgendaItem({ task, project, assignee }: TaskAgendaItemProps)
             </div>
           )}
         </div>
-        {isMeeting && task.meetLink && (
+        {isMeeting && item.meetLink && (
             <Button variant="link" size="sm" asChild className="p-0 h-auto mt-1">
-              <a href={task.meetLink} target="_blank" rel="noopener noreferrer">
+              <a href={item.meetLink} target="_blank" rel="noopener noreferrer">
                 Entrar na Reunião
               </a>
             </Button>

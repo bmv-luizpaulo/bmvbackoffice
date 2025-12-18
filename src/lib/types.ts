@@ -1,5 +1,5 @@
-'use client';
 
+'use client';
 
 export type User = {
   id: string;
@@ -98,11 +98,10 @@ export type Stage = {
 
 export type Task = {
     id: string;
-    taskType?: 'task' | 'meeting';
     name: string;
     description?: string;
     projectId?: string; // Tornar opcional
-    stageId?: string; // Tornar opcional
+    stageId?: string; // Tornar opcional para tarefas que não são de projetos
     isCompleted: boolean;
     createdAt: any;
     completedAt?: any;
@@ -113,8 +112,19 @@ export type Task = {
     isRecurring?: boolean;
     recurrenceFrequency?: 'diaria' | 'semanal' | 'mensal';
     recurrenceEndDate?: string;
+};
+
+export type Meeting = {
+    id: string;
+    name: string;
+    description?: string;
+    dueDate: string;
     meetLink?: string;
-    participantIds?: string[];
+    participantIds: string[];
+    isRecurring?: boolean;
+    recurrenceFrequency?: 'diaria' | 'semanal' | 'mensal';
+    recurrenceEndDate?: string;
+    createdAt: any;
 };
 
 export type Team = {
