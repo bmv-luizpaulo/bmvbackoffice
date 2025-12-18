@@ -7,7 +7,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { format, setHours, setMinutes } from "date-fns";
 import { ptBR } from 'date-fns/locale';
-import { CalendarIcon, Users, Video, RefreshCcw } from "lucide-react";
+import { CalendarIcon, Users, Video, RefreshCcw, Bot, Wand2, Loader2 } from "lucide-react";
 
 import {
   Dialog,
@@ -38,6 +38,9 @@ import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { Calendar } from "../ui/calendar";
 import { cn } from "@/lib/utils";
 import { Switch } from "../ui/switch";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "../ui/accordion";
+import { useToast } from "@/hooks/use-toast";
+import { parseMeetingDetails } from "@/ai/flows/parse-meeting-flow";
 
 type MeetingFormDialogProps = {
   isOpen: boolean;
@@ -67,7 +70,10 @@ const formSchema = z.object({
 });
 
 export function MeetingFormDialog({ isOpen, onOpenChange, onSave, meeting, users }: MeetingFormDialogProps) {
-  
+  const { toast } = useToast();
+  const [isParsing, setIsParsing] = React.useState(false);
+  const [meetingPaste, setMeetingPaste] = React.useState("");
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -106,9 +112,25 @@ export function MeetingFormDialog({ isOpen, onOpenChange, onSave, meeting, users
           recurrenceEndDate: undefined,
         });
       }
+      setMeetingPaste("");
     }
   }, [meeting, isOpen, form]);
 
+  const handleParseMeeting = async () => {
+    if (!meetingPaste.trim()) return;
+    setIsParsing(true);
+    try {
+        const result = await parseMeetingDetails(meetingPaste);
+        if (result.name) form.setValue('name', result.name);
+        if (result.startDate) form.setValue('dueDate', new Date(result.startDate));
+        if (result.meetLink) form.setValue('meetLink', result.meetLink);
+        toast({ title: "Dados da reunião extraídos com sucesso!" });
+    } catch(e: any) {
+        toast({ title: "Erro na Análise", description: e.message, variant: 'destructive' });
+    } finally {
+        setIsParsing(false);
+    }
+  }
 
   function onSubmit(values: z.infer<typeof formSchema>) {
     const meetingData = {
@@ -138,6 +160,29 @@ export function MeetingFormDialog({ isOpen, onOpenChange, onSave, meeting, users
         </DialogHeader>
         <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 max-h-[70vh] overflow-y-auto pr-4">
+                 <Accordion type="single" collapsible className="w-full">
+                    <AccordionItem value="item-1">
+                        <AccordionTrigger>
+                            <div className="flex items-center gap-2 text-primary">
+                                <Bot className="h-5 w-5"/>
+                                <span className="font-semibold">Criar a partir de texto (com IA)</span>
+                            </div>
+                        </AccordionTrigger>
+                        <AccordionContent className="pt-4 space-y-3">
+                        <Textarea 
+                            placeholder="Cole aqui o conteúdo de um convite de reunião (ex: do Google Calendar)..."
+                            rows={8}
+                            value={meetingPaste}
+                            onChange={(e) => setMeetingPaste(e.target.value)}
+                        />
+                        <Button type="button" onClick={handleParseMeeting} disabled={isParsing || !meetingPaste.trim()}>
+                                {isParsing ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Wand2 className="mr-2 h-4 w-4" />}
+                                Analisar e Preencher
+                        </Button>
+                        </AccordionContent>
+                    </AccordionItem>
+                </Accordion>
+
                 <FormField
                     control={form.control}
                     name="name"
@@ -258,7 +303,8 @@ export function MeetingFormDialog({ isOpen, onOpenChange, onSave, meeting, users
                                 name="recurrenceFrequency"
                                 render={({ field }) => (
                                     <FormItem><FormLabel>Frequência</FormLabel>
-                                    <Select onValueChange={field.onChange} value={field.value}><FormControl>
+                                    <Select onValueChange={field.onChange} value={field.value}>
+                                    <FormControl>
                                         <SelectTrigger><SelectValue placeholder="Selecione a frequência" /></SelectTrigger>
                                     </FormControl>
                                     <SelectContent>
