@@ -3,12 +3,14 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Regra geral para a maioria das coleções (ainda permissiva para o desenvolvimento)
+    // Permitir acesso a usuários autenticados para a maioria das coleções.
+    // Esta é uma regra ainda permissiva, ideal para desenvolvimento.
+    // Regras mais granulares devem ser adicionadas conforme necessário.
     match /{document=**} {
-      allow read, write: if true;
+      allow read, write: if request.auth != null;
     }
 
-    // Regra específica e explícita para a coleção de tarefas/reuniões
+    // Regra explícita para a coleção de tarefas/reuniões
     match /tasks/{taskId} {
       allow read, create, update, delete: if request.auth != null;
     }
