@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from "react"
@@ -13,7 +12,7 @@ import {
   ColumnFiltersState,
   getFilteredRowModel,
 } from "@tanstack/react-table"
-import { MoreHorizontal, Pencil, Trash2 } from "lucide-react"
+import { MoreHorizontal, Pencil, Trash2, Upload } from "lucide-react"
 
 import {
   Table,
@@ -26,12 +25,16 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import type { SealOrder } from "@/lib/types";
-import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
-import { collection, query, orderBy } from "firebase/firestore";
+import { useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking } from "@/firebase";
+import { collection, query, orderBy, serverTimestamp } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
-import { format } from 'date-fns';
+import { format, parse } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Badge } from "../ui/badge"
+import dynamic from "next/dynamic"
+
+const SealOrderImportDialog = dynamic(() => import('./seal-order-import-dialog').then(m => m.SealOrderImportDialog), { ssr: false });
+
 
 export function SealOrderDataTable() {
   const firestore = useFirestore();
@@ -47,6 +50,27 @@ export function SealOrderDataTable() {
 
   const [sorting, setSorting] = React.useState<SortingState>([{ id: 'orderDate', desc: true }]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
+  const [isImportOpen, setIsImportOpen] = React.useState(false);
+
+  const handleImportSave = async (orders: Partial<SealOrder>[]) => {
+    if (!firestore) return;
+    let successCount = 0;
+    for (const order of orders) {
+        try {
+            await addDocumentNonBlocking(collection(firestore, 'sealOrders'), order);
+            successCount++;
+        } catch (e) {
+            console.error("Error importing order row: ", e);
+        }
+    }
+    if (successCount > 0) {
+        toast({
+            title: "Importação Concluída",
+            description: `${successCount} de ${orders.length} pedidos foram importados com sucesso.`
+        });
+    }
+    setIsImportOpen(false);
+  };
 
   const columns: ColumnDef<SealOrder>[] = React.useMemo(() => [
     {
@@ -121,7 +145,10 @@ export function SealOrderDataTable() {
           }
           className="max-w-sm"
         />
-        <Button disabled>Sincronizar NXT</Button>
+        <Button onClick={() => setIsImportOpen(true)}>
+          <Upload className="h-4 w-4 mr-2"/>
+          Importar Pedidos
+        </Button>
       </div>
       <div className="rounded-md border">
         <Table>
@@ -185,6 +212,12 @@ export function SealOrderDataTable() {
           Próximo
         </Button>
       </div>
+
+       <SealOrderImportDialog 
+        isOpen={isImportOpen}
+        onOpenChange={setIsImportOpen}
+        onSave={handleImportSave}
+      />
     </div>
   )
 }
