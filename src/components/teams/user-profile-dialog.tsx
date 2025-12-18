@@ -53,6 +53,15 @@ export function UserProfileDialog({ isOpen, onOpenChange, user }: UserProfileDia
 
   const userRole = user.roleId ? rolesMap.get(user.roleId) : null;
   const userTeams = user.teamIds?.map(teamId => teamsMap.get(teamId)).filter(Boolean) || [];
+  
+  const getInitials = (name?: string | null) => {
+    if (!name) return "?";
+    const names = name.split(' ');
+    if (names.length > 1) {
+      return `${names[0][0]}${names[names.length - 1][0]}`.toUpperCase();
+    }
+    return name.substring(0, 2).toUpperCase();
+  };
 
   const statusConfig = {
     active: { label: 'Ativo', icon: UserCheck, className: 'text-green-600 bg-green-50 border-green-200' },
@@ -71,7 +80,7 @@ export function UserProfileDialog({ isOpen, onOpenChange, user }: UserProfileDia
             <Avatar className="h-12 w-12">
               <AvatarImage src={user.avatarUrl} alt={user.name} />
               <AvatarFallback className="text-lg">
-                {user.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                {getInitials(user.name)}
               </AvatarFallback>
             </Avatar>
             <div>
@@ -197,8 +206,8 @@ export function UserProfileDialog({ isOpen, onOpenChange, user }: UserProfileDia
                   <div className="mt-1">
                     {userRole ? (
                       <div className="flex items-center gap-2">
-                        <Badge variant={userRole.isManager ? "default" : "secondary"}>
-                          {userRole.isManager && <Shield className="h-3 w-3 mr-1" />}
+                        <Badge variant={userRole.permissions?.isManager ? "default" : "secondary"}>
+                          {userRole.permissions?.isManager && <Shield className="h-3 w-3 mr-1" />}
                           {userRole.name}
                         </Badge>
                       </div>
