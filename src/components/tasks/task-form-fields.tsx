@@ -26,7 +26,6 @@ import { Calendar } from "../ui/calendar";
 import { cn } from "@/lib/utils";
 import { Separator } from "../ui/separator";
 import { Switch } from "../ui/switch";
-import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "../ui/accordion";
 import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
 import { collection } from "firebase/firestore";
@@ -69,37 +68,6 @@ export function TaskFormFields({ form, projectsData, usersData }: TaskFormFields
 
     return (
         <div className="space-y-4">
-             <FormField
-                control={form.control}
-                name="taskType"
-                render={({ field }) => (
-                    <FormItem className="space-y-3">
-                    <FormLabel>Tipo de Item</FormLabel>
-                    <FormControl>
-                        <RadioGroup
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                        className="flex space-x-4"
-                        >
-                        <FormItem className="flex items-center space-x-2 space-y-0">
-                            <FormControl>
-                            <RadioGroupItem value="task" />
-                            </FormControl>
-                            <FormLabel className="font-normal">Tarefa</FormLabel>
-                        </FormItem>
-                        <FormItem className="flex items-center space-x-2 space-y-0">
-                            <FormControl>
-                            <RadioGroupItem value="meeting" />
-                            </FormControl>
-                            <FormLabel className="font-normal">Reunião</FormLabel>
-                        </FormItem>
-                        </RadioGroup>
-                    </FormControl>
-                    <FormMessage />
-                    </FormItem>
-                )}
-            />
-
             <FormField
                 control={form.control}
                 name="name"

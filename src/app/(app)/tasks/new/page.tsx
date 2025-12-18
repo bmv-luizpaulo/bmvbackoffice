@@ -9,7 +9,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useCollection, useUser, useMemoFirebase, addDocumentNonBlocking } from '@/firebase';
 import type { Task, Project, User as UserType, Stage, Meeting } from '@/lib/types';
-import { collection, query, getDocs, serverTimestamp } from 'firebase/firestore';
+import { collection, query, serverTimestamp } from 'firebase/firestore';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form } from '@/components/ui/form';
 import { Button } from '@/components/ui/button';
@@ -18,7 +18,7 @@ import { useNotifications } from '@/components/notifications/notifications-provi
 import { TaskFormFields } from '@/components/tasks/task-form-fields';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Textarea } from '@/components/ui/textarea';
-import { parseMeetingDetailsAction } from '@/lib/actions';
+import { parseMeetingDetails } from '@/ai/flows/parse-meeting-flow';
 
 const formSchema = z.object({
   taskType: z.enum(['task', 'meeting']).default('task'),
@@ -56,12 +56,11 @@ export default function NewTaskPage() {
     defaultValues: { name: "", description: "", taskType: 'task', participantIds: [] },
   });
   
+  const itemType = (searchParams.get('type') as 'task' | 'meeting' | null) || 'task';
+
   React.useEffect(() => {
-    const type = searchParams.get('type') as 'task' | 'meeting' | null;
-    if (type) {
-      form.setValue('taskType', type);
-    }
-  }, [searchParams, form]);
+    form.setValue('taskType', itemType);
+  }, [itemType, form]);
 
 
   const { isSubmitting } = form.formState;
@@ -71,7 +70,7 @@ export default function NewTaskPage() {
 
     try {
         if (values.taskType === 'meeting') {
-            const meetingData: Omit<Meeting, 'id' | 'createdAt'> = {
+            const meetingData: Omit<Meeting, 'id'> = {
                 name: values.name,
                 description: values.description || '',
                 dueDate: values.dueDate ? values.dueDate.toISOString() : new Date().toISOString(),
@@ -80,23 +79,11 @@ export default function NewTaskPage() {
                 isRecurring: values.isRecurring,
                 recurrenceFrequency: values.isRecurring ? values.recurrenceFrequency : undefined,
                 recurrenceEndDate: values.isRecurring && values.recurrenceEndDate ? values.recurrenceEndDate.toISOString() : undefined,
+                createdAt: serverTimestamp(),
             };
-            await addDocumentNonBlocking(collection(firestore, 'meetings'), {...meetingData, createdAt: serverTimestamp()});
+            await addDocumentNonBlocking(collection(firestore, 'meetings'), meetingData);
             toast({ title: "Reunião Criada", description: "Sua nova reunião foi adicionada." });
         } else {
-            let stageId: string | undefined = undefined;
-            if (values.projectId) {
-                const stagesCollection = collection(firestore, 'projects', values.projectId, 'stages');
-                const stagesSnapshot = await getDocs(stagesCollection);
-                
-                if (stagesSnapshot.empty) {
-                    toast({ variant: 'destructive', title: "Erro de Configuração", description: "O projeto selecionado não possui etapas (stages) configuradas. Adicione etapas ao projeto antes de criar tarefas." });
-                    return;
-                }
-                const stages = stagesSnapshot.docs.map(d => ({...d.data(), id: d.id}) as Stage).sort((a,b) => a.order - b.order);
-                stageId = stages[0]?.id;
-            }
-
             const { assignee, ...rest } = values;
             let assigneeId: string | undefined;
             let teamId: string | undefined;
@@ -104,27 +91,27 @@ export default function NewTaskPage() {
             if (assignee?.startsWith('user-')) assigneeId = assignee.replace('user-', '');
             if (assignee?.startsWith('team-')) teamId = assignee.replace('team-', '');
 
-            const taskData: Omit<Task, 'id' | 'createdAt' | 'isCompleted'> = {
+            const taskData: Omit<Task, 'id' | 'isCompleted'> = {
                 name: rest.name,
                 description: rest.description || '',
                 projectId: values.projectId || undefined,
                 assigneeId: assigneeId,
                 teamId: teamId,
-                stageId: stageId,
                 dueDate: values.dueDate?.toISOString(),
                 isRecurring: values.isRecurring,
                 recurrenceFrequency: values.isRecurring ? values.recurrenceFrequency : undefined,
                 recurrenceEndDate: values.isRecurring && values.recurrenceEndDate ? values.recurrenceEndDate.toISOString() : undefined,
+                createdAt: serverTimestamp(),
             };
 
-            const docRef = await addDocumentNonBlocking(collection(firestore, 'tasks'), { ...taskData, isCompleted: false, createdAt: serverTimestamp() });
+            const docRef = await addDocumentNonBlocking(collection(firestore, 'tasks'), taskData);
 
             if (taskData.assigneeId) {
                 const project = projectsData?.find(p => p.id === values.projectId);
                 createNotification(taskData.assigneeId, {
                     title: 'Nova Tarefa Atribuída',
                     message: `Você foi atribuído à tarefa "${values.name}"${project ? ` no projeto "${project.name}"` : ''}.`,
-                    link: `/projects?projectId=${values.projectId}&taskId=${docRef.id}`
+                    link: `/tasks/${docRef.id}`
                 });
             }
 
@@ -143,17 +130,13 @@ export default function NewTaskPage() {
     if (!meetingPaste.trim()) return;
     setIsParsing(true);
     try {
-        const result = await parseMeetingDetailsAction(meetingPaste);
-        if (result.success && result.data) {
-            const { name, startDate, meetLink } = result.data;
-            form.setValue('taskType', 'meeting');
-            if (name) form.setValue('name', name);
-            if (startDate) form.setValue('dueDate', new Date(startDate));
-            if (meetLink) form.setValue('meetLink', meetLink);
-            toast({ title: "Dados da reunião extraídos com sucesso!" });
-        } else {
-            throw new Error(result.error || "A IA não conseguiu extrair os detalhes.");
-        }
+        const result = await parseMeetingDetails(meetingPaste);
+        form.setValue('taskType', 'meeting');
+        if (result.name) form.setValue('name', result.name);
+        if (result.startDate) form.setValue('dueDate', new Date(result.startDate));
+        if (result.meetLink) form.setValue('meetLink', result.meetLink);
+        toast({ title: "Dados da reunião extraídos com sucesso!" });
+        
     } catch(e: any) {
         toast({ title: "Erro na Análise", description: e.message, variant: 'destructive' });
     } finally {
@@ -162,48 +145,54 @@ export default function NewTaskPage() {
   }
 
   const isLoading = isLoadingProjects || isLoadingUsers;
+  const pageTitle = itemType === 'meeting' ? 'Nova Reunião' : 'Nova Tarefa';
+  const pageDescription = itemType === 'meeting' 
+    ? 'Preencha os detalhes abaixo para agendar uma nova reunião.'
+    : 'Preencha os detalhes abaixo para adicionar uma nova tarefa.';
 
   return (
     <div className="space-y-6">
       <header>
         <h1 className="font-headline text-3xl font-bold tracking-tight flex items-center gap-2">
             <ListPlus className="h-8 w-8 text-primary"/>
-            Criar Novo Item
+            {pageTitle}
         </h1>
         <p className="text-muted-foreground">
-          Preencha os detalhes abaixo para adicionar uma nova tarefa ou reunião.
+          {pageDescription}
         </p>
       </header>
        <Card className="max-w-4xl mx-auto">
         <CardHeader>
           <CardTitle>Detalhes do Item</CardTitle>
           <CardDescription>
-            Selecione o tipo de item e preencha as informações.
+            { itemType === 'meeting' ? 'Cole o texto de um convite para preencher os campos com IA, ou preencha manualmente.' : 'Preencha as informações da tarefa.' }
           </CardDescription>
         </CardHeader>
         <CardContent>
-            <Accordion type="single" collapsible className="w-full mb-6">
-                <AccordionItem value="item-1">
-                    <AccordionTrigger>
-                        <div className="flex items-center gap-2 text-primary">
-                            <Bot className="h-5 w-5"/>
-                            <span className="font-semibold">Criar a partir de texto (com IA)</span>
-                        </div>
-                    </AccordionTrigger>
-                    <AccordionContent className="pt-4 space-y-3">
-                       <Textarea 
-                         placeholder="Cole aqui o conteúdo de um convite de reunião (ex: do Google Calendar)..."
-                         rows={8}
-                         value={meetingPaste}
-                         onChange={(e) => setMeetingPaste(e.target.value)}
-                       />
-                       <Button onClick={handleParseMeeting} disabled={isParsing || !meetingPaste.trim()}>
-                            {isParsing ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Wand2 className="mr-2 h-4 w-4" />}
-                            Analisar e Preencher
-                       </Button>
-                    </AccordionContent>
-                </AccordionItem>
-            </Accordion>
+            {itemType === 'meeting' && (
+                <Accordion type="single" collapsible className="w-full mb-6">
+                    <AccordionItem value="item-1">
+                        <AccordionTrigger>
+                            <div className="flex items-center gap-2 text-primary">
+                                <Bot className="h-5 w-5"/>
+                                <span className="font-semibold">Criar a partir de texto (com IA)</span>
+                            </div>
+                        </AccordionTrigger>
+                        <AccordionContent className="pt-4 space-y-3">
+                        <Textarea 
+                            placeholder="Cole aqui o conteúdo de um convite de reunião (ex: do Google Calendar)..."
+                            rows={8}
+                            value={meetingPaste}
+                            onChange={(e) => setMeetingPaste(e.target.value)}
+                        />
+                        <Button onClick={handleParseMeeting} disabled={isParsing || !meetingPaste.trim()}>
+                                {isParsing ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Wand2 className="mr-2 h-4 w-4" />}
+                                Analisar e Preencher
+                        </Button>
+                        </AccordionContent>
+                    </AccordionItem>
+                </Accordion>
+            )}
             {isLoading ? (
                 <div className='flex items-center justify-center h-40'>
                     <Loader2 className='animate-spin text-primary' />
@@ -219,7 +208,7 @@ export default function NewTaskPage() {
                         <div className='flex justify-end'>
                             <Button type="submit" disabled={isSubmitting}>
                                 {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                Criar Item
+                                Criar {itemType === 'meeting' ? 'Reunião' : 'Tarefa'}
                             </Button>
                         </div>
                     </form>
