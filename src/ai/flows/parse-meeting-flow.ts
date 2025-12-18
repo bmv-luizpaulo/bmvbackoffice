@@ -26,15 +26,19 @@ const MeetingDetailsSchema = z.object({
     .optional(),
 });
 
+const MeetingParseInputSchema = z.object({
+  meetingText: z.string(),
+  currentDateTime: z.string(),
+});
 
 const parseMeetingDetailsPrompt = ai.definePrompt({
   name: 'parseMeetingDetailsPrompt',
-  input: { schema: z.string() },
+  input: { schema: MeetingParseInputSchema },
   output: { schema: MeetingDetailsSchema },
   prompt: `Você é um assistente especialista em extrair informações de convites de reunião. Analise o texto a seguir e extraia o título, a data e hora de início, a data e hora de término (se houver) e o link do Google Meet.
 
 Considere o seguinte:
-- A data e hora atual para referência é: ${format(new Date(), "EEEE, dd 'de' MMMM 'de' yyyy, HH:mm", { locale: ptBR })}. Se o ano não for especificado no texto, presuma o ano atual.
+- A data e hora atual para referência é: {{{currentDateTime}}}. Se o ano não for especificado no texto, presuma o ano atual.
 - O formato da data e hora de saída deve ser estritamente ISO 8601 (por exemplo, 2024-07-25T14:00:00.000Z).
 - Se o fuso horário for 'America/Sao_Paulo', converta para UTC somando 3 horas ao horário local (ex: 10:00 America/Sao_Paulo se torna 13:00 UTC). Se não houver fuso, presuma que o horário já está em UTC.
 - O título deve ser o assunto principal da reunião.
@@ -42,7 +46,7 @@ Considere o seguinte:
 
 Texto do Convite:
 ---
-{{{input}}}
+{{{meetingText}}}
 ---
 `,
 });
@@ -54,7 +58,13 @@ const parseMeetingDetailsFlow = ai.defineFlow(
     outputSchema: MeetingDetailsSchema,
   },
   async (meetingText) => {
-    const { output } = await parseMeetingDetailsPrompt(meetingText);
+    const currentDateTime = format(new Date(), "EEEE, dd 'de' MMMM 'de' yyyy, HH:mm", { locale: ptBR });
+    
+    const { output } = await parseMeetingDetailsPrompt({
+        meetingText,
+        currentDateTime,
+    });
+    
     if (!output) {
       throw new Error('Não foi possível extrair os detalhes da reunião.');
     }
