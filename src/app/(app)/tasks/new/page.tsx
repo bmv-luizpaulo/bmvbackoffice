@@ -71,18 +71,17 @@ export default function NewTaskPage() {
 
     try {
         if (values.taskType === 'meeting') {
-            const meetingData: Omit<Meeting, 'id'> = {
+            const meetingData: Omit<Meeting, 'id' | 'createdAt'> = {
                 name: values.name,
                 description: values.description || '',
-                dueDate: values.dueDate?.toISOString() || new Date().toISOString(),
+                dueDate: values.dueDate ? values.dueDate.toISOString() : new Date().toISOString(),
                 meetLink: values.meetLink,
                 participantIds: values.participantIds || [],
                 isRecurring: values.isRecurring,
                 recurrenceFrequency: values.isRecurring ? values.recurrenceFrequency : undefined,
-                recurrenceEndDate: values.isRecurring ? values.recurrenceEndDate?.toISOString() : undefined,
-                createdAt: serverTimestamp(),
+                recurrenceEndDate: values.isRecurring && values.recurrenceEndDate ? values.recurrenceEndDate.toISOString() : undefined,
             };
-            await addDocumentNonBlocking(collection(firestore, 'meetings'), meetingData);
+            await addDocumentNonBlocking(collection(firestore, 'meetings'), {...meetingData, createdAt: serverTimestamp()});
             toast({ title: "Reunião Criada", description: "Sua nova reunião foi adicionada." });
         } else {
             let stageId: string | undefined = undefined;
@@ -105,22 +104,20 @@ export default function NewTaskPage() {
             if (assignee?.startsWith('user-')) assigneeId = assignee.replace('user-', '');
             if (assignee?.startsWith('team-')) teamId = assignee.replace('team-', '');
 
-            const taskData: Omit<Task, 'id'> = {
+            const taskData: Omit<Task, 'id' | 'createdAt' | 'isCompleted'> = {
                 name: rest.name,
                 description: rest.description || '',
                 projectId: values.projectId || undefined,
                 assigneeId: assigneeId,
                 teamId: teamId,
                 stageId: stageId,
-                isCompleted: false,
-                createdAt: serverTimestamp(),
                 dueDate: values.dueDate?.toISOString(),
                 isRecurring: values.isRecurring,
                 recurrenceFrequency: values.isRecurring ? values.recurrenceFrequency : undefined,
-                recurrenceEndDate: values.isRecurring ? values.recurrenceEndDate?.toISOString() : undefined,
+                recurrenceEndDate: values.isRecurring && values.recurrenceEndDate ? values.recurrenceEndDate.toISOString() : undefined,
             };
 
-            const docRef = await addDocumentNonBlocking(collection(firestore, 'tasks'), taskData);
+            const docRef = await addDocumentNonBlocking(collection(firestore, 'tasks'), { ...taskData, isCompleted: false, createdAt: serverTimestamp() });
 
             if (taskData.assigneeId) {
                 const project = projectsData?.find(p => p.id === values.projectId);

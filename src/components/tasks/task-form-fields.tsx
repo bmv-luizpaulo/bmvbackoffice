@@ -18,8 +18,8 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from "../ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
-import type { User as UserType, Project } from "@/lib/types";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
+import type { User as UserType, Project, Team } from "@/lib/types";
 import { MultiSelect } from "../ui/multi-select";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { Calendar } from "../ui/calendar";
@@ -28,6 +28,8 @@ import { Separator } from "../ui/separator";
 import { Switch } from "../ui/switch";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "../ui/accordion";
+import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
+import { collection } from "firebase/firestore";
 
 const formSchema = z.object({
   taskType: z.enum(['task', 'meeting']).default('task'),
@@ -52,11 +54,16 @@ type TaskFormFieldsProps = {
 
 export function TaskFormFields({ form, projectsData, usersData }: TaskFormFieldsProps) {
     
+    const firestore = useFirestore();
     const taskType = form.watch("taskType");
     const isRecurring = form.watch("isRecurring");
 
+    const teamsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'teams') : null, [firestore]);
+    const { data: teamsData } = useCollection<Team>(teamsQuery);
+
     const projectOptions = projectsData.map(p => ({ value: p.id, label: p.name }));
-    const userOptions = usersData.map(u => ({ value: u.id, label: u.name }));
+    const userOptions = usersData.map(u => ({ value: `user-${u.id}`, label: u.name }));
+    const teamOptions = teamsData?.map(t => ({ value: `team-${t.id}`, label: t.name })) || [];
     const participantOptions = usersData.map(u => ({ value: u.id, label: u.name }));
 
 
@@ -207,7 +214,7 @@ export function TaskFormFields({ form, projectsData, usersData }: TaskFormFields
                 )}
             />
             
-            {taskType === 'meeting' && (
+            {taskType === 'meeting' ? (
                 <>
                     <FormField
                     control={form.control}
@@ -239,6 +246,39 @@ export function TaskFormFields({ form, projectsData, usersData }: TaskFormFields
                     )}
                     />
                 </>
+            ) : (
+                <FormField
+                    control={form.control}
+                    name="assignee"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel className="flex items-center gap-2"><User className="h-4 w-4" />Responsável</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                            <SelectTrigger>
+                                <SelectValue placeholder="Atribuir a..." />
+                            </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                                <SelectItem value="unassigned">Não atribuído</SelectItem>
+                                <SelectGroup>
+                                    <FormLabel className="px-2 py-1.5 text-xs font-semibold flex items-center gap-2"><Users className="h-4 w-4" />Equipes</FormLabel>
+                                    {teamOptions.map(option => (
+                                        <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                                    ))}
+                                </SelectGroup>
+                                <SelectGroup>
+                                    <FormLabel className="px-2 py-1.5 text-xs font-semibold flex items-center gap-2"><User className="h-4 w-4" />Usuários</FormLabel>
+                                    {userOptions.map(option => (
+                                        <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                                    ))}
+                                </SelectGroup>
+                            </SelectContent>
+                        </Select>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                />
             )}
 
             <Accordion type="single" collapsible className="w-full">
@@ -250,29 +290,6 @@ export function TaskFormFields({ form, projectsData, usersData }: TaskFormFields
                         </div>
                     </AccordionTrigger>
                     <AccordionContent className="pt-4 space-y-4">
-                         <FormField
-                            control={form.control}
-                            name="assignee"
-                            render={({ field }) => (
-                                <FormItem>
-                                <FormLabel>Responsável</FormLabel>
-                                <Select onValueChange={field.onChange} value={field.value}>
-                                    <FormControl>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Atribuir a..." />
-                                    </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                    <SelectItem value="unassigned">Não atribuído</SelectItem>
-                                    {userOptions.map(option => (
-                                        <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
-                                    ))}
-                                    </SelectContent>
-                                </Select>
-                                <FormMessage />
-                                </FormItem>
-                            )}
-                        />
                          <FormField
                             control={form.control}
                             name="isRecurring"
