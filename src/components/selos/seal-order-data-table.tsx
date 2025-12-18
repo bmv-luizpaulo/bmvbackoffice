@@ -28,7 +28,7 @@ import type { SealOrder, Contact } from "@/lib/types";
 import { useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase";
 import { collection, query, orderBy, where, doc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
-import { format, isValid } from 'date-fns';
+import { format, isValid, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Badge } from "../ui/badge"
 import dynamic from "next/dynamic"
@@ -43,6 +43,25 @@ const SealOrderImportDialog = dynamic(() => import('./seal-order-import-dialog')
 interface SealOrderDataTableProps {
   statusFilter: 'active' | 'archived';
 }
+
+const parseOrderDate = (orderDateValue: any): Date | null => {
+    if (!orderDateValue) return null;
+    if (orderDateValue.toDate && typeof orderDateValue.toDate === 'function') {
+        return orderDateValue.toDate();
+    }
+    if (typeof orderDateValue === 'string') {
+        const parsed = parseISO(orderDateValue);
+        if (isValid(parsed)) return parsed;
+    }
+    if (typeof orderDateValue === 'object' && 'y' in orderDateValue && 'm' in orderDateValue && 'd' in orderDateValue) {
+        const { y, m, d, H, M, S } = orderDateValue;
+        const date = new Date(y, m - 1, d, H || 0, M || 0, S || 0);
+        if (isValid(date)) return date;
+    }
+    const genericDate = new Date(orderDateValue);
+    if (isValid(genericDate)) return genericDate;
+    return null;
+};
 
 export function SealOrderDataTable({ statusFilter }: SealOrderDataTableProps) {
   const firestore = useFirestore();
@@ -82,8 +101,8 @@ export function SealOrderDataTable({ statusFilter }: SealOrderDataTableProps) {
     if (statusFilter === 'active') {
       // Client-side sorting for active orders to avoid composite index requirement
       return orders.sort((a, b) => {
-        const dateA = a.orderDate?.toDate ? a.orderDate.toDate() : new Date(0);
-        const dateB = b.orderDate?.toDate ? b.orderDate.toDate() : new Date(0);
+        const dateA = parseOrderDate(a.orderDate) || new Date(0);
+        const dateB = parseOrderDate(b.orderDate) || new Date(0);
         return dateB.getTime() - dateA.getTime();
       });
     }
@@ -189,23 +208,10 @@ export function SealOrderDataTable({ statusFilter }: SealOrderDataTableProps) {
         </Button>
       ),
       cell: ({ row }) => {
-        const orderDateValue = row.original.orderDate;
-        if (!orderDateValue) return <span className="text-muted-foreground">N/D</span>;
-
-        let date: Date | null = null;
-        // Firebase Timestamp object
-        if (orderDateValue && typeof orderDateValue.toDate === 'function') {
-            date = orderDateValue.toDate();
-        } 
-        // ISO string or other date string
-        else if (typeof orderDateValue === 'string') {
-            date = new Date(orderDateValue);
-        }
-        
+        const date = parseOrderDate(row.original.orderDate);
         if (!date || !isValid(date)) {
             return <span className="text-destructive">Data inválida</span>
         }
-
         return format(date, 'dd/MM/yyyy HH:mm', { locale: ptBR });
       },
     },
