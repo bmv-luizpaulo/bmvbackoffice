@@ -12,7 +12,7 @@ import {
   ColumnFiltersState,
   getFilteredRowModel,
 } from "@tanstack/react-table"
-import { MoreHorizontal, Upload, User as UserIcon, Archive } from "lucide-react"
+import { MoreHorizontal, Upload, User as UserIcon, Archive, ArrowUpDown } from "lucide-react"
 
 import {
   Table,
@@ -26,7 +26,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import type { SealOrder, Contact } from "@/lib/types";
 import { useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase";
-import { collection, query, orderBy, where } from "firebase/firestore";
+import { collection, query, orderBy, where, doc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { format, isValid } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -35,6 +35,8 @@ import dynamic from "next/dynamic"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "../ui/dropdown-menu";
 import { ContactProfileDialog } from "../agenda/contact-profile-dialog";
 import { ContactFormDialog } from "../agenda/contact-form-dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
+import { cn } from "@/lib/utils";
 
 const SealOrderImportDialog = dynamic(() => import('./seal-order-import-dialog').then(m => m.SealOrderImportDialog), { ssr: false });
 
@@ -54,8 +56,7 @@ export function SealOrderDataTable({ statusFilter }: SealOrderDataTableProps) {
       return query(baseQuery, where('status', '==', 'Arquivado'), orderBy('orderDate', 'desc'));
     }
     
-    // Using != requires ordering by the same field first. Since we need to order by date,
-    // we'll fetch all non-archived and sort client-side to avoid complex index requirements.
+    // Using != requires ordering by the same field first. Client-side sort will be used.
     return query(baseQuery, where('status', '!=', 'Arquivado'));
   }, [firestore, statusFilter]);
 
@@ -75,10 +76,11 @@ export function SealOrderDataTable({ statusFilter }: SealOrderDataTableProps) {
   const [isContactFormOpen, setIsContactFormOpen] = React.useState(false);
   const [selectedContact, setSelectedContact] = React.useState<Contact | null>(null);
   const [prefilledContact, setPrefilledContact] = React.useState<Partial<Contact> | null>(null);
-
+  
   const data = React.useMemo(() => {
     const orders = sealOrdersData ?? [];
     if (statusFilter === 'active') {
+      // Client-side sorting for active orders to avoid composite index requirement
       return orders.sort((a, b) => {
         const dateA = a.orderDate?.toDate ? a.orderDate.toDate() : new Date(0);
         const dateB = b.orderDate?.toDate ? b.orderDate.toDate() : new Date(0);
@@ -87,6 +89,17 @@ export function SealOrderDataTable({ statusFilter }: SealOrderDataTableProps) {
     }
     return orders;
   }, [sealOrdersData, statusFilter]);
+
+
+  const uniquePrograms = React.useMemo(() => {
+      const programs = new Set(data.map(o => o.program).filter(Boolean));
+      return ['Todos', ...Array.from(programs)];
+  }, [data]);
+
+  const uniqueStatuses = React.useMemo(() => {
+      const statuses = new Set(data.map(o => o.status).filter(Boolean));
+      return ['Todos', ...Array.from(statuses)];
+  }, [data]);
 
   const handleImportSave = async (orders: Partial<SealOrder>[]) => {
     if (!firestore) return;
@@ -161,12 +174,20 @@ export function SealOrderDataTable({ statusFilter }: SealOrderDataTableProps) {
   const columns: ColumnDef<SealOrder>[] = React.useMemo(() => [
     {
       accessorKey: "legacyId",
-      header: "Pedido",
-      cell: ({ row }) => <span className="font-mono text-primary">#{row.original.legacyId}</span>,
+      header: ({ column }) => (
+        <Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")} className="px-2">
+          Pedido <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      ),
+      cell: ({ row }) => <span className="font-mono text-primary pl-4">#{row.original.legacyId}</span>,
     },
     {
       accessorKey: "orderDate",
-      header: "Data",
+      header: ({ column }) => (
+        <Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>
+          Data <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      ),
       cell: ({ row }) => {
         const orderDate = row.original.orderDate;
         if (!orderDate) return <span className="text-muted-foreground">N/D</span>;
@@ -174,8 +195,6 @@ export function SealOrderDataTable({ statusFilter }: SealOrderDataTableProps) {
         let date: Date | null = null;
         if (orderDate?.toDate) {
             date = orderDate.toDate();
-        } else if (typeof orderDate === 'object' && 'y' in orderDate && 'm' in orderDate && 'd' in orderDate) {
-            date = new Date(orderDate.y, (orderDate.m - 1), orderDate.d, orderDate.H || 0, orderDate.M || 0, orderDate.S || 0);
         } else if (typeof orderDate === 'string') {
             date = new Date(orderDate);
         }
@@ -204,20 +223,33 @@ export function SealOrderDataTable({ statusFilter }: SealOrderDataTableProps) {
     {
       accessorKey: "uf",
       header: "UF",
+      cell: ({ row }) => <span className="pl-2">{row.original.uf}</span>
     },
     {
       accessorKey: "quantity",
-      header: "Quantidade",
-      cell: ({ row }) => `${row.original.quantity} ucs`
+      header: ({ column }) => (
+        <Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>
+          Qtd. <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      ),
+      cell: ({ row }) => <div className="text-center">{`${row.original.quantity} ucs`}</div>
     },
      {
       accessorKey: "total",
-      header: "Total",
+      header: ({ column }) => (
+        <Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>
+          Total <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      ),
       cell: ({ row }) => `R$ ${row.original.total.toFixed(2)}`
     },
     {
         accessorKey: "status",
-        header: "Status",
+        header: ({ column }) => (
+          <Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>
+            Status <ArrowUpDown className="ml-2 h-4 w-4" />
+          </Button>
+        ),
         cell: ({ row }) => <Badge>{row.original.status}</Badge>
     },
      {
@@ -275,15 +307,45 @@ export function SealOrderDataTable({ statusFilter }: SealOrderDataTableProps) {
 
   return (
     <div>
-       <div className="flex items-center justify-between py-4">
-        <Input
-          placeholder="Filtrar por nome da origem..."
-          value={(table.getColumn("originName")?.getFilterValue() as string) ?? ""}
-          onChange={(event) =>
-            table.getColumn("originName")?.setFilterValue(event.target.value)
-          }
-          className="max-w-sm"
-        />
+       <div className="flex flex-col sm:flex-row items-center justify-between gap-2 py-4">
+          <div className="flex flex-col sm:flex-row gap-2 w-full">
+            <Input
+              placeholder="Filtrar por nome da origem..."
+              value={(table.getColumn("originName")?.getFilterValue() as string) ?? ""}
+              onChange={(event) =>
+                table.getColumn("originName")?.setFilterValue(event.target.value)
+              }
+              className="max-w-sm"
+            />
+            {statusFilter === 'active' && (
+              <Select
+                value={(table.getColumn("status")?.getFilterValue() as string) ?? "Todos"}
+                onValueChange={(value) => table.getColumn("status")?.setFilterValue(value === "Todos" ? "" : value)}
+              >
+                <SelectTrigger className="w-full sm:w-[180px]">
+                  <SelectValue placeholder="Filtrar por status..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {uniqueStatuses.map(status => (
+                      <SelectItem key={status} value={status}>{status}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+             <Select
+              value={(table.getColumn("program")?.getFilterValue() as string) ?? "Todos"}
+              onValueChange={(value) => table.getColumn("program")?.setFilterValue(value === "Todos" ? "" : value)}
+            >
+              <SelectTrigger className="w-full sm:w-[240px]">
+                <SelectValue placeholder="Filtrar por programa..." />
+              </SelectTrigger>
+              <SelectContent>
+                {uniquePrograms.map(program => (
+                    <SelectItem key={program} value={program}>{program}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         <Button onClick={() => setIsImportOpen(true)}>
           <Upload className="h-4 w-4 mr-2"/>
           Importar Pedidos
