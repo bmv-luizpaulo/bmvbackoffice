@@ -221,6 +221,13 @@ export type Notification = {
   createdAt: any;
 };
 
+export type NotificationTemplate = {
+  id: string;
+  title: string;
+  message: string;
+  link: string;
+}
+
 export type Product = {
     id: string;
     name: string;
@@ -406,3 +413,5 @@ export type ErrorLog = {
     timestamp: any;
     isResolved: boolean;
 }
+
+    

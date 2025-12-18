@@ -564,6 +564,17 @@
       },
       "required": ["title", "message", "link", "isRead", "createdAt"]
     },
+    "NotificationTemplate": {
+      "title": "NotificationTemplate",
+      "type": "object",
+      "description": "Represents a template for creating notifications.",
+      "properties": {
+        "title": { "type": "string", "description": "The default title for the notification." },
+        "message": { "type": "string", "description": "The message template, with placeholders like {{variable}}." },
+        "link": { "type": "string", "description": "The default link for the notification, with placeholders." }
+      },
+      "required": ["title", "message", "link"]
+    },
     "Product": {
       "title": "Product",
       "type": "object",
@@ -897,6 +908,10 @@
       "schema": { "$ref": "#/entities/Notification" },
       "description": "Contains notifications for a specific user."
     },
+    "/notificationTemplates/{templateId}": {
+      "schema": { "$ref": "#/entities/NotificationTemplate" },
+      "description": "Stores templates for system notifications."
+    },
     "/teams/{teamId}": {
       "schema": { "$ref": "#/entities/Team" },
       "description": "Represents a team. Contains 'id', 'name', and 'description'."
@@ -1062,3 +1077,5 @@
     }
   }
 }
+
+    

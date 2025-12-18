@@ -31,7 +31,7 @@ import {
 } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import type { ErrorLog, User } from "@/lib/types";
+import type { ErrorLog, User, NotificationTemplate } from "@/lib/types";
 import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { collection, doc, query, where } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast"
@@ -252,3 +252,5 @@ export function ErrorLogViewer({ filterResolved }: ErrorLogViewerProps) {
     </div>
   )
 }
+
+    

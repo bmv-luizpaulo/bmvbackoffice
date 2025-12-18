@@ -12,23 +12,22 @@ import {
   useFirestore,
   useUser,
   useCollection,
-  useMemoFirebase
+  useMemoFirebase,
+  addDocumentNonBlocking,
+  updateDocumentNonBlocking,
 } from '@/firebase';
 import {
   collection,
   doc,
-  updateDoc,
+  getDoc,
   query,
   orderBy,
   limit,
   writeBatch,
   serverTimestamp,
 } from 'firebase/firestore';
-import type { Notification } from '@/lib/types';
-import {
-  addDocumentNonBlocking,
-  updateDocumentNonBlocking,
-} from '@/firebase';
+import type { Notification, NotificationTemplate } from '@/lib/types';
+
 
 interface NotificationsContextType {
   notifications: Notification[];
@@ -38,7 +37,8 @@ interface NotificationsContextType {
   markAllAsRead: () => void;
   createNotification: (
     userId: string,
-    notificationData: Omit<Notification, 'id' | 'isRead' | 'createdAt'>
+    templateId: string,
+    data: Record<string, any>
   ) => void;
 }
 
@@ -113,20 +113,40 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
   const createNotification = useCallback(
     async (
       userId: string,
-      notificationData: Omit<Notification, 'id' | 'isRead' | 'createdAt'>
+      templateId: string,
+      data: Record<string, any>
     ) => {
       if (!firestore) return;
 
-      const newNotification = {
-        ...notificationData,
-        isRead: false,
-        createdAt: serverTimestamp(),
-      };
-      const notificationsCollection = collection(
-        firestore,
-        `users/${userId}/notifications`
-      );
-      await addDocumentNonBlocking(notificationsCollection, newNotification);
+      try {
+        const templateRef = doc(firestore, 'notificationTemplates', templateId);
+        const templateSnap = await getDoc(templateRef);
+
+        if (!templateSnap.exists()) {
+          console.error(`Notification template "${templateId}" not found.`);
+          return;
+        }
+
+        const template = templateSnap.data() as NotificationTemplate;
+
+        // Replace placeholders in message and link
+        const message = template.message.replace(/\{\{(\w+)\}\}/g, (_, key) => data[key] || '');
+        const link = template.link.replace(/\{\{(\w+)\}\}/g, (_, key) => data[key] || '');
+
+        const newNotification = {
+          title: template.title,
+          message,
+          link,
+          isRead: false,
+          createdAt: serverTimestamp(),
+        };
+
+        const notificationsCollection = collection(firestore, `users/${userId}/notifications`);
+        await addDocumentNonBlocking(notificationsCollection, newNotification);
+
+      } catch (error) {
+        console.error('Error creating notification from template:', error);
+      }
     },
     [firestore]
   );
@@ -156,3 +176,5 @@ export const useNotifications = (): NotificationsContextType => {
   }
   return context;
 };
+
+    

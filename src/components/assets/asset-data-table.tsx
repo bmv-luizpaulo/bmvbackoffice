@@ -201,11 +201,7 @@ export const AssetDataTable = React.memo(function AssetDataTable({ ownerFilter }
             to: usersMap.get(assetData.assigneeId || '') || 'Ninguém'
           });
           if (assetData.assigneeId) {
-            createNotification(assetData.assigneeId, {
-                title: 'Novo Ativo Atribuído',
-                message: `Você recebeu a responsabilidade pelo ativo: "${assetData.name}".`,
-                link: `/assets?owner=me`
-            });
+             createNotification(assetData.assigneeId, 'asset_assigned', { assetName: assetData.name });
           }
       }
       toast({ title: "Ativo Atualizado", description: "O ativo foi atualizado com sucesso." });
@@ -214,11 +210,7 @@ export const AssetDataTable = React.memo(function AssetDataTable({ ownerFilter }
       await logHistory(newDocRef.id, 'Ativo Criado');
       if (assetData.assigneeId) {
           await logHistory(newDocRef.id, 'Atribuição Inicial', { to: usersMap.get(assetData.assigneeId) || 'N/A' });
-          createNotification(assetData.assigneeId, {
-            title: 'Novo Ativo Atribuído',
-            message: `Você recebeu a responsabilidade pelo ativo: "${assetData.name}".`,
-            link: `/assets?owner=me`
-          });
+          createNotification(assetData.assigneeId, 'asset_assigned', { assetName: assetData.name });
       }
       toast({ title: "Ativo Adicionado", description: "O novo ativo foi cadastrado." });
     }
@@ -549,11 +541,7 @@ export const AssetDataTable = React.memo(function AssetDataTable({ ownerFilter }
         to: usersMap.get(uid || '') || (uid ? uid : 'Ninguém'),
       });
       if (uid) {
-        createNotification(uid, {
-          title: 'Novo Ativo Atribuído',
-          message: `Você recebeu a responsabilidade pelo ativo: "${asset.name}".`,
-          link: `/assets?owner=me`
-        });
+        createNotification(uid, 'asset_assigned', { assetName: asset.name });
       }
     }
     toast({ title: 'Transferência concluída', description: `${transferTargets.length} ativo(s) atualizado(s).` });
@@ -892,3 +880,5 @@ export const AssetDataTable = React.memo(function AssetDataTable({ ownerFilter }
     </div>
   )
 });
+
+    

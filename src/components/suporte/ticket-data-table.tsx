@@ -105,7 +105,7 @@ export const TicketDataTable = React.memo(function TicketDataTable() {
       if (selectedTicket) {
           const finalData = { ...ticketData, requesterId: selectedTicket.requesterId };
           await updateDocumentNonBlocking(doc(firestore, 'tickets', selectedTicket.id), finalData);
-          toast({ title: "Ticket Atualizado", description: "Seu chamado foi atualizado." });
+          toast({ title: "Chamado Atualizado", description: "Seu chamado foi atualizado." });
       } else {
           const finalData = { ...ticketData, requesterId: authUser.uid, createdAt: serverTimestamp() };
           const docRef = await addDocumentNonBlocking(collection(firestore, 'tickets'), finalData);
@@ -117,11 +117,15 @@ export const TicketDataTable = React.memo(function TicketDataTable() {
             if (managerUsers) {
               managerUsers.forEach(manager => {
                 if (manager.id !== authUser.uid) { // Don't notify the user who created the ticket
-                  createNotification(manager.id, {
-                    title: 'Chamado Urgente Aberto',
-                    message: `Um novo chamado de alta prioridade foi aberto por ${userProfile?.name}: "${ticketData.title}"`,
-                    link: `/suporte?ticketId=${docRef.id}`
-                  });
+                  createNotification(
+                    manager.id, 
+                    'urgent_ticket_opened',
+                    { 
+                      userName: userProfile?.name || 'Usuário',
+                      ticketTitle: ticketData.title,
+                      ticketId: docRef.id 
+                    }
+                  );
                 }
               });
             }
@@ -236,7 +240,9 @@ export const TicketDataTable = React.memo(function TicketDataTable() {
         <Input
           placeholder="Filtrar por título..."
           value={(table.getColumn("title")?.getFilterValue() as string) ?? ""}
-          onChange={(event) => table.getColumn("title")?.setFilterValue(event.target.value)}
+          onChange={(event) =>
+            table.getColumn("title")?.setFilterValue(event.target.value)
+          }
           className="max-w-sm"
         />
         <Button onClick={() => {setSelectedTicket(null); setIsFormOpen(true)}}>
@@ -290,3 +296,5 @@ export const TicketDataTable = React.memo(function TicketDataTable() {
     </div>
   )
 });
+
+    
