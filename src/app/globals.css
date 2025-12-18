@@ -1,12 +1,99 @@
+/* Importações do Tailwind */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-body {
-  font-family: Arial, Helvetica, sans-serif;
+/* Variáveis de cores */
+:root {
+  /* Cores BMV */
+  --bmv-green: #3A452D;
+  --bmv-yellow: #ECAE2F;
+  --bmv-blue: #394054;
+  --bmv-black: #231F20;
+  --bmv-white: #FFFFFF;
+  
+  /* Cores de fundo */
+  --background-primary: #F8F9FA;
+  --background-secondary: #FFFFFF;
+  
+  /* Cores de texto */
+  --text-primary: var(--bmv-black);
+  --text-secondary: #4A5568;
+  
+  /* Cores de destaque */
+  --accent-primary: var(--bmv-green);
+  --accent-secondary: var(--bmv-yellow);
+  --accent-tertiary: var(--bmv-blue);
+  
+  /* Cores adicionais */
+  --background: var(--background-primary);
+  --foreground: var(--text-primary);
+  --card: var(--background-secondary);
+  --card-foreground: var(--text-secondary);
+  --popover: var(--background-secondary);
+  --popover-foreground: var(--text-secondary);
+  --primary: var(--bmv-green);
+  --primary-foreground: var(--bmv-white);
+  --secondary: var(--bmv-yellow);
+  --secondary-foreground: var(--bmv-black);
+  --muted: var(--background-secondary);
+  --muted-foreground: var(--text-secondary);
+  --accent: var(--bmv-blue);
+  --accent-foreground: var(--bmv-white);
+  --destructive: var(--bmv-black);
+  --destructive-foreground: var(--bmv-white);
+  --border: var(--bmv-black);
+  --input: var(--background-secondary);
+  --ring: var(--bmv-green);
+  --radius: 0.5rem;
 }
 
-/* Custom scrollbar styles */
+/* Estilos base */
+@layer base {
+  * {
+    @apply border-border;
+  }
+  
+  html {
+    font-family: 'Montserrat', sans-serif;
+    color: var(--text-primary);
+    background-color: var(--background-primary);
+  }
+  
+  body {
+    @apply bg-background text-foreground;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Raleway', sans-serif;
+    @apply font-bold text-foreground;
+  }
+}
+
+/* Componentes personalizados */
+@layer components {
+  .container {
+    @apply mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl;
+  }
+  
+  .btn {
+    @apply inline-flex items-center justify-center rounded-md font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none;
+  }
+  
+  .btn-primary {
+    @apply bg-primary text-primary-foreground hover:bg-primary/90;
+  }
+  
+  .btn-secondary {
+    @apply bg-secondary text-secondary-foreground hover:bg-secondary/80;
+  }
+  
+  .btn-outline {
+    @apply border border-input bg-background hover:bg-accent hover:text-accent-foreground;
+  }
+}
+
+/* Estilos de rolagem personalizados */
 ::-webkit-scrollbar {
   width: 12px;
   height: 12px;
@@ -22,91 +109,29 @@ body {
   border: 3px solid hsl(var(--background));
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background-color: hsl(var(--muted-foreground) / 0.5);
-}
-
 .dark ::-webkit-scrollbar-thumb {
   border-color: hsl(var(--card));
 }
 
-@layer base {
-  :root {
-    --background: 0 0% 100%; /* Branco BMV */
-    --foreground: 220 13% 13%; /* Preto BMV */
-    --card: 0 0% 100%;
-    --card-foreground: 220 13% 13%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 220 13% 13%;
-    --primary: 82 22% 24%; /* Verde BMV */
-    --primary-foreground: 0 0% 98%;
-    --secondary: 220 15% 95%;
-    --secondary-foreground: 220 10% 25%;
-    --muted: 220 15% 95%;
-    --muted-foreground: 220 10% 45%;
-    --accent: 41 84% 56%; /* Amarelo BMV */
-    --accent-foreground: 220 20% 98%;
-    --destructive: 0 70% 50%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 220 15% 90%;
-    --input: 0 0% 100%;
-    --ring: 82 22% 24%;
-    --chart-1: 82 22% 24%;
-    --chart-2: 82 22% 34%;
-    --chart-3: 82 22% 44%;
-    --chart-4: 41 84% 56%;
-    --chart-5: 41 84% 66%;
-    --radius: 0.5rem;
-    --sidebar-background: 222 18% 28%; /* Azul BMV */
-    --sidebar-foreground: 0 0% 98%;
-    --sidebar-primary: 82 22% 34%;
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 82 22% 29%;
-    --sidebar-accent-foreground: 0 0% 98%;
-    --sidebar-border: 222 18% 33%;
-    --sidebar-ring: 82 22% 34%;
-  }
-  .dark {
-    --background: 220 13% 13%; /* Preto BMV */
-    --foreground: 0 0% 98%; /* Branco BMV */
-    --card: 222 18% 18%; /* Azul BMV escurecido */
-    --card-foreground: 0 0% 98%;
-    --popover: 222 18% 18%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 82 22% 34%; /* Verde BMV */
-    --primary-foreground: 0 0% 98%;
-    --secondary: 222 18% 28%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 222, 18%, 28%;
-    --muted-foreground: 0 0% 70%;
-    --accent: 41 84% 56%; /* Amarelo BMV */
-    --accent-foreground: 220 13% 13%;
-    --destructive: 0 60% 50%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 222 18% 28%;
-    --input: 222 18% 28%;
-    --ring: 82 22% 34%;
-    --chart-1: 82 22% 34%;
-    --chart-2: 82 22% 44%;
-    --chart-3: 82 22% 54%;
-    --chart-4: 41 84% 56%;
-    --chart-5: 41 84% 66%;
-    --sidebar-background: 222 18% 28%; /* Azul BMV */
-    --sidebar-foreground: 0 0% 98%;
-    --sidebar-primary: 82 22% 34%;
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 82 22% 29%;
-    --sidebar-accent-foreground: 0 0% 98%;
-    --sidebar-border: 222 18% 33%;
-    --sidebar-ring: 82 22% 34%;
-  }
-}
-
-@layer base {
-  * {
-    @apply border-border;
-  }
-  body {
-    @apply bg-background text-foreground;
-  }
+/* Tema escuro */
+.dark {
+  --background: 220 13% 13%;
+  --foreground: 0 0% 98%;
+  --card: 222 18% 18%;
+  --card-foreground: 0 0% 98%;
+  --popover: 222 18% 18%;
+  --popover-foreground: 0 0% 98%;
+  --primary: 82 22% 34%;
+  --primary-foreground: 0 0% 98%;
+  --secondary: 222 18% 28%;
+  --secondary-foreground: 0 0% 98%;
+  --muted: 222 18% 28%;
+  --muted-foreground: 0 0% 70%;
+  --accent: 41 84% 56%;
+  --accent-foreground: 220 13% 13%;
+  --destructive: 0 60% 50%;
+  --destructive-foreground: 0 0% 98%;
+  --border: 222 18% 28%;
+  --input: 222 18% 28%;
+  --ring: 82 22% 34%;
 }
