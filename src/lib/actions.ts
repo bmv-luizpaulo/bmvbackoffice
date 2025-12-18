@@ -7,6 +7,7 @@ import type { Project, Task, User } from "./types";
 import { unstable_noStore as noStore } from 'next/cache';
 import * as admin from 'firebase-admin';
 import { headers } from 'next/headers';
+import { ActivityLogger } from './activity-logger';
 
 // This is a placeholder for a real chat log fetching mechanism
 const getChatLogForDay = async (): Promise<string> => {
@@ -66,10 +67,12 @@ export async function createUserAction(userData: Omit<User, 'id' | 'avatarUrl'>)
 
         const roleRef = firestore.collection('roles').doc(callingUserRoleId);
         const callingUserRoleDoc = await roleRef.get();
-
-        if (!callingUserRoleDoc.data()?.permissions?.canManageUsers) {
-            return { success: false, error: 'Permissão negada. Apenas usuários autorizados podem criar novos usuários.' };
+        const permissions = callingUserRoleDoc.data()?.permissions || {};
+        
+        if (!permissions.canManageUsers && !permissions.isDev) {
+            return { success: false, error: 'Permissão negada. Você não tem autorização para criar novos usuários.' };
         }
+
 
         // Create user in Firebase Auth
         const tempPassword = Math.random().toString(36).slice(-16);
@@ -78,14 +81,14 @@ export async function createUserAction(userData: Omit<User, 'id' | 'avatarUrl'>)
             emailVerified: true,
             password: tempPassword,
             displayName: userData.name,
-            disabled: false,
+            disabled: userData.status === 'suspended',
         });
 
         // Create user profile in Firestore
         const newUserProfile: Omit<User, 'id'> = {
             ...userData,
             avatarUrl: `https://picsum.photos/seed/${userRecord.uid}/200`,
-            createdAt: serverTimestamp()
+            createdAt: admin.firestore.FieldValue.serverTimestamp()
         };
         await firestore.collection("users").doc(userRecord.uid).set(newUserProfile);
 
