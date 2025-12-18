@@ -49,14 +49,15 @@ const parseOrderDate = (orderDateValue: any): Date | null => {
     if (orderDateValue.toDate && typeof orderDateValue.toDate === 'function') {
         return orderDateValue.toDate();
     }
+    // Handle complex date object
+    if (typeof orderDateValue === 'object' && 'y' in orderDateValue && 'm' in orderDateValue && 'd' in orderDateValue) {
+        const { y, m, d, H, M, S } = orderDateValue as { y: number, m: number, d: number, H?: number, M?: number, S?: number };
+        const date = new Date(y, m - 1, d, H || 0, M || 0, S || 0);
+        if (isValid(date)) return date;
+    }
     if (typeof orderDateValue === 'string') {
         const parsed = parseISO(orderDateValue);
         if (isValid(parsed)) return parsed;
-    }
-    if (typeof orderDateValue === 'object' && 'y' in orderDateValue && 'm' in orderDateValue && 'd' in orderDateValue) {
-        const { y, m, d, H, M, S } = orderDateValue;
-        const date = new Date(y, m - 1, d, H || 0, M || 0, S || 0);
-        if (isValid(date)) return date;
     }
     const genericDate = new Date(orderDateValue);
     if (isValid(genericDate)) return genericDate;
@@ -69,17 +70,11 @@ export function SealOrderDataTable({ statusFilter }: SealOrderDataTableProps) {
 
   const sealOrdersQuery = useMemoFirebase(() => {
     if (!firestore) return null;
-    const baseQuery = collection(firestore, 'sealOrders');
+    // Fetch all documents and filter on the client to avoid composite index issues
+    return collection(firestore, 'sealOrders');
+  }, [firestore]);
 
-    if (statusFilter === 'archived') {
-      return query(baseQuery, where('status', '==', 'Arquivado'), orderBy('orderDate', 'desc'));
-    }
-    
-    // Using != requires ordering by the same field first. Client-side sort will be used.
-    return query(baseQuery, where('status', '!=', 'Arquivado'));
-  }, [firestore, statusFilter]);
-
-  const { data: sealOrdersData, isLoading } = useCollection<SealOrder>(sealOrdersQuery);
+  const { data: allSealOrders, isLoading } = useCollection<SealOrder>(sealOrdersQuery);
   
   const contactsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'contacts') : null, [firestore]);
   const { data: contacts } = useCollection<Contact>(contactsQuery);
@@ -97,17 +92,18 @@ export function SealOrderDataTable({ statusFilter }: SealOrderDataTableProps) {
   const [prefilledContact, setPrefilledContact] = React.useState<Partial<Contact> | null>(null);
   
   const data = React.useMemo(() => {
-    const orders = sealOrdersData ?? [];
-    if (statusFilter === 'active') {
-      // Client-side sorting for active orders to avoid composite index requirement
-      return orders.sort((a, b) => {
+    const orders = allSealOrders ?? [];
+    return orders.filter(order => {
+        if (statusFilter === 'archived') {
+            return order.status === 'Arquivado';
+        }
+        return order.status !== 'Arquivado';
+    }).sort((a, b) => {
         const dateA = parseOrderDate(a.orderDate) || new Date(0);
         const dateB = parseOrderDate(b.orderDate) || new Date(0);
         return dateB.getTime() - dateA.getTime();
-      });
-    }
-    return orders;
-  }, [sealOrdersData, statusFilter]);
+    });
+  }, [allSealOrders, statusFilter]);
 
 
   const uniquePrograms = React.useMemo(() => {
