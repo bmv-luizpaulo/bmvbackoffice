@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { ai } from '@/ai/genkit';
 import { ptBR } from 'date-fns/locale';
 import { format } from 'date-fns';
+import { MeetingDetails } from '@/lib/types';
 
 const MeetingDetailsSchema = z.object({
   name: z.string().describe('O título ou assunto principal da reunião.'),
@@ -25,7 +26,6 @@ const MeetingDetailsSchema = z.object({
     .optional(),
 });
 
-export type MeetingDetails = z.infer<typeof MeetingDetailsSchema>;
 
 const parseMeetingDetailsPrompt = ai.definePrompt({
   name: 'parseMeetingDetailsPrompt',

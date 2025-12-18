@@ -8,7 +8,7 @@ import { z } from "zod";
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useCollection, useUser, useMemoFirebase, addDocumentNonBlocking } from '@/firebase';
-import type { Task, Project, User as UserType, Stage, Meeting } from '@/lib/types';
+import type { Task, Project, User as UserType, Stage, Meeting, MeetingDetails } from '@/lib/types';
 import { collection, query, serverTimestamp } from 'firebase/firestore';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form } from '@/components/ui/form';
@@ -165,7 +165,7 @@ export default function NewTaskPage() {
         <CardHeader>
           <CardTitle>Detalhes do Item</CardTitle>
           <CardDescription>
-            { itemType === 'meeting' ? 'Cole o texto de um convite para preencher os campos com IA, ou preencha manualmente.' : 'Preencha as informações da tarefa.' }
+            { itemType === 'meeting' ? 'Cole o texto de um convite para preencher os campos com IA, ou preencha manually.' : 'Preencha as informações da tarefa.' }
           </CardDescription>
         </CardHeader>
         <CardContent>

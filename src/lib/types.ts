@@ -126,6 +126,13 @@ export type Meeting = {
     createdAt: any;
 };
 
+export type MeetingDetails = {
+    name: string;
+    startDate: string;
+    endDate?: string;
+    meetLink?: string;
+};
+
 export type Team = {
     id: string;
     name: string;
