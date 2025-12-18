@@ -3,7 +3,7 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { useUser, useCollection, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, where, or, collectionGroup } from 'firebase/firestore';
+import { collection, query, where, or, collectionGroup, doc } from 'firebase/firestore';
 import type { Task, User, Project, Role, Meeting } from '@/lib/types';
 import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
