@@ -3,32 +3,24 @@
 import * as React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, ListChecks, Trash2, Edit, Eye, CheckSquare, Heading2, Check, X, ThumbsUp, FileText, Archive, ArchiveRestore, MoreHorizontal } from "lucide-react";
+import { Plus, ListChecks, Trash2, Edit, Eye, Archive, ArchiveRestore, MoreHorizontal, CheckSquare, ThumbsUp, Heading2 } from "lucide-react";
 import { useCollection, useFirestore, useMemoFirebase, useUser, useDoc } from '@/firebase';
 import { collection, doc, orderBy, query, where, serverTimestamp } from 'firebase/firestore';
-import type { Checklist, ChecklistItem, Team, User as UserType, Role } from '@/lib/types';
+import type { Checklist, Team, User as UserType, Role } from '@/lib/types';
 import { addDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import NextDynamic from 'next/dynamic';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Input } from '@/components/ui/input';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Checkbox } from '@/components/ui/checkbox';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Progress } from '@/components/ui/progress';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import Link from 'next/link';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useSearchParams } from 'next/navigation';
 
-
 export const dynamic = 'force-dynamic';
 
 const ChecklistFormDialog = NextDynamic(() => import('@/components/checklists/checklist-form-dialog').then(m => m.ChecklistFormDialog));
+const ExecutionDetailsDialog = NextDynamic(() => import('@/components/checklists/execution-details-dialog').then(m => m.ExecutionDetailsDialog), { ssr: false });
 
 export default function ChecklistsPage() {
   const firestore = useFirestore();
@@ -48,10 +40,6 @@ export default function ChecklistsPage() {
   const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [checklistToEdit, setChecklistToEdit] = React.useState<Checklist | null>(null);
   const [checklistToDelete, setChecklistToDelete] = React.useState<Checklist | null>(null);
-  const [newItemText, setNewItemText] = React.useState('');
-  const [newItemType, setNewItemType] = React.useState<'header' | 'item' | 'yes_no'>('header');
-  const [isEditMode, setIsEditMode] = React.useState(true);
-  const [commentDebounceTimers, setCommentDebounceTimers] = React.useState<Record<string, NodeJS.Timeout>>({});
 
   const isManager = role?.permissions?.isManager || role?.permissions?.isDev;
 
@@ -78,9 +66,6 @@ export default function ChecklistsPage() {
   const teamsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'teams') : null, [firestore]);
   const { data: teams } = useCollection<Team>(teamsQuery);
   const teamsMap = React.useMemo(() => new Map(teams?.map(t => [t.id, t.name])), [teams]);
-
-  const itemsQuery = useMemoFirebase(() => firestore && selectedChecklist ? query(collection(firestore, `checklists/${selectedChecklist.id}/items`), orderBy('order')) : null, [firestore, selectedChecklist?.id]);
-  const { data: checklistItems, isLoading: isLoadingItems } = useCollection<ChecklistItem>(itemsQuery);
   
   const { activeChecklists, archivedChecklists } = React.useMemo(() => {
     const active = filteredChecklists?.filter(c => c.status !== 'arquivado') || [];
@@ -89,31 +74,6 @@ export default function ChecklistsPage() {
   }, [filteredChecklists]);
   
   const currentChecklistList = activeTab === 'ativo' ? activeChecklists : archivedChecklists;
-  
-  const progress = React.useMemo(() => {
-    if (!checklistItems || checklistItems.length === 0) return 0;
-    
-    const completableItems = checklistItems.filter(item => item.type === 'item' || item.type === 'yes_no');
-    if (completableItems.length === 0) return 0;
-
-    const completed = completableItems.filter(item => {
-        if (item.type === 'item') return item.isCompleted;
-        if (item.type === 'yes_no') return item.answer !== 'unanswered';
-        return false;
-    }).length;
-    
-    return (completed / completableItems.length) * 100;
-  }, [checklistItems]);
-
-
-  React.useEffect(() => {
-    const list = currentChecklistList || [];
-    if (!selectedChecklist && list.length > 0) {
-      setSelectedChecklist(list[0]);
-    } else if (selectedChecklist && !list.some(c => c.id === selectedChecklist.id)) {
-      setSelectedChecklist(list[0] || null);
-    }
-  }, [currentChecklistList, selectedChecklist]);
 
   const handleSaveChecklist = React.useCallback(async (data: Omit<Checklist, 'id'>, id?: string) => {
     if (!firestore || !authUser) return;
@@ -141,10 +101,7 @@ export default function ChecklistsPage() {
     deleteDocumentNonBlocking(doc(firestore, 'checklists', checklistToDelete.id));
     toast({ title: "Checklist Excluído", variant: "destructive" });
     setChecklistToDelete(null);
-    if (selectedChecklist?.id === checklistToDelete.id) {
-      setSelectedChecklist(null);
-    }
-  }, [firestore, toast, checklistToDelete, selectedChecklist]);
+  }, [firestore, toast, checklistToDelete]);
 
   const handleToggleArchive = React.useCallback((checklist: Checklist) => {
     if (!firestore) return;
@@ -152,71 +109,6 @@ export default function ChecklistsPage() {
     updateDocumentNonBlocking(doc(firestore, 'checklists', checklist.id), { status: newStatus });
     toast({ title: `Checklist ${newStatus === 'ativo' ? 'Restaurado' : 'Arquivado'}` });
   }, [firestore, toast]);
-
-  const handleAddNewItem = React.useCallback(async () => {
-    if (!firestore || !selectedChecklist || !newItemText.trim()) return;
-    
-    const itemsCollection = collection(firestore, `checklists/${selectedChecklist.id}/items`);
-    const newOrder = (checklistItems?.length || 0) + 1;
-    
-    const newItem: Partial<ChecklistItem> = {
-      description: newItemText.trim(),
-      order: newOrder,
-      checklistId: selectedChecklist.id,
-      type: newItemType,
-    };
-
-    if (newItemType === 'item') {
-        newItem.isCompleted = false;
-    } else if (newItemType === 'yes_no') {
-        newItem.answer = 'unanswered';
-        newItem.comment = '';
-    }
-
-    await addDocumentNonBlocking(itemsCollection, newItem);
-    setNewItemText('');
-  }, [firestore, selectedChecklist, newItemText, newItemType, checklistItems]);
-
-  const handleDeleteItem = React.useCallback((itemId: string) => {
-    if (!firestore || !selectedChecklist) return;
-    deleteDocumentNonBlocking(doc(firestore, `checklists/${selectedChecklist.id}/items`, itemId));
-  }, [firestore, selectedChecklist]);
-  
-  const handleToggleItem = React.useCallback((item: ChecklistItem) => {
-    if (!firestore || !selectedChecklist || item.type !== 'item') return;
-    const itemRef = doc(firestore, `checklists/${selectedChecklist.id}/items`, item.id);
-    updateDocumentNonBlocking(itemRef, { isCompleted: !item.isCompleted });
-  }, [firestore, selectedChecklist]);
-  
-  const handleAnswerItem = React.useCallback((item: ChecklistItem, answer: 'yes' | 'no') => {
-    if (!firestore || !selectedChecklist || item.type !== 'yes_no') return;
-    const itemRef = doc(firestore, `checklists/${selectedChecklist.id}/items`, item.id);
-    updateDocumentNonBlocking(itemRef, { answer });
-  }, [firestore, selectedChecklist]);
-  
-  const handleCommentChange = React.useCallback((item: ChecklistItem, comment: string) => {
-    if (!firestore || !selectedChecklist || item.type !== 'yes_no') return;
-    
-    if (commentDebounceTimers[item.id]) {
-      clearTimeout(commentDebounceTimers[item.id]);
-    }
-    
-    const timer = setTimeout(() => {
-      const itemRef = doc(firestore, `checklists/${selectedChecklist.id}/items`, item.id);
-      updateDocumentNonBlocking(itemRef, { comment });
-    }, 1000); 
-
-    setCommentDebounceTimers(prev => ({ ...prev, [item.id]: timer }));
-  }, [firestore, selectedChecklist, commentDebounceTimers]);
-
-
-  const canEdit = isManager && isEditMode;
-
-  React.useEffect(() => {
-    if (!isManager) {
-        setIsEditMode(false);
-    }
-  }, [isManager]);
 
 
   return (
@@ -237,27 +129,11 @@ export default function ChecklistsPage() {
                 }
             </p>
             </div>
-            <div className="flex items-center gap-2">
-                {isManager && (
-                    <TooltipProvider>
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                <Button variant="outline" size="icon" onClick={() => setIsEditMode(!isEditMode)}>
-                                    {isEditMode ? <Eye className="h-4 w-4" /> : <Edit className="h-4 w-4 text-primary" />}
-                                </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                                <p>Alternar para modo de {isEditMode ? 'visualização' : 'edição'}</p>
-                            </TooltipContent>
-                        </Tooltip>
-                    </TooltipProvider>
-                )}
-                {canEdit && (
-                    <Button onClick={() => { setChecklistToEdit(null); setIsFormOpen(true); }}>
-                        <Plus className="mr-2 h-4 w-4" /> Criar Checklist
-                    </Button>
-                )}
-            </div>
+            {isManager && (
+              <Button onClick={() => { setChecklistToEdit(null); setIsFormOpen(true); }}>
+                  <Plus className="mr-2 h-4 w-4" /> Criar Checklist
+              </Button>
+            )}
         </div>
         
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="w-full">
@@ -268,276 +144,51 @@ export default function ChecklistsPage() {
         </Tabs>
     </header>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="md:col-span-2 md:order-1 ring-1 ring-primary/10 shadow-md">
-          {selectedChecklist ? (
-            <>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {isLoadingChecklists ? (
+          Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-40 w-full" />)
+        ) : currentChecklistList.length > 0 ? (
+          currentChecklistList.map(checklist => (
+            <Card key={checklist.id} className="flex flex-col">
               <CardHeader>
-                <div className="flex justify-between items-start">
-                    <div>
-                        <CardTitle className="text-2xl">{selectedChecklist.name}</CardTitle>
-                        <CardDescription>
-                            {selectedChecklist.description || `Checklist para a equipe ${teamsMap.get(selectedChecklist.teamId) || 'desconhecida'}`}
-                        </CardDescription>
-                    </div>
-                    {canEdit && (
-                        <div className='flex items-center'>
-                            <TooltipProvider>
-                                <Tooltip>
-                                    <TooltipTrigger asChild>
-                                        <Button variant="ghost" size="icon" onClick={() => handleToggleArchive(selectedChecklist)}>
-                                            {selectedChecklist.status === 'arquivado' ? <ArchiveRestore className="h-4 w-4" /> : <Archive className="h-4 w-4" />}
-                                        </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                        <p>{selectedChecklist.status === 'arquivado' ? 'Restaurar' : 'Arquivar'}</p>
-                                    </TooltipContent>
-                                </Tooltip>
-                            </TooltipProvider>
-
-                            <Button variant="ghost" size="icon" onClick={() => { setChecklistToEdit(selectedChecklist); setIsFormOpen(true); }}>
-                                <Edit className="h-4 w-4" />
-                            </Button>
-                            <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                    <Button variant="ghost" size="icon" className='text-destructive hover:text-destructive'>
-                                        <Trash2 className="h-4 w-4" />
-                                    </Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                <AlertDialogHeader>
-                                    <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                        Esta ação não pode ser desfeita e excluirá o checklist "{selectedChecklist?.name}" e todos os seus itens.
-                                    </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                    <AlertDialogAction
-                                        className='bg-destructive hover:bg-destructive/90'
-                                        onClick={() => {
-                                            if (selectedChecklist) {
-                                                confirmDelete();
-                                            }
-                                        }}
-                                    >
-                                        Excluir
-                                    </AlertDialogAction>
-                                </AlertDialogFooter>
-                                </AlertDialogContent>
-                            </AlertDialog>
-                        </div>
-                    )}
-                </div>
-                <div className="mt-4 space-y-2">
-                    <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                        <Progress value={progress} className="w-full h-2" />
-                        <span>{Math.round(progress)}%</span>
-                    </div>
-                </div>
+                <CardTitle className="truncate">{checklist.name}</CardTitle>
+                <CardDescription className="truncate">{teamsMap.get(checklist.teamId) || 'Equipe desconhecida'}</CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div>
-                    <h3 className="text-lg font-medium mb-2">Passos do Checklist</h3>
-                    <div className="space-y-1 max-h-[55vh] overflow-y-auto pr-2">
-                      {isLoadingItems ? (
-                        Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-10 w-full" />)
-                      ) : checklistItems && checklistItems.length > 0 ? (
-                        checklistItems.map((item) => {
-                            if (item.type === 'header') {
-                                return (
-                                    <div key={item.id} className="flex items-center gap-3 bg-muted p-3 rounded-md mt-4 mb-2">
-                                        <h4 className="flex-1 font-semibold text-sm">{item.description}</h4>
-                                        {canEdit && (
-                                            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive/70 hover:text-destructive/100" onClick={() => handleDeleteItem(item.id)}>
-                                            <Trash2 className="h-4 w-4" />
-                                            </Button>
-                                        )}
-                                    </div>
-                                )
-                            }
-                            if (item.type === 'yes_no') {
-                                return (
-                                     <div key={item.id} className="p-3 rounded-md border bg-background flex flex-col gap-3 border-l-2 border-l-primary/30">
-                                        <div className="flex items-start justify-between">
-                                            <label className="text-sm flex-1 pr-4">{item.description}</label>
-                                            <div className="flex items-center gap-2">
-                                                <Button size="sm" variant={item.answer === 'yes' ? 'default' : 'outline'} onClick={() => handleAnswerItem(item, 'yes')} className='h-8'><Check className='h-4 w-4 mr-1'/>Sim</Button>
-                                                <Button size="sm" variant={item.answer === 'no' ? 'destructive' : 'outline'} onClick={() => handleAnswerItem(item, 'no')} className='h-8'><X className='h-4 w-4 mr-1'/>Não</Button>
-                                                {canEdit && (
-                                                    <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive/70 hover:text-destructive/100" onClick={() => handleDeleteItem(item.id)}>
-                                                        <Trash2 className="h-4 w-4" />
-                                                    </Button>
-                                                )}
-                                            </div>
-                                        </div>
-                                        <Textarea 
-                                            placeholder="Adicionar comentário (opcional)..." 
-                                            defaultValue={item.comment || ''}
-                                            onChange={(e) => handleCommentChange(item, e.target.value)}
-                                            className="text-sm"
-                                        />
-                                    </div>
-                                )
-                            }
-                            return (
-                                <div key={item.id} className="flex items-center gap-3 p-3 rounded-md hover:bg-muted/40 transition-colors">
-                                    <Checkbox id={`item-${item.id}`} checked={item.isCompleted} onCheckedChange={() => handleToggleItem(item)} />
-                                    <label htmlFor={`item-${item.id}`} className={cn("flex-1 text-sm cursor-pointer", item.isCompleted && "line-through text-muted-foreground")}>{item.description}</label>
-                                    {canEdit && (
-                                        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive/70 hover:text-destructive/100" onClick={() => handleDeleteItem(item.id)}>
-                                        <Trash2 className="h-4 w-4" />
-                                        </Button>
-                                    )}
-                                </div>
-                            )
-                        })
-                      ) : (
-                        <p className="text-sm text-muted-foreground pt-4 text-center">Nenhum passo adicionado ainda.</p>
-                      )}
-                    </div>
-                  </div>
-                   {canEdit && (
-                        <form
-                            onSubmit={(e) => {
-                                e.preventDefault();
-                                handleAddNewItem();
-                            }}
-                            className="flex flex-col gap-4 pt-4 border-t"
-                        >
-                            <RadioGroup defaultValue="header" value={newItemType} onValueChange={(value: 'item' | 'header' | 'yes_no') => setNewItemType(value)} className="flex items-center gap-4">
-                                <div className="flex items-center space-x-2">
-                                    <RadioGroupItem value="header" id="r-header" />
-                                    <Label htmlFor="r-header" className='flex items-center gap-1'><Heading2 className='h-4 w-4'/>Título de Seção</Label>
-                                </div>
-                                <div className="flex items-center space-x-2">
-                                    <RadioGroupItem value="item" id="r-item" />
-                                    <Label htmlFor="r-item" className='flex items-center gap-1'><CheckSquare className='h-4 w-4'/>Passo (Item)</Label>
-                                </div>
-                                 <div className="flex items-center space-x-2">
-                                    <RadioGroupItem value="yes_no" id="r-yes-no" />
-                                    <Label htmlFor="r-yes-no" className='flex items-center gap-1'><ThumbsUp className='h-4 w-4'/>Verificação (Sim/Não)</Label>
-                                </div>
-                            </RadioGroup>
-                            <div className="flex items-center gap-2">
-                                <Input
-                                    value={newItemText}
-                                    onChange={(e) => setNewItemText(e.target.value)}
-                                    placeholder={
-                                        newItemType === 'item' ? "Adicionar novo passo..." : 
-                                        newItemType === 'header' ? "Adicionar novo título de seção..." :
-                                        "Adicionar nova pergunta de verificação..."
-                                    }
-                                />
-                                <Button type="submit" disabled={!newItemText.trim()}>Adicionar</Button>
-                            </div>
-                        </form>
-                   )}
-                </div>
-                 <div className="border-t pt-6 mt-6">
-                    {isEditMode ? (
-                      <div className="flex justify-center">
-                        <Button
-                          variant="secondary"
-                          className="px-6"
-                          onClick={() => toast({ title: 'Checklist salvo', description: 'Alterações gravadas automaticamente.' })}
-                        >
-                          Salvar alterações
-                        </Button>
-                      </div>
-                    ) : (
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button className='w-full'>
-                            <FileText className="mr-2 h-4 w-4" />
-                            Gerar Relatório e Finalizar
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Finalizar checklist?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Isso salvará a execução e gerará o PDF do relatório. Deseja continuar?
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                            <AlertDialogAction asChild>
-                              <Link href={`/reports/checklist/${selectedChecklist.id}`} target="_blank">Continuar</Link>
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    )}
-                  </div>
+              <CardContent className="flex-grow">
+                <p className="text-sm text-muted-foreground line-clamp-2">{checklist.description}</p>
               </CardContent>
-            </>
-          ) : (
-            <div className="flex flex-col items-center justify-center text-center p-8 h-full">
-              <ListChecks className="h-16 w-16 text-muted-foreground/50" />
-              <p className="text-lg font-semibold mt-4">Selecione um Checklist</p>
-              <p className="text-muted-foreground mt-2">
-                  Escolha um checklist da lista para ver seus detalhes ou {isManager ? "crie um novo para começar." : "comece a executar um."}
-              </p>
-            </div>
-          )}
-        </Card>
-
-        <Card className="md:col-span-1 md:order-2">
-          <CardHeader>
-            <CardTitle>Todos os Checklists</CardTitle>
-          </CardHeader>
-          <CardContent className="p-2">
-            <div className="space-y-1 max-h-[60vh] overflow-y-auto">
-              {isLoadingChecklists ? (
-                Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-12 w-full" />)
-              ) : currentChecklistList.length > 0 ? (
-                currentChecklistList.map(checklist => (
-                    <div
-                        key={checklist.id}
-                        className={cn(
-                            "group flex w-full h-auto justify-between items-start p-2 rounded-md transition-colors",
-                            selectedChecklist?.id === checklist.id ? "bg-secondary" : "hover:bg-muted/50"
-                        )}
-                    >
-                        <button className="flex-1 flex flex-col items-start text-left" onClick={() => setSelectedChecklist(checklist)}>
-                            <span className="font-medium">{checklist.name}</span>
-                            <span className="text-xs text-muted-foreground">{teamsMap.get(checklist.teamId) || 'Equipe desconhecida'}</span>
-                        </button>
-                        <div className="flex items-center">
-                            <span className='font-mono text-xs text-muted-foreground/80 mr-2'>#{checklist.id.substring(0,6).toUpperCase()}</span>
-                            {isManager && (
-                                <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                        <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100 focus:opacity-100">
-                                            <MoreHorizontal className="h-4 w-4" />
-                                        </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end">
-                                        <DropdownMenuItem onClick={() => { setChecklistToEdit(checklist); setIsFormOpen(true); }}>
-                                            <Edit className="mr-2 h-4 w-4" /> Editar
-                                        </DropdownMenuItem>
-                                        <DropdownMenuItem onClick={() => handleToggleArchive(checklist)}>
-                                            {checklist.status === 'arquivado' ? <ArchiveRestore className="mr-2 h-4 w-4" /> : <Archive className="mr-2 h-4 w-4" />}
-                                            {checklist.status === 'arquivado' ? 'Restaurar' : 'Arquivar'}
-                                        </DropdownMenuItem>
-                                        <DropdownMenuSeparator />
-                                        <DropdownMenuItem className="text-destructive" onClick={() => setChecklistToDelete(checklist)}>
-                                            <Trash2 className="mr-2 h-4 w-4" /> Excluir
-                                        </DropdownMenuItem>
-                                    </DropdownMenuContent>
-                                </DropdownMenu>
-                            )}
-                        </div>
-                    </div>
-                ))
-              ) : (
-                <p className="text-sm text-muted-foreground p-4 text-center">Nenhum checklist encontrado.</p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+              <CardContent className="flex justify-between items-center gap-2">
+                <Button variant="outline" onClick={() => setSelectedChecklist(checklist)}>
+                  <Eye className="mr-2 h-4 w-4" /> Visualizar
+                </Button>
+                {isManager && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => { setChecklistToEdit(checklist); setIsFormOpen(true); }}>
+                            <Edit className="mr-2 h-4 w-4" /> Editar
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleToggleArchive(checklist)}>
+                            {checklist.status === 'arquivado' ? <ArchiveRestore className="mr-2 h-4 w-4" /> : <Archive className="mr-2 h-4 w-4" />}
+                            {checklist.status === 'arquivado' ? 'Restaurar' : 'Arquivar'}
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem className="text-destructive" onClick={() => setChecklistToDelete(checklist)}>
+                            <Trash2 className="mr-2 h-4 w-4" /> Excluir
+                        </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
+              </CardContent>
+            </Card>
+          ))
+        ) : (
+          <p className="text-sm text-muted-foreground p-4 text-center md:col-span-3">Nenhum checklist encontrado.</p>
+        )}
       </div>
 
       {isManager && isFormOpen && (
@@ -547,6 +198,15 @@ export default function ChecklistsPage() {
             onSave={handleSaveChecklist}
             checklist={checklistToEdit}
             teams={teams || []}
+        />
+      )}
+
+      {selectedChecklist && (
+        <ExecutionDetailsDialog
+          isOpen={!!selectedChecklist}
+          onOpenChange={(open) => !open && setSelectedChecklist(null)}
+          checklist={selectedChecklist}
+          isManager={isManager}
         />
       )}
 
