@@ -130,7 +130,7 @@ export function UserDataTable() {
             toast({ title: "Usuário Criado com Sucesso", description: `Um link para definição de senha foi gerado para ${userData.name}.` });
             setGeneratedLink(result.data.setupLink);
         } else {
-            toast({ variant: 'destructive', title: "Erro ao Criar Usuário", description: result.error });
+            toast({ variant: 'destructive', title: "Erro ao Criar Usuário", description: result.error || "Ocorreu um erro desconhecido." });
         }
     }
     setIsFormOpen(false);
