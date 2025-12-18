@@ -111,6 +111,9 @@ export type Task = {
     isRecurring?: boolean;
     recurrenceFrequency?: 'diaria' | 'semanal' | 'mensal';
     recurrenceEndDate?: string;
+    taskType?: 'task' | 'meeting';
+    meetLink?: string;
+    participantIds?: string[];
 };
 
 export type Meeting = {

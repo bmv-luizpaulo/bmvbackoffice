@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -8,17 +7,14 @@ import { z } from "zod";
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useCollection, useUser, useMemoFirebase, addDocumentNonBlocking } from '@/firebase';
-import type { Task, Project, User as UserType, Stage, Meeting, MeetingDetails } from '@/lib/types';
+import type { Task, Project, User as UserType, Stage, Meeting } from '@/lib/types';
 import { collection, query, serverTimestamp } from 'firebase/firestore';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form } from '@/components/ui/form';
 import { Button } from '@/components/ui/button';
-import { Loader2, ListPlus, Bot, Wand2 } from 'lucide-react';
+import { Loader2, ListPlus } from 'lucide-react';
 import { useNotifications } from '@/components/notifications/notifications-provider';
 import { TaskFormFields } from '@/components/tasks/task-form-fields';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { Textarea } from '@/components/ui/textarea';
-import { parseMeetingDetails } from '@/ai/flows/parse-meeting-flow';
 
 const formSchema = z.object({
   taskType: z.enum(['task', 'meeting']).default('task'),
@@ -41,9 +37,6 @@ export default function NewTaskPage() {
   const { toast } = useToast();
   const { createNotification } = useNotifications();
   const searchParams = useSearchParams();
-
-  const [isParsing, setIsParsing] = React.useState(false);
-  const [meetingPaste, setMeetingPaste] = React.useState("");
 
   const projectsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'projects') : null, [firestore]);
   const { data: projectsData, isLoading: isLoadingProjects } = useCollection<Project>(projectsQuery);
@@ -126,24 +119,6 @@ export default function NewTaskPage() {
     }
   }
 
-  const handleParseMeeting = async () => {
-    if (!meetingPaste.trim()) return;
-    setIsParsing(true);
-    try {
-        const result = await parseMeetingDetails(meetingPaste);
-        form.setValue('taskType', 'meeting');
-        if (result.name) form.setValue('name', result.name);
-        if (result.startDate) form.setValue('dueDate', new Date(result.startDate));
-        if (result.meetLink) form.setValue('meetLink', result.meetLink);
-        toast({ title: "Dados da reunião extraídos com sucesso!" });
-        
-    } catch(e: any) {
-        toast({ title: "Erro na Análise", description: e.message, variant: 'destructive' });
-    } finally {
-        setIsParsing(false);
-    }
-  }
-
   const isLoading = isLoadingProjects || isLoadingUsers;
   const pageTitle = itemType === 'meeting' ? 'Nova Reunião' : 'Nova Tarefa';
   const pageDescription = itemType === 'meeting' 
@@ -165,34 +140,10 @@ export default function NewTaskPage() {
         <CardHeader>
           <CardTitle>Detalhes do Item</CardTitle>
           <CardDescription>
-            { itemType === 'meeting' ? 'Cole o texto de um convite para preencher os campos com IA, ou preencha manually.' : 'Preencha as informações da tarefa.' }
+            { itemType === 'meeting' ? 'Preencha as informações da reunião.' : 'Preencha as informações da tarefa.' }
           </CardDescription>
         </CardHeader>
         <CardContent>
-            {itemType === 'meeting' && (
-                <Accordion type="single" collapsible className="w-full mb-6">
-                    <AccordionItem value="item-1">
-                        <AccordionTrigger>
-                            <div className="flex items-center gap-2 text-primary">
-                                <Bot className="h-5 w-5"/>
-                                <span className="font-semibold">Criar a partir de texto (com IA)</span>
-                            </div>
-                        </AccordionTrigger>
-                        <AccordionContent className="pt-4 space-y-3">
-                        <Textarea 
-                            placeholder="Cole aqui o conteúdo de um convite de reunião (ex: do Google Calendar)..."
-                            rows={8}
-                            value={meetingPaste}
-                            onChange={(e) => setMeetingPaste(e.target.value)}
-                        />
-                        <Button onClick={handleParseMeeting} disabled={isParsing || !meetingPaste.trim()}>
-                                {isParsing ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Wand2 className="mr-2 h-4 w-4" />}
-                                Analisar e Preencher
-                        </Button>
-                        </AccordionContent>
-                    </AccordionItem>
-                </Accordion>
-            )}
             {isLoading ? (
                 <div className='flex items-center justify-center h-40'>
                     <Loader2 className='animate-spin text-primary' />

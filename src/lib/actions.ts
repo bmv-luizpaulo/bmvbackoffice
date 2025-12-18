@@ -243,8 +243,10 @@ export async function uploadContractFileAction(formData: FormData) {
 export async function parseMeetingDetailsAction(meetingText: string): Promise<{ success: boolean, data?: MeetingDetails, error?: string }> {
     noStore();
     try {
-        const result = await parseMeetingDetails(meetingText);
-        return { success: true, data: result };
+        // This functionality is temporarily disabled.
+        // const result = await parseMeetingDetails(meetingText);
+        // return { success: true, data: result };
+        return { success: false, error: "Funcionalidade de IA desativada temporariamente." };
     } catch (error: any) {
         console.error("Error in parseMeetingDetailsAction:", error);
         return { success: false, error: error.message || 'Falha ao analisar os detalhes da reunião.' };
