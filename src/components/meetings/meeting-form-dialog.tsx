@@ -40,7 +40,7 @@ import { cn } from "@/lib/utils";
 import { Switch } from "../ui/switch";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "../ui/accordion";
 import { useToast } from "@/hooks/use-toast";
-import { parseMeetingDetails } from "@/ai/flows/parse-meeting-flow";
+import { parseMeetingDetailsAction } from "@/lib/actions";
 
 type MeetingFormDialogProps = {
   isOpen: boolean;
@@ -119,17 +119,18 @@ export function MeetingFormDialog({ isOpen, onOpenChange, onSave, meeting, users
   const handleParseMeeting = async () => {
     if (!meetingPaste.trim()) return;
     setIsParsing(true);
-    try {
-        const result = await parseMeetingDetails(meetingPaste);
-        if (result.name) form.setValue('name', result.name);
-        if (result.startDate) form.setValue('dueDate', new Date(result.startDate));
-        if (result.meetLink) form.setValue('meetLink', result.meetLink);
+    
+    const result = await parseMeetingDetailsAction(meetingPaste);
+
+    if (result.success && result.data) {
+        if (result.data.name) form.setValue('name', result.data.name);
+        if (result.data.startDate) form.setValue('dueDate', new Date(result.data.startDate));
+        if (result.data.meetLink) form.setValue('meetLink', result.data.meetLink);
         toast({ title: "Dados da reunião extraídos com sucesso!" });
-    } catch(e: any) {
-        toast({ title: "Erro na Análise", description: e.message, variant: 'destructive' });
-    } finally {
-        setIsParsing(false);
+    } else {
+        toast({ title: "Erro na Análise", description: result.error, variant: 'destructive' });
     }
+    setIsParsing(false);
   }
 
   function onSubmit(values: z.infer<typeof formSchema>) {
@@ -247,7 +248,8 @@ export function MeetingFormDialog({ isOpen, onOpenChange, onSave, meeting, users
                                     onChange={(e) => {
                                         const [hours, minutes] = e.target.value.split(':').map(Number);
                                         const date = field.value || new Date();
-                                        field.onChange(setHours(setMinutes(date, minutes), hours));
+                                        const newDate = setHours(setMinutes(date, minutes), hours);
+                                        field.onChange(newDate);
                                     }}
                                 />
                             </div>

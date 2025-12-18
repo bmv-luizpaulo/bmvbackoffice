@@ -3,12 +3,11 @@
 import { getDocs, collection, addDoc, serverTimestamp, doc, setDoc } from 'firebase/firestore';
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
 import { initializeFirebase } from "@/firebase";
-import type { Project, Task, User } from "./types";
+import type { Project, Task, User, MeetingDetails } from "./types";
 import { unstable_noStore as noStore } from 'next/cache';
 import * as admin from 'firebase-admin';
 import { headers } from 'next/headers';
 import { ActivityLogger } from './activity-logger';
-import { ai } from '@/ai/genkit';
 import { parseMeetingDetails } from '@/ai/flows/parse-meeting-flow';
 
 // This is a placeholder for a real chat log fetching mechanism
@@ -241,7 +240,7 @@ export async function uploadContractFileAction(formData: FormData) {
     }
 }
 
-export async function parseMeetingDetailsAction(meetingText: string) {
+export async function parseMeetingDetailsAction(meetingText: string): Promise<{ success: boolean, data?: MeetingDetails, error?: string }> {
     noStore();
     try {
         const result = await parseMeetingDetails(meetingText);
