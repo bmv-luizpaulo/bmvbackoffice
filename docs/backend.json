@@ -127,6 +127,11 @@
       "type": "object",
       "description": "Represents a task within a project.",
       "properties": {
+        "taskType": {
+          "type": "string",
+          "enum": ["task", "meeting"],
+          "description": "The type of the item, either a task or a meeting."
+        },
         "name": {
           "type": "string",
           "description": "Name of the task."
@@ -190,6 +195,18 @@
             "type": "string",
             "description": "The end date for the recurrence.",
             "format": "date-time"
+        },
+        "meetLink": {
+          "type": "string",
+          "format": "uri",
+          "description": "URL for the Google Meet meeting."
+        },
+        "participantIds": {
+          "type": "array",
+          "description": "An array of user IDs participating in the meeting.",
+          "items": {
+            "type": "string"
+          }
         }
       },
       "required": [

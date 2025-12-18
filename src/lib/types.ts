@@ -98,6 +98,7 @@ export type Stage = {
 
 export type Task = {
     id: string;
+    taskType?: 'task' | 'meeting';
     name: string;
     description?: string;
     projectId: string;
@@ -112,6 +113,8 @@ export type Task = {
     isRecurring?: boolean;
     recurrenceFrequency?: 'diaria' | 'semanal' | 'mensal';
     recurrenceEndDate?: string;
+    meetLink?: string;
+    participantIds?: string[];
 };
 
 export type Team = {

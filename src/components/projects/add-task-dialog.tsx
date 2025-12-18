@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { format } from "date-fns";
 import { ptBR } from 'date-fns/locale';
-import { CalendarIcon, User, RefreshCcw, Users } from "lucide-react";
+import { CalendarIcon, User, RefreshCcw, Users, Video } from "lucide-react";
 import React from 'react';
 
 import {
@@ -37,6 +37,7 @@ import { Calendar } from "../ui/calendar";
 import { cn } from "@/lib/utils";
 import { Separator } from "../ui/separator";
 import { Switch } from "../ui/switch";
+import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 
 type AddTaskDialogProps = {
   isOpen: boolean;
@@ -50,7 +51,8 @@ type AddTaskDialogProps = {
 };
 
 const formSchema = z.object({
-  name: z.string().min(1, "O nome da tarefa é obrigatório."),
+  taskType: z.enum(['task', 'meeting']).default('task'),
+  name: z.string().min(1, "O nome é obrigatório."),
   description: z.string().optional(),
   stageId: z.string({ required_error: "A etapa é obrigatória." }),
   dependentTaskIds: z.array(z.string()).optional(),
@@ -59,6 +61,8 @@ const formSchema = z.object({
   isRecurring: z.boolean().default(false),
   recurrenceFrequency: z.enum(['diaria', 'semanal', 'mensal']).optional(),
   recurrenceEndDate: z.date().optional(),
+  meetLink: z.string().url("URL do Google Meet inválida.").optional().or(z.literal('')),
+  participantIds: z.array(z.string()).optional(),
 }).refine(data => {
     if (data.isRecurring) {
         return !!data.recurrenceFrequency && !!data.recurrenceEndDate;
@@ -80,16 +84,20 @@ export function AddTaskDialog({ isOpen, onOpenChange, onSaveTask, stages, tasks,
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
+      taskType: 'task',
       name: "",
       description: "",
       dependentTaskIds: [],
       assignee: undefined,
       dueDate: undefined,
       isRecurring: false,
+      meetLink: "",
+      participantIds: [],
     },
   });
 
   const isRecurring = form.watch("isRecurring");
+  const taskType = form.watch("taskType");
 
   // Reset form when dialog opens or taskToEdit changes
   React.useEffect(() => {
@@ -103,6 +111,7 @@ export function AddTaskDialog({ isOpen, onOpenChange, onSaveTask, stages, tasks,
 
       if (taskToEdit) {
         form.reset({
+          taskType: taskToEdit.taskType || 'task',
           name: taskToEdit.name,
           description: taskToEdit.description,
           stageId: taskToEdit.stageId,
@@ -112,9 +121,12 @@ export function AddTaskDialog({ isOpen, onOpenChange, onSaveTask, stages, tasks,
           isRecurring: taskToEdit.isRecurring || false,
           recurrenceFrequency: taskToEdit.recurrenceFrequency,
           recurrenceEndDate: taskToEdit.recurrenceEndDate ? new Date(taskToEdit.recurrenceEndDate) : undefined,
+          meetLink: taskToEdit.meetLink || "",
+          participantIds: taskToEdit.participantIds || [],
         });
       } else {
         form.reset({
+          taskType: 'task',
           stageId: stages.length > 0 ? stages[0].id : '',
           name: '',
           description: '',
@@ -124,6 +136,8 @@ export function AddTaskDialog({ isOpen, onOpenChange, onSaveTask, stages, tasks,
           isRecurring: false,
           recurrenceFrequency: undefined,
           recurrenceEndDate: undefined,
+          meetLink: "",
+          participantIds: [],
         });
       }
     }
@@ -154,6 +168,8 @@ export function AddTaskDialog({ isOpen, onOpenChange, onSaveTask, stages, tasks,
         dueDate: values.dueDate?.toISOString(),
         recurrenceFrequency: values.isRecurring ? values.recurrenceFrequency : undefined,
         recurrenceEndDate: values.isRecurring ? values.recurrenceEndDate?.toISOString() : undefined,
+        meetLink: values.taskType === 'meeting' ? values.meetLink : undefined,
+        participantIds: values.taskType === 'meeting' ? values.participantIds : undefined,
     };
 
     if (!taskData.isRecurring) {
@@ -171,6 +187,7 @@ export function AddTaskDialog({ isOpen, onOpenChange, onSaveTask, stages, tasks,
 
   const userOptions = usersData?.map(user => ({ value: `user-${user.id}`, label: user.name })) || [];
   const teamOptions = teamsData?.map(team => ({ value: `team-${team.id}`, label: team.name })) || [];
+  const participantOptions = usersData?.map(user => ({ value: user.id, label: user.name })) || [];
 
 
   return (
@@ -179,18 +196,49 @@ export function AddTaskDialog({ isOpen, onOpenChange, onSaveTask, stages, tasks,
     }}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>{taskToEdit ? 'Editar Tarefa' : 'Adicionar Nova Tarefa'}</DialogTitle>
+          <DialogTitle>{taskToEdit ? 'Editar Item' : 'Adicionar Novo Item'}</DialogTitle>
         </DialogHeader>
         <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 max-h-[80vh] overflow-y-auto p-1 pr-4">
                 <FormField
                     control={form.control}
+                    name="taskType"
+                    render={({ field }) => (
+                        <FormItem className="space-y-3">
+                        <FormLabel>Tipo de Item</FormLabel>
+                        <FormControl>
+                            <RadioGroup
+                            onValueChange={field.onChange}
+                            defaultValue={field.value}
+                            className="flex space-x-4"
+                            >
+                            <FormItem className="flex items-center space-x-2 space-y-0">
+                                <FormControl>
+                                <RadioGroupItem value="task" />
+                                </FormControl>
+                                <FormLabel className="font-normal">Tarefa</FormLabel>
+                            </FormItem>
+                            <FormItem className="flex items-center space-x-2 space-y-0">
+                                <FormControl>
+                                <RadioGroupItem value="meeting" />
+                                </FormControl>
+                                <FormLabel className="font-normal">Reunião</FormLabel>
+                            </FormItem>
+                            </RadioGroup>
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                />
+                
+                <FormField
+                    control={form.control}
                     name="name"
                     render={({ field }) => (
                         <FormItem>
-                        <FormLabel>Nome da Tarefa</FormLabel>
+                        <FormLabel>Nome da {taskType === 'meeting' ? 'Reunião' : 'Tarefa'}</FormLabel>
                         <FormControl>
-                            <Input placeholder="Ex: Desenvolver página de login" {...field} />
+                            <Input placeholder={taskType === 'meeting' ? "Ex: Reunião de alinhamento semanal" : "Ex: Desenvolver página de login"} {...field} />
                         </FormControl>
                         <FormMessage />
                         </FormItem>
@@ -203,12 +251,47 @@ export function AddTaskDialog({ isOpen, onOpenChange, onSaveTask, stages, tasks,
                         <FormItem>
                         <FormLabel>Descrição</FormLabel>
                         <FormControl>
-                            <Textarea placeholder="Adicione mais detalhes sobre a tarefa..." {...field} />
+                            <Textarea placeholder="Adicione mais detalhes..." {...field} />
                         </FormControl>
                         <FormMessage />
                         </FormItem>
                     )}
                 />
+
+                {taskType === 'meeting' && (
+                  <>
+                    <FormField
+                      control={form.control}
+                      name="meetLink"
+                      render={({ field }) => (
+                          <FormItem>
+                          <FormLabel>Link da Reunião (Google Meet)</FormLabel>
+                          <FormControl>
+                              <Input placeholder="https://meet.google.com/..." {...field} />
+                          </FormControl>
+                          <FormMessage />
+                          </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="participantIds"
+                      render={({ field }) => (
+                          <FormItem>
+                              <FormLabel className="flex items-center gap-2"><Users className="h-4 w-4" />Participantes</FormLabel>
+                              <MultiSelect
+                                  options={participantOptions}
+                                  selected={field.value || []}
+                                  onChange={field.onChange}
+                                  placeholder="Selecione os participantes..."
+                              />
+                              <FormMessage />
+                          </FormItem>
+                      )}
+                    />
+                  </>
+                )}
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <FormField
                         control={form.control}
