@@ -33,7 +33,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import type { Reimbursement, User, Role } from "@/lib/types";
 import dynamic from "next/dynamic";
-import { useFirestore, useCollection, useMemoFirebase, useUser as useAuthUser } from "@/firebase";
+import { useFirestore, useCollection, useMemoFirebase, useUser as useAuthUser, useDoc } from "@/firebase";
 import { collection, doc, query, where, serverTimestamp } from "firebase/firestore";
 import {
   AlertDialog,
@@ -57,23 +57,18 @@ const ReembolsoFormDialog = dynamic(() => import('./reembolso-form-dialog').then
 export function ReembolsoDataTable({ filterUserId }: { filterUserId?: string }) {
   const firestore = useFirestore();
   const { toast } = useToast();
-  const { user: authUser } = useAuthUser();
-  
-  const userProfileQuery = useMemoFirebase(() => firestore && authUser ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser]);
-  const { data: userProfile } = useCollection<User>(userProfileQuery as any); // useCollection for single doc for simplicity here
-  const roleId = userProfile?.[0]?.roleId;
-
-  const roleQuery = useMemoFirebase(() => firestore && roleId ? doc(firestore, 'roles', roleId) : null, [firestore, roleId]);
-  const { data: roleData } = useCollection<Role>(roleQuery as any);
-  const isManager = roleData?.[0]?.isManager;
+  const { user: authUser, claims } = useAuthUser();
+  const isManager = claims?.canAccessFinancial;
 
   const reembolsosQuery = useMemoFirebase(() => {
     if (!firestore || !authUser) return null;
     let q = collection(firestore, 'reimbursements');
     if (filterUserId) {
+        if (!filterUserId) return null; // Wait for filterUserId
         return query(q, where('requesterId', '==', filterUserId));
     }
     if (!isManager) {
+        if (!authUser.uid) return null; // Wait for authUser.uid
         return query(q, where('requesterId', '==', authUser.uid));
     }
     return q;
