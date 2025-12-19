@@ -57,10 +57,11 @@ export async function createUserAction(userData: Omit<User, 'id' | 'avatarUrl'>)
         }
         const userProfile = userDoc.data() as User;
         
-        if (!userProfile.roleId) {
+        const roleId = userProfile.roleId;
+        if (!roleId) {
              return { success: false, error: 'Permissão negada. Você não tem um cargo definido.' };
         }
-        const roleDoc = await firestore.collection('roles').doc(userProfile.roleId).get();
+        const roleDoc = await firestore.collection('roles').doc(roleId).get();
         if (!roleDoc.exists) {
              return { success: false, error: 'Permissão negada. Seu cargo não foi encontrado no sistema.' };
         }
@@ -228,16 +229,5 @@ export async function uploadContractFileAction(formData: FormData) {
     } catch (error) {
         console.error("Erro no upload de contrato:", error);
         return { success: false, error: 'Falha ao enviar o arquivo do contrato.' };
-    }
-}
-
-export async function parseMeetingDetailsAction(meetingText: string): Promise<{ success: boolean, data?: MeetingDetails, error?: string }> {
-    noStore();
-    try {
-        // This functionality is temporarily disabled.
-        return { success: false, error: "Funcionalidade de IA desativada temporariamente." };
-    } catch (error: any) {
-        console.error("Error in parseMeetingDetailsAction:", error);
-        return { success: false, error: error.message || 'Falha ao analisar os detalhes da reunião.' };
     }
 }
