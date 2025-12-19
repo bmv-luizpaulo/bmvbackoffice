@@ -94,22 +94,4 @@ function KanbanColumnComponent({ stage, tasks, onUpdateTask, onDeleteTask, onEdi
   );
 }
 
-const areEqual = (prev: KanbanColumnProps, next: KanbanColumnProps) => {
-  if (
-    prev.stage.id !== next.stage.id ||
-    prev.stage.name !== next.stage.name ||
-    prev.stage.description !== next.stage.description
-  ) return false;
-  if (prev.tasks.length !== next.tasks.length) return false;
-  for (let i = 0; i < prev.tasks.length; i++) {
-    const a = prev.tasks[i];
-    const b = next.tasks[i];
-    if (a.id !== b.id) return false;
-    if ((a.isLocked ? 1 : 0) !== (b.isLocked ? 1 : 0)) return false;
-    if (a.assignee?.id !== b.assignee?.id) return false;
-    if (a.team?.id !== b.team?.id) return false;
-  }
-  return true;
-};
-
-export const KanbanColumn = memo(KanbanColumnComponent, areEqual);
+export const KanbanColumn = memo(KanbanColumnComponent);

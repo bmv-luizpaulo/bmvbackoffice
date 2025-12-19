@@ -42,10 +42,10 @@ export function KanbanBoard({ openNewProjectDialog }: { openNewProjectDialog?: b
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const userProfileQuery = useMemoFirebase(() => (firestore && authUser?.uid ? doc(firestore, 'users', authUser.uid) : null), [firestore, authUser]);
+  const userProfileQuery = useMemoFirebase(() => (firestore && authUser?.uid ? doc(firestore, 'users', authUser.uid) : null), [firestore, authUser?.uid]);
   const { data: userProfile } = useDoc<User>(userProfileQuery);
   const roleQuery = useMemoFirebase(() => (firestore && userProfile?.roleId ? doc(firestore, 'roles', userProfile.roleId) : null), [firestore, userProfile?.roleId]);
-  const { data: role } = useDoc<Role>(roleQuery);
+  const { data: role } = useDoc<Role>(roleQuery as any);
   const isPrivilegedUser = role?.permissions?.isManager || role?.permissions?.isDev;
 
   const [projects, setProjects] = useState<Project[]>([]);
@@ -146,7 +146,7 @@ export function KanbanBoard({ openNewProjectDialog }: { openNewProjectDialog?: b
     });
   }, [tasks, usersMap, teamsMap]);
   
-  const handleAddProject = async (newProjectData: Omit<Project, 'id'>) => {
+  const handleAddProject = useCallback(async (newProjectData: Omit<Project, 'id'>) => {
     if (!firestore) return;
     const docRef = await addDocumentNonBlocking(collection(firestore, 'projects'), newProjectData);
     
@@ -166,9 +166,9 @@ export function KanbanBoard({ openNewProjectDialog }: { openNewProjectDialog?: b
     
     toast({ title: "Projeto Adicionado", description: `O projeto "${newProjectData.name}" foi criado com sucesso.`});
     setSelectedProjectId(docRef.id);
-  };
+  }, [firestore, toast]);
   
-  const handleSaveTask = async (taskData: Omit<Task, 'id' | 'isCompleted'>, taskId?: string) => {
+  const handleSaveTask = useCallback(async (taskData: Omit<Task, 'id' | 'isCompleted'>, taskId?: string) => {
     if (!selectedProjectId || !firestore) return;
 
     if (taskId) {
@@ -182,7 +182,7 @@ export function KanbanBoard({ openNewProjectDialog }: { openNewProjectDialog?: b
         });
         toast({ title: "Tarefa Adicionada", description: "A nova tarefa foi adicionada ao projeto." });
     }
-  };
+  }, [selectedProjectId, firestore, toast]);
   
   const handleUpdateTask = useCallback((taskId: string, updates: Partial<Omit<Task, 'id'>>) => {
       if (!selectedProjectId || !firestore) return;
@@ -195,12 +195,12 @@ export function KanbanBoard({ openNewProjectDialog }: { openNewProjectDialog?: b
       toast({ title: "Tarefa Excluída", variant: "destructive" });
   }, [selectedProjectId, firestore, toast]);
 
-  const handleDeleteProject = () => {
+  const handleDeleteProject = useCallback(() => {
     if (!selectedProjectId || !firestore) return;
     deleteDocumentNonBlocking(doc(firestore, 'projects', selectedProjectId));
     toast({ title: "Projeto Excluído", variant: "destructive" });
     setSelectedProjectId(projects.length > 1 ? projects.find(p => p.id !== selectedProjectId)!.id : null);
-  };
+  }, [selectedProjectId, firestore, toast, projects]);
 
   const handleDragStart = (event: DragStartEvent) => {
     setActiveTask(tasks.find(t => t.id === event.active.id) ?? null);
@@ -224,6 +224,17 @@ export function KanbanBoard({ openNewProjectDialog }: { openNewProjectDialog?: b
         }
     }
   };
+
+  const handleEditTask = useCallback((task: Task) => {
+    setTaskToEdit(task);
+    setTaskModalOpen(true);
+  }, []);
+
+  const handleAddDependentTask = useCallback((dependencyId: string) => {
+    setDependencyId(dependencyId);
+    setTaskModalOpen(true);
+  }, []);
+
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -294,8 +305,8 @@ export function KanbanBoard({ openNewProjectDialog }: { openNewProjectDialog?: b
               tasks={tasksWithDetails.filter(t => t.stageId === stage.id)}
               onUpdateTask={handleUpdateTask}
               onDeleteTask={handleDeleteTask}
-              onEditTask={(task) => { setTaskToEdit(task); setTaskModalOpen(true); }}
-              onAddDependentTask={(depId) => { setDependencyId(depId); setTaskModalOpen(true); }}
+              onEditTask={handleEditTask}
+              onAddDependentTask={handleAddDependentTask}
             />
           ))}
         </div>

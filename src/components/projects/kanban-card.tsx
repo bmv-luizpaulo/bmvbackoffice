@@ -48,8 +48,8 @@ function KanbanCardComponent({ task, onUpdateTask, onDeleteTask, onEditTask, onA
   const userProfileQuery = React.useMemo(() => firestore && authUser?.uid ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser?.uid]);
   const { data: userProfile } = useDoc<User>(userProfileQuery);
   const roleQuery = React.useMemo(() => firestore && userProfile?.roleId ? doc(firestore, 'roles', userProfile.roleId) : null, [firestore, userProfile?.roleId]);
-  const { data: role } = useDoc<Role>(roleQuery);
-  const isPrivilegedUser = role?.isManager || role?.isDev;
+  const { data: role } = useDoc<Role>(roleQuery as any);
+  const isPrivilegedUser = role?.permissions?.isManager || role?.permissions?.isDev;
 
 
   const style = {
@@ -213,20 +213,4 @@ function KanbanCardComponent({ task, onUpdateTask, onDeleteTask, onEditTask, onA
   );
 }
 
-const areEqual = (prev: KanbanCardProps, next: KanbanCardProps) => {
-  const a = prev.task;
-  const b = next.task;
-  if (a.id !== b.id) return false;
-  if (a.name !== b.name) return false;
-  if ((a.description || '') !== (b.description || '')) return false;
-  if ((a.isCompleted ? 1 : 0) !== (b.isCompleted ? 1 : 0)) return false;
-  if ((a.isLocked ? 1 : 0) !== (b.isLocked ? 1 : 0)) return false;
-  if ((a.dueDate || '') !== (b.dueDate || '')) return false;
-  if ((a.assigneeId || '') !== (b.assigneeId || '')) return false;
-  if ((a.teamId || '') !== (b.teamId || '')) return false;
-  if (a.assignee?.id !== b.assignee?.id) return false;
-  if (a.team?.id !== b.team?.id) return false;
-  return true;
-};
-
-export const KanbanCard = memo(KanbanCardComponent, areEqual);
+export const KanbanCard = memo(KanbanCardComponent);
