@@ -43,9 +43,9 @@ function DashboardSkeleton() {
 
 
 function DashboardPage() {
-  const { user: authUser, isUserLoading, claims, areClaimsReady } = useFirebase();
+  const { user: authUser, isUserLoading, claims } = useFirebase();
 
-  if (isUserLoading || !areClaimsReady) {
+  if (isUserLoading) {
     return <DashboardSkeleton />;
   }
 
@@ -63,5 +63,3 @@ function DashboardPage() {
 }
 
 export default DashboardPage;
-
-    

@@ -16,7 +16,7 @@ interface FirebaseProviderProps {
 // Internal state for user authentication
 interface UserAuthState {
   user: User | null;
-  isUserLoading: boolean;
+  isUserLoading: boolean; // This will now wait for claims as well
   userError: Error | null;
 }
 
@@ -96,7 +96,7 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
             setClaims(null);
           } finally {
             setAreClaimsReady(true);
-            setUserAuthState({ user: firebaseUser, isUserLoading: false, userError: null }); // Now we are fully loaded
+            setUserAuthState(prev => ({ ...prev, isUserLoading: false })); // Now we are fully loaded
             setLastTokenRefresh(Date.now());
           }
         } else {
@@ -128,6 +128,7 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
         // If a refresh timestamp exists and it's newer than our last refresh, force a new token
         if (tokenRefreshedTime && tokenRefreshedTime > lastTokenRefresh) {
           console.log("Detected role change, forcing token refresh...");
+          setUserAuthState(prev => ({ ...prev, isUserLoading: true }));
           setAreClaimsReady(false);
           try {
             const token = await userAuthState.user?.getIdTokenResult(true); // Force refresh
@@ -136,6 +137,7 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
             console.error("Error refreshing token after role change:", e);
           } finally {
             setAreClaimsReady(true);
+            setUserAuthState(prev => ({ ...prev, isUserLoading: false }));
             setLastTokenRefresh(Date.now());
           }
         }
