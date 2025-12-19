@@ -34,8 +34,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import type { Contract, Asset, Project } from "@/lib/types";
 import dynamic from "next/dynamic";
-import { useFirestore, useCollection, useMemoFirebase, useUser } from "@/firebase";
-import { collection, doc, serverTimestamp } from "firebase/firestore";
+import { useFirestore, useCollection, useMemoFirebase, useUser, usePermissions } from "@/firebase";
+import { collection, doc, serverTimestamp, query, where, or } from "firebase/firestore";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -58,6 +58,7 @@ export const ContractDataTable = React.memo(function ContractDataTable() {
   const firestore = useFirestore();
   const { toast } = useToast();
   const { user: authUser } = useUser();
+  const { ready: permissionsReady, isManager } = usePermissions();
   
   const contractsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'contracts') : null, [firestore]);
   const { data: contractsData, isLoading } = useCollection<Contract>(contractsQuery);
@@ -65,7 +66,20 @@ export const ContractDataTable = React.memo(function ContractDataTable() {
   const assetsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'assets') : null, [firestore]);
   const { data: assetsData } = useCollection<Asset>(assetsQuery);
 
-  const projectsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'projects') : null, [firestore]);
+  const projectsQuery = useMemoFirebase(() => {
+    if (!firestore || !authUser || !permissionsReady) return null;
+    const projectsCollection = collection(firestore, 'projects');
+    if (isManager) {
+        return projectsCollection;
+    }
+    return query(
+        projectsCollection,
+        or(
+            where('ownerId', '==', authUser.uid),
+            where('teamMembers', 'array-contains', authUser.uid)
+        )
+    );
+  }, [firestore, authUser, permissionsReady, isManager]);
   const { data: projectsData } = useCollection<Project>(projectsQuery);
 
   const assetsMap = React.useMemo(() => new Map(assetsData?.map(a => [a.id, a.name])), [assetsData]);
