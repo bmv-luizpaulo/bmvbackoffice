@@ -32,12 +32,13 @@ export async function logUserActivity({
       action,
       description,
       timestamp: serverTimestamp(),
-      performedBy,
+      performedBy: performedBy || userId, // Default to the user if no admin is specified
       ipAddress,
       userAgent
     };
 
-    await addDoc(collection(firestore, 'userActivityLogs'), activityData);
+    // Corrigido: Registra na subcoleção do usuário.
+    await addDoc(collection(firestore, `users/${userId}/activityLogs`), activityData);
   } catch (error) {
     console.error('Erro ao registrar atividade do usuário:', error);
   }
@@ -103,5 +104,3 @@ export const ActivityLogger = {
       performedBy
     })
 };
-
-    

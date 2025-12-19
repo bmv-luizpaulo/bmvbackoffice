@@ -923,6 +923,10 @@
       "schema": { "$ref": "#/entities/Notification" },
       "description": "Contains notifications for a specific user."
     },
+    "/users/{userId}/activityLogs/{logId}": {
+        "schema": { "$ref": "#/entities/UserActivityLog" },
+        "description": "Stores a log of user activities for auditing purposes."
+    },
     "/notificationTemplates/{templateId}": {
       "schema": { "$ref": "#/entities/NotificationTemplate" },
       "description": "Stores templates for system notifications."
@@ -1085,10 +1089,6 @@
             }
         },
         "description": "Stores reusable document templates."
-    },
-    "/userActivityLogs/{logId}": {
-        "schema": { "$ref": "#/entities/UserActivityLog" },
-        "description": "Stores a log of user activities for auditing purposes."
     }
   }
 }
