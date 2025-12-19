@@ -116,7 +116,7 @@ export function ErrorLogViewer({ filterResolved }: ErrorLogViewerProps) {
     {
       accessorKey: "timestamp",
       header: "Data",
-      cell: ({ row }) => row.original.timestamp ? format(new Date(row.original.timestamp), 'dd/MM/yy HH:mm', { locale: ptBR }) : 'N/A'
+      cell: ({ row }) => row.original.timestamp ? format(new Date(row.original.timestamp.toDate()), 'dd/MM/yy HH:mm', { locale: ptBR }) : 'N/A'
     },
     {
       id: "actions",
@@ -252,5 +252,3 @@ export function ErrorLogViewer({ filterResolved }: ErrorLogViewerProps) {
     </div>
   )
 }
-
-    

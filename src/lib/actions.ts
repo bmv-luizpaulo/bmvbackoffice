@@ -51,22 +51,8 @@ export async function createUserAction(userData: Omit<User, 'id' | 'avatarUrl'>)
         }
         const decodedToken = await auth.verifyIdToken(idToken);
         
-        const userDoc = await firestore.collection('users').doc(decodedToken.uid).get();
-        if (!userDoc.exists) {
-            return { success: false, error: 'Perfil do usuário solicitante não encontrado.' };
-        }
-        const userProfile = userDoc.data() as User;
-        
-        const roleId = userProfile.roleId;
-        if (!roleId) {
-             return { success: false, error: 'Permissão negada. Você não tem um cargo definido.' };
-        }
-        const roleDoc = await firestore.collection('roles').doc(roleId).get();
-        if (!roleDoc.exists) {
-             return { success: false, error: 'Permissão negada. Seu cargo não foi encontrado no sistema.' };
-        }
-        const permissions = roleDoc.data()?.permissions;
-
+        // Use the decoded token claims to check for role
+        const permissions = decodedToken.permissions as { canManageUsers?: boolean, isDev?: boolean } | undefined;
         if (!permissions?.canManageUsers && !permissions?.isDev) {
             return { success: false, error: 'Permissão negada. Você não tem autorização para criar novos usuários.' };
         }
