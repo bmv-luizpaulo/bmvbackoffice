@@ -3,7 +3,7 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { useUser, useCollection, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, where, or, collectionGroup, doc } from 'firebase/firestore';
+import { collection, query, where, doc } from 'firebase/firestore';
 import type { Task, User, Project, Role, Meeting } from '@/lib/types';
 import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -16,23 +16,23 @@ import { useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
 import Link from 'next/link';
+import { Skeleton } from '@/components/ui/skeleton';
 
-// Opt out of static prerendering; this page relies on client-only Firebase hooks
 export const dynamic = 'force-dynamic';
 
 export default function TaskAgendaPage() {
   const firestore = useFirestore();
-  const { user: authUser } = useUser();
+  const { user: authUser, isUserLoading } = useUser();
   const searchParams = useSearchParams();
   
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [selectedUserId, setSelectedUserId] = useState<string | 'all'>('all');
 
   const userProfileQuery = useMemoFirebase(() => firestore && authUser?.uid ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser?.uid]);
-  const { data: userProfile } = useDoc<User>(userProfileQuery);
+  const { data: userProfile, isLoading: isProfileLoading } = useDoc<User>(userProfileQuery);
   
   const roleQuery = useMemoFirebase(() => firestore && userProfile?.roleId ? doc(firestore, 'roles', userProfile.roleId) : null, [firestore, userProfile?.roleId]);
-  const { data: role } = useDoc<Role>(roleQuery);
+  const { data: role, isLoading: isRoleLoading } = useDoc<Role>(roleQuery);
 
   const allUsersQuery = useMemoFirebase(() => firestore ? collection(firestore, 'users') : null, [firestore]);
   const { data: allUsers } = useCollection<User>(allUsersQuery);
@@ -47,12 +47,14 @@ export default function TaskAgendaPage() {
     }
   }, [filterParam, authUser?.uid]);
 
+  const isGestor = role?.permissions?.isManager || role?.permissions?.isDev;
+
   const tasksQuery = useMemoFirebase(() => {
     if (!firestore || !role || !authUser?.uid) return null;
     
     let q = query(collection(firestore, 'tasks'));
 
-    if (role.permissions?.isManager || role.permissions?.isDev) {
+    if (isGestor) {
       if (selectedUserId !== 'all') {
         q = query(q, where('assigneeId', '==', selectedUserId));
       }
@@ -60,7 +62,7 @@ export default function TaskAgendaPage() {
       q = query(q, where('assigneeId', '==', authUser.uid));
     }
     return q;
-  }, [firestore, role, selectedUserId, authUser?.uid]);
+  }, [firestore, role, selectedUserId, authUser?.uid, isGestor]);
   const { data: tasksData, isLoading: isLoadingTasks } = useCollection<Task>(tasksQuery);
   
   const meetingsQuery = useMemoFirebase(() => {
@@ -68,7 +70,7 @@ export default function TaskAgendaPage() {
 
     let q = query(collection(firestore, 'meetings'));
 
-    if (role.permissions?.isManager || role.permissions?.isDev) {
+    if (isGestor) {
       if (selectedUserId !== 'all') {
          q = query(q, where('participantIds', 'array-contains', selectedUserId));
       }
@@ -76,7 +78,7 @@ export default function TaskAgendaPage() {
        q = query(q, where('participantIds', 'array-contains', authUser.uid));
     }
     return q;
-  }, [firestore, role, selectedUserId, authUser?.uid]);
+  }, [firestore, role, selectedUserId, authUser?.uid, isGestor]);
   const { data: meetingsData, isLoading: isLoadingMeetings } = useCollection<Meeting>(meetingsQuery);
 
   const projectsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'projects') : null, [firestore]);
@@ -104,8 +106,23 @@ export default function TaskAgendaPage() {
       .sort((a, b) => a.dueDateObj!.getTime() - b.dueDateObj!.getTime());
   }, [combinedAgendaItems, selectedDate]);
   
-  const isGestor = role?.permissions?.isManager || role?.permissions?.isDev;
-  const isLoading = isLoadingTasks || isLoadingMeetings;
+  const isLoading = isUserLoading || isProfileLoading || isRoleLoading || isLoadingTasks || isLoadingMeetings;
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <Skeleton className="h-10 w-48" />
+        <Skeleton className="h-6 w-full max-w-lg" />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 space-y-4">
+            <Skeleton className="h-9 w-64" />
+            <Skeleton className="h-[300px] w-full" />
+          </div>
+          <Skeleton className="h-[450px] w-full" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -187,9 +204,7 @@ export default function TaskAgendaPage() {
                 </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3 max-h-[450px] overflow-y-auto">
-                {isLoading ? (
-                    <p>Carregando...</p>
-                ) : selectedDayItems.length > 0 ? (
+                {selectedDayItems.length > 0 ? (
                     selectedDayItems.map(item => (
                         <TaskAgendaItem 
                             key={item.id}
