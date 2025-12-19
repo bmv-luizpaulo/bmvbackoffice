@@ -47,40 +47,43 @@ const db = admin.firestore();
 
 // Função para definir os custom claims com base no roleId
 const setCustomClaimsForUser = async (userId: string, roleId: string | null) => {
-  let isManager = false;
-  let isDev = false;
+  const permissions: { [key: string]: boolean } = {};
 
   if (roleId) {
     try {
       const roleDoc = await db.collection("roles").doc(roleId).get();
       if (roleDoc.exists) {
         const roleData = roleDoc.data();
-        // Usa a nova estrutura de permissões
-        isManager = roleData?.permissions?.isManager === true;
-        isDev = roleData?.permissions?.isDev === true;
+        if (roleData?.permissions) {
+          // Mapeia todas as chaves do objeto de permissões para os claims
+          for (const key in roleData.permissions) {
+            if (typeof roleData.permissions[key] === 'boolean') {
+              permissions[key] = roleData.permissions[key];
+            }
+          }
+        }
       } else {
         functions.logger.warn(`Role document ${roleId} not found for user ${userId}.`);
       }
     } catch (error) {
       functions.logger.error(`Error fetching role ${roleId} for user ${userId}:`, error);
-      // Não prosseguir se não conseguir ler o cargo
       return;
     }
   }
 
   try {
-    // Busca os claims existentes para não os sobrescrever
     const user = await admin.auth().getUser(userId);
     const existingClaims = user.customClaims || {};
 
-    // Define os custom claims no Firebase Auth
-    await admin.auth().setCustomUserClaims(userId, { 
+    const newClaims = {
       ...existingClaims,
-      isManager, 
-      isDev, 
-      roleId 
-    });
-    functions.logger.log(`Successfully set custom claims for user ${userId}:`, { isManager, isDev, roleId });
+      ...permissions,
+      roleId: roleId || null, // Garante que o roleId também seja um claim
+    };
+
+    // Define os custom claims no Firebase Auth
+    await admin.auth().setCustomUserClaims(userId, newClaims);
+    functions.logger.log(`Successfully set custom claims for user ${userId}:`, newClaims);
 
     // Dispara a atualização do token no cliente
     await db.collection("users").doc(userId).update({
@@ -91,6 +94,7 @@ const setCustomClaimsForUser = async (userId: string, roleId: string | null) => 
     functions.logger.error(`Error setting custom claims or triggering refresh for user ${userId}:`, error);
   }
 };
+
 
 // Gatilho para quando um novo usuário é criado no Firestore.
 export const onUserCreate = functions.firestore
