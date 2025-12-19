@@ -3,46 +3,149 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // Regra geral: Usuários podem ler e escrever seus próprios documentos.
+
+    // ===== REGRAS DE USUÁRIOS E PERMISSÕES =====
     match /users/{userId} {
-      allow read, update, delete: if request.auth.uid == userId;
-      // Criação de conta é pública ou gerenciada por admin
-      allow create: if request.auth != null; 
-    }
-
-    // Funções e Times: Apenas leitura para usuários autenticados
-    match /roles/{roleId} {
-      allow read: if request.auth != null;
-      // Apenas admins podem modificar
-      allow write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.roleId == 'admin_role_id' || request.auth.token.isDev == true;
-    }
-
-    match /teams/{teamId} {
-      allow read: if request.auth != null;
-       // Apenas admins podem modificar
-      allow write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.roleId == 'admin_role_id' || request.auth.token.isDev == true;
-    }
-    
-    // Tarefas: Usuários podem ler/escrever suas próprias tarefas. Gestores podem ler tudo.
-    match /tasks/{taskId} {
-      allow read, write: if request.auth.uid == resource.data.assigneeId || request.auth.token.isManager == true;
+      // Usuários podem ler e atualizar seu próprio perfil.
+      allow read, update: if request.auth.uid == userId;
+      // Admins (com a claim) podem ler qualquer perfil.
+      allow read: if request.auth.token.canManageUsers == true || request.auth.token.isDev == true;
+      // Criação de usuário é gerenciada por Cloud Function, não por regras diretas.
       allow create: if request.auth != null;
     }
 
-    // Projetos: Membros do projeto ou gestores podem ler. Dono ou gestor pode escrever.
-    match /projects/{projectId} {
-      allow read: if request.auth.uid in resource.data.teamMembers || request.auth.uid == resource.data.ownerId || request.auth.token.isManager == true;
-      allow write: if request.auth.uid == resource.data.ownerId || request.auth.token.isManager == true;
+    match /users/{userId}/activityLogs/{logId} {
+      // Usuários podem ler seu próprio log. Admins também.
+      allow read: if request.auth.uid == userId || request.auth.token.canManageUsers == true || request.auth.token.isDev == true;
+    }
+
+    match /users/{userId}/notifications/{notificationId} {
+      // Usuário pode ler e escrever (marcar como lida) suas próprias notificações.
+      allow read, write: if request.auth.uid == userId;
+    }
+
+    match /roles/{roleId} {
+      // Todos os usuários autenticados podem ler os cargos.
+      allow read: if request.auth != null;
+      // Apenas admins podem modificar.
+      allow write: if request.auth.token.canManageUsers == true || request.auth.token.isDev == true;
+    }
+
+    match /teams/{teamId} {
+      // Todos os usuários autenticados podem ler as equipes.
+      allow read: if request.auth != null;
+      // Apenas admins podem modificar.
+      allow write: if request.auth.token.canManageUsers == true || request.auth.token.isDev == true;
     }
     
-    // Reuniões: Participantes ou gestores podem ler/escrever.
+    match /directorates/{directorateId} {
+      // Todos os usuários autenticados podem ler as diretorias.
+      allow read: if request.auth != null;
+      // Apenas admins podem modificar.
+      allow write: if request.auth.token.canManageUsers == true || request.auth.token.isDev == true;
+    }
+
+    // ===== REGRAS OPERACIONAIS (PROJETOS E TAREFAS) =====
+    match /projects/{projectId} {
+      // Gestores/Devs podem ler/escrever. Membros e donos do projeto podem ler.
+      allow read: if request.auth.token.canViewAllProjects == true || request.auth.uid == resource.data.ownerId || request.auth.uid in resource.data.teamMembers;
+      allow write: if request.auth.token.canManageProjects == true || request.auth.uid == resource.data.ownerId;
+      allow create: if request.auth.token.canManageProjects == true;
+    }
+    
+    match /projects/{projectId}/{subcollection}/{docId} {
+       // Permite acesso às subcoleções do projeto se o usuário tem acesso ao projeto.
+      allow read, write: if get(/databases/$(database)/documents/projects/$(projectId)).data.ownerId == request.auth.uid || request.auth.uid in get(/databases/$(database)/documents/projects/$(projectId)).data.teamMembers || request.auth.token.canViewAllProjects == true;
+    }
+
+    match /tasks/{taskId} {
+      // Gestores/Devs podem ler/escrever. O responsável pela tarefa pode ler/escrever.
+      allow read, write: if request.auth.token.isManager == true || request.auth.token.isDev == true || request.auth.uid == resource.data.assigneeId;
+      // Qualquer usuário logado pode criar tarefa.
+      allow create: if request.auth != null;
+    }
+
     match /meetings/{meetingId} {
-       allow read, write: if request.auth.uid in resource.data.participantIds || request.auth.token.isManager == true;
+       // Gestores/Devs e participantes podem ler/escrever.
+       allow read, write: if request.auth.token.isManager == true || request.auth.token.isDev == true || request.auth.uid in resource.data.participantIds;
        allow create: if request.auth != null;
     }
 
-    // Regra de fallback: nega acesso por padrão se nenhuma regra acima corresponder.
+    // ===== REGRAS COMERCIAIS =====
+    match /contacts/{contactId} {
+      allow read, write: if request.auth.token.canManageContacts == true || request.auth.token.isDev == true;
+      allow create: if request.auth.token.canManageContacts == true || request.auth.token.isDev == true;
+    }
+    
+    match /products/{productId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth.token.canManageProductsAndSeals == true || request.auth.token.isDev == true;
+    }
+    
+    match /seals/{sealId} {
+      allow read, write: if request.auth.token.canManageProductsAndSeals == true || request.auth.token.isDev == true;
+    }
+    
+    match /sealOrders/{sealOrderId} {
+      allow read, write: if request.auth.token.canManageProductsAndSeals == true || request.auth.token.isDev == true;
+    }
+    
+    // ===== REGRAS FINANCEIRAS =====
+    match /reimbursements/{reimbursementId} {
+      // Usuário pode criar e ler/atualizar seu próprio reembolso. Gestores podem ler/atualizar qualquer um.
+      allow create: if request.auth.uid == request.resource.data.requesterId;
+      allow read, update: if request.auth.uid == resource.data.requesterId || request.auth.token.canAccessFinancial == true;
+    }
+    
+    match /costCenters/{costCenterId} {
+       allow read, write: if request.auth.token.canAccessFinancial == true || request.auth.token.isDev == true;
+    }
+    
+    match /contracts/{contractId} {
+       allow read, write: if request.auth.token.canAccessFinancial == true || request.auth.token.isDev == true;
+    }
+
+    // ===== REGRAS DE GESTÃO DE ATIVOS =====
+    match /assets/{assetId} {
+       allow read, write: if request.auth.token.canManageAssets == true || request.auth.token.isDev == true;
+    }
+    match /assets/{assetId}/{subcollection}/{docId} {
+       allow read, write: if request.auth.token.canManageAssets == true || request.auth.token.isDev == true;
+    }
+    match /maintenances/{maintenanceId} {
+       allow read, write: if request.auth.token.canManageAssets == true || request.auth.token.isDev == true;
+    }
+     match /assetUsageContracts/{contractId} {
+       allow read, write: if request.auth.token.canManageAssets == true || request.auth.token.isDev == true;
+    }
+    match /documentTemplates/{templateId} {
+       allow read, write: if request.auth.token.canManageAssets == true || request.auth.token.isDev == true;
+    }
+    
+    // ===== REGRAS DE CHECKLISTS =====
+    match /checklists/{checklistId} {
+      allow read: if request.auth != null; // Todos podem ler modelos
+      allow write: if request.auth.token.canManageChecklists == true || request.auth.token.isDev == true;
+    }
+     match /checklists/{checklistId}/items/{itemId} {
+      allow read, write: if request.auth.token.canManageChecklists == true || request.auth.token.isDev == true;
+    }
+    match /checklistExecutions/{executionId} {
+       allow read, write: if request.auth != null; // Todos podem criar, e gestores podem ler/escrever
+    }
+
+    // ===== REGRAS DE SUPORTE E LOGS =====
+    match /tickets/{ticketId} {
+      // Usuário pode criar e ler seu próprio ticket. Suporte pode ler/atualizar qualquer um.
+      allow create: if request.auth.uid == request.resource.data.requesterId;
+      allow read, update: if request.auth.uid == resource.data.requesterId || request.auth.token.canManageSupport == true;
+    }
+    match /errorLogs/{logId} {
+      // Apenas desenvolvedores podem ler/escrever logs de erro.
+      allow read, write: if request.auth.token.isDev == true;
+    }
+    
+    // Regra de fallback: nega tudo que não foi permitido explicitamente.
     match /{document=**} {
       allow read, write: if false;
     }
