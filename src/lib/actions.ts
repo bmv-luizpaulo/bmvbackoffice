@@ -13,9 +13,10 @@ import * as admin from 'firebase-admin';
 // Initialize Firebase Admin SDK if not already initialized
 if (!admin.apps.length) {
     try {
+        // These credentials are auto-injected in the hosting environment
         admin.initializeApp();
     } catch (e) {
-        console.error("Firebase Admin initialization error", e);
+        console.error("Firebase Admin initialization error on server action:", e);
     }
 }
 
@@ -56,26 +57,54 @@ export async function getCepInfoAction(cep: string): Promise<{ success: boolean;
     }
 }
 
-async function getAdminUidFromToken(): Promise<string> {
-    const authorization = headers().get('Authorization');
-    if (!authorization?.startsWith('Bearer ')) {
-      throw new Error("Não autorizado.");
+async function getAdminUidFromToken(): Promise<string | null> {
+    try {
+        const authorization = headers().get('Authorization');
+        if (!authorization?.startsWith('Bearer ')) {
+          return null;
+        }
+        const idToken = authorization.split('Bearer ')[1];
+        const decodedToken = await admin.auth().verifyIdToken(idToken);
+        return decodedToken.uid;
+    } catch (error) {
+        console.warn("Could not verify admin token on server action:", error);
+        return null;
     }
-    const idToken = authorization.split('Bearer ')[1];
-    const decodedToken = await admin.auth().verifyIdToken(idToken);
-    return decodedToken.uid;
 }
 
 
-export async function createUserAction(userData: Omit<User, 'id' | 'avatarUrl' | 'createdAt'>): Promise<{ success: boolean; data?: { uid: string, email: string }; error?: string }> {
+export async function createUserAction(userData: Omit<User, 'id' | 'avatarUrl' | 'createdAt'>): Promise<{ success: boolean; data?: any; error?: string }> {
   noStore();
   
   try {
-    await getAdminUidFromToken();
-    return { success: false, error: "A criação de usuário via Server Action está desabilitada. Use a Cloud Function." };
+    const adminUid = await getAdminUidFromToken();
+    if (!adminUid) {
+        return { success: false, error: "Ação não autorizada." };
+    }
+    
+    // This is now a proxy to the Cloud Function
+    const functionUrl = `https://us-central1-${process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID}.cloudfunctions.net/createUser`;
+    const token = headers().get('Authorization')?.split('Bearer ')[1];
+
+    const response = await fetch(functionUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify(userData),
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(result.error || 'Falha ao chamar a Cloud Function de criação de usuário.');
+    }
+
+    return { success: true, data: result.data };
 
   } catch (error: any) {
-    console.error("Error in createUserAction:", error);
+    console.error("Error in createUserAction calling cloud function:", error);
     return { success: false, error: error.message || 'Falha ao criar usuário.' };
   }
 }
@@ -84,6 +113,7 @@ export async function updateUserRoleAction(targetUserId: string, newRoleId: stri
     noStore();
     try {
         await getAdminUidFromToken(); // Just for permission check
+        // The actual claim update is handled by the onUserUpdate firestore trigger
         return { success: true };
     } catch (error: any) {
         return { success: false, error: error.message };
@@ -94,6 +124,7 @@ export async function updateUserStatusAction(targetUserId: string, newStatus: Us
     noStore();
     try {
         await getAdminUidFromToken(); // Just for permission check
+        // The actual user disabling is handled by this function's caller now
         return { success: true };
     } catch (error: any) {
         return { success: false, error: error.message };

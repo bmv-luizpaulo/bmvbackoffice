@@ -6,40 +6,8 @@ import { Change, EventContext } from 'firebase-functions';
 import cors from 'cors';
 import { randomBytes } from "crypto";
 
-const allowedOrigins = new Set([
-  'https://sgibmv.vercel.app',
-  'http://localhost:9002',
-  'http://127.0.0.1:9002',
-]);
-
-const corsHandler = cors({
-  origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
-    if (!origin) {
-      callback(null, true);
-      return;
-    }
-
-    if (allowedOrigins.has(origin)) {
-      callback(null, true);
-      return;
-    }
-
-    try {
-      const url = new URL(origin);
-      if (url.hostname.endsWith('.vercel.app')) {
-        callback(null, true);
-        return;
-      }
-    } catch {
-      // ignore
-    }
-
-    callback(new Error('Not allowed by CORS'));
-  },
-  methods: ['POST', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-});
-
+// Use default import for cors
+const corsHandler = cors({ origin: true });
 
 admin.initializeApp();
 
@@ -125,11 +93,6 @@ export const onUserUpdate = functions.firestore
     functions.logger.log(`User ${userId} role changed to: ${roleId}. Updating claims...`);
     await setCustomClaimsForUser(userId, roleId);
 
-    // Force a token refresh on the client
-    await db.collection("users").doc(userId).update({
-        _tokenRefreshed: admin.firestore.FieldValue.serverTimestamp(),
-    });
-
     return null;
   });
 
@@ -137,18 +100,13 @@ export const onUserUpdate = functions.firestore
 // Cloud Function para criar um novo usuário
 export const createUser = functions.https.onRequest((req, res) => {
     corsHandler(req, res, async () => {
-      if (req.method === 'OPTIONS') {
-        res.status(204).send('');
-        return;
-      }
-
       if (req.method !== 'POST') {
-        res.status(405).send({ success: false, error: 'Method not allowed' });
+        res.status(405).send('Method Not Allowed');
         return;
       }
 
       try {
-        // 1. Verificação de autenticação e permissão
+        // 1. Verificação de autenticação e permissão do admin que está fazendo a chamada
         if (!req.headers.authorization || !req.headers.authorization.startsWith('Bearer ')) {
           res.status(403).send({ success: false, error: "Unauthorized: Missing or invalid token." });
           return;
@@ -158,70 +116,43 @@ export const createUser = functions.https.onRequest((req, res) => {
         const decodedIdToken = await admin.auth().verifyIdToken(idToken);
         const adminUid = decodedIdToken.uid;
 
-        let hasPermission = false;
-        if (decodedIdToken.isDev === true || decodedIdToken.canManageUsers === true) {
-          hasPermission = true;
+        // Verificar se o admin tem permissão para criar usuários (isDev ou canManageUsers)
+        if (decodedIdToken.isDev !== true && decodedIdToken.canManageUsers !== true) {
+           res.status(403).send({ success: false, error: "Permission denied: You do not have permission to create users."});
+           return;
         }
 
-        if (!hasPermission) {
-          const adminUserDoc = await db.collection('users').doc(adminUid).get();
-          if (adminUserDoc.exists) {
-            const adminUserData = adminUserDoc.data();
-            const adminRoleId = adminUserData?.roleId;
-            if (adminRoleId) {
-              const adminRoleDoc = await db.collection('roles').doc(adminRoleId).get();
-              if (adminRoleDoc.exists) {
-                const adminRoleData = adminRoleDoc.data();
-                if (adminRoleData?.permissions?.isDev === true || adminRoleData?.permissions?.canManageUsers === true) {
-                  hasPermission = true;
-                }
-              }
-            }
-          }
-        }
-        
-        if (!hasPermission) {
-          res.status(403).send({ success: false, error: "Permission denied: You do not have permission to create users."});
-          return;
-        }
-
-        const { email, name, status, ...restOfData } = req.body;
+        const { email, name, ...restOfData } = req.body;
         if (!email || !name) {
           res.status(400).send({ success: false, error: 'Email and name are required.' });
           return;
         }
 
         const tempPassword = `bmv-${randomBytes(4).toString('hex')}`;
-        const allowedStatus = ['active', 'inactive', 'suspended'];
-        const safeStatus = allowedStatus.includes(status) ? status : 'active';
+        const status = restOfData.status || 'active';
 
+        // 2. Criar usuário no Firebase Authentication
         const userRecord = await admin.auth().createUser({
           email: email,
-          emailVerified: false, // O usuário definirá a senha, então não precisa verificar
+          emailVerified: false,
           password: tempPassword,
           displayName: name,
-          disabled: safeStatus !== 'active',
+          disabled: status !== 'active',
         });
 
-        const allowedFields = ['roleId', 'phone', 'linkedinUrl', 'personalDocument', 'address', 'teamIds'];
-        const safeData: { [key: string]: any } = {};
-        for (const key of allowedFields) {
-          if (restOfData[key] !== undefined) {
-            safeData[key] = restOfData[key];
-          }
-        }
-        
         const resetLink = await admin.auth().generatePasswordResetLink(email);
 
+        // 3. Criar o perfil do usuário no Firestore
         const newUserProfile = {
-          ...safeData,
+          ...restOfData,
           name,
           email,
-          status: safeStatus,
+          status,
           avatarUrl: `https://picsum.photos/seed/${userRecord.uid}/200`,
           createdAt: admin.firestore.FieldValue.serverTimestamp(),
         };
         await db.collection("users").doc(userRecord.uid).set(newUserProfile);
+        // O gatilho onUserCreate cuidará de definir as claims iniciais
 
         functions.logger.log(`User ${userRecord.uid} created by ${adminUid}.`);
         res.status(200).send({ 
@@ -246,5 +177,3 @@ export const createUser = functions.https.onRequest((req, res) => {
       }
     });
 });
-
-    
