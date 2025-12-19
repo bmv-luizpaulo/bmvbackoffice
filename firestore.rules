@@ -4,117 +4,127 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+
+    function isManager() {
+      return request.auth.token.isManager == true || request.auth.token.isDev == true;
+    }
+
+    function isDev() {
+        return request.auth.token.isDev == true;
+    }
+
     // ===== REGRAS DE USUÁRIOS E PERMISSÕES =====
     match /users/{userId} {
-      allow get, update: if request.auth.token.canManageUsers == true || request.auth.token.isDev == true || request.auth.uid == userId;
-      allow list, create: if request.auth.token.canManageUsers == true || request.auth.token.isDev == true;
+      allow get, update: if isManager() || isOwner(userId);
+      allow list, create: if isManager();
     }
 
     match /users/{userId}/activityLogs/{logId} {
-      allow read: if request.auth.uid == userId || request.auth.token.canManageUsers == true || request.auth.token.isDev == true;
+      allow read: if isManager() || isOwner(userId);
     }
 
     match /users/{userId}/notifications/{notificationId} {
-      allow read, write: if request.auth.uid == userId;
+      allow read, write: if isOwner(userId);
     }
 
     match /roles/{roleId} {
       allow read: if request.auth != null;
-      allow write: if request.auth.token.canManageUsers == true || request.auth.token.isDev == true;
+      allow write: if isManager();
     }
 
     match /teams/{teamId} {
       allow read: if request.auth != null;
-      allow write: if request.auth.token.canManageUsers == true || request.auth.token.isDev == true;
+      allow write: if isManager();
     }
     
     match /directorates/{directorateId} {
       allow read: if request.auth != null;
-      allow write: if request.auth.token.canManageUsers == true || request.auth.token.isDev == true;
+      allow write: if isManager();
     }
 
     // ===== REGRAS OPERACIONAIS (PROJETOS E TAREFAS) =====
     match /projects/{projectId} {
-      allow get: if request.auth.token.canViewAllProjects == true || request.auth.token.isDev == true || request.auth.uid == resource.data.ownerId || request.auth.uid in resource.data.teamMembers;
-      allow list: if request.auth.token.canViewAllProjects == true || request.auth.token.isDev == true || (request.query.where != null && request.query.where.size() > 0 && request.query.where[0][0] == 'ownerId' && request.query.where[0][2] == request.auth.uid);
-      allow write: if request.auth.token.canManageProjects == true || request.auth.uid == resource.data.ownerId;
-      allow create: if request.auth.token.canManageProjects == true || request.auth.token.isDev == true;
+      allow get: if isManager() || request.auth.uid == resource.data.ownerId || request.auth.uid in resource.data.teamMembers;
+      allow list: if isManager() || (request.query.where != null && request.query.where.size() > 0 && request.query.where[0][0] == 'ownerId' && request.query.where[0][2] == request.auth.uid);
+      allow write: if isManager() || request.auth.uid == resource.data.ownerId;
+      allow create: if isManager();
     }
     
     match /projects/{projectId}/{subcollection}/{docId} {
-      allow read, write: if get(/databases/$(database)/documents/projects/$(projectId)).data.ownerId == request.auth.uid || request.auth.uid in get(/databases/$(database)/documents/projects/$(projectId)).data.teamMembers || request.auth.token.canViewAllProjects == true || request.auth.token.isDev == true;
+      allow read, write: if isManager() || get(/databases/$(database)/documents/projects/$(projectId)).data.ownerId == request.auth.uid || request.auth.uid in get(/databases/$(database)/documents/projects/$(projectId)).data.teamMembers;
     }
 
     match /tasks/{taskId} {
-      allow get: if request.auth.token.canViewAllProjects == true || request.auth.token.isDev == true || resource.data.assigneeId == request.auth.uid;
-      allow list: if request.auth.token.canViewAllProjects == true || request.auth.token.isDev == true
-                  || (request.query.where != null && request.query.where.size() > 0 && request.query.where[0][0] == 'assigneeId' && request.query.where[0][2] == request.auth.uid);
-
-      allow write: if request.auth.token.canManageProjects == true || request.auth.token.isDev == true || request.auth.uid == resource.data.assigneeId || (resource.data.assigneeId == null && request.auth.uid != null) ;
+      allow get: if isManager() || resource.data.assigneeId == request.auth.uid;
+      allow list: if isManager() || (request.query.where != null && request.query.where.size() > 0 && request.query.where[0][0] == 'assigneeId' && request.query.where[0][2] == request.auth.uid);
+      allow write: if isManager() || request.auth.uid == resource.data.assigneeId || (resource.data.assigneeId == null && request.auth.uid != null);
       allow create: if request.auth != null;
     }
 
     match /meetings/{meetingId} {
-       allow read, write: if request.auth.token.canViewAllProjects == true || request.auth.token.isDev == true || request.auth.uid in resource.data.participantIds;
+       allow read, write: if isManager() || request.auth.uid in resource.data.participantIds;
        allow create: if request.auth != null;
     }
 
     // ===== REGRAS COMERCIAIS =====
     match /contacts/{contactId} {
-      allow read, write, create: if request.auth.token.canManageContacts == true || request.auth.token.isDev == true;
+      allow read, write, create: if request.auth.token.canManageContacts == true || isDev();
     }
     
     match /products/{productId} {
       allow read: if request.auth != null;
-      allow write: if request.auth.token.canManageProductsAndSeals == true || request.auth.token.isDev == true;
+      allow write: if request.auth.token.canManageProductsAndSeals == true || isDev();
     }
     
     match /seals/{sealId} {
-      allow read, write: if request.auth.token.canManageProductsAndSeals == true || request.auth.token.isDev == true;
+      allow read, write: if request.auth.token.canManageProductsAndSeals == true || isDev();
     }
     
     match /sealOrders/{sealOrderId} {
-      allow read, write: if request.auth.token.canManageProductsAndSeals == true || request.auth.token.isDev == true;
+      allow read, write: if request.auth.token.canManageProductsAndSeals == true || isDev();
     }
     
     // ===== REGRAS FINANCEIRAS =====
     match /reimbursements/{reimbursementId} {
       allow create: if request.auth.uid == request.resource.data.requesterId;
-      allow read, update: if request.auth.uid == resource.data.requesterId || request.auth.token.canAccessFinancial == true || request.auth.token.isDev == true;
+      allow read, update: if request.auth.uid == resource.data.requesterId || request.auth.token.canAccessFinancial == true || isDev();
     }
     
     match /costCenters/{costCenterId} {
-       allow read, write: if request.auth.token.canAccessFinancial == true || request.auth.token.isDev == true;
+       allow read, write: if request.auth.token.canAccessFinancial == true || isDev();
     }
     
     match /contracts/{contractId} {
-       allow read, write: if request.auth.token.canAccessFinancial == true || request.auth.token.isDev == true;
+       allow read, write: if request.auth.token.canAccessFinancial == true || isDev();
     }
 
     // ===== REGRAS DE GESTÃO DE ATIVOS =====
     match /assets/{assetId} {
-       allow read, write: if request.auth.token.canManageAssets == true || request.auth.token.isDev == true;
+       allow read, write: if request.auth.token.canManageAssets == true || isDev();
     }
     match /assets/{assetId}/{subcollection}/{docId} {
-       allow read, write: if request.auth.token.canManageAssets == true || request.auth.token.isDev == true;
+       allow read, write: if request.auth.token.canManageAssets == true || isDev();
     }
     match /maintenances/{maintenanceId} {
-       allow read, write: if request.auth.token.canManageAssets == true || request.auth.token.isDev == true;
+       allow read, write: if request.auth.token.canManageAssets == true || isDev();
     }
      match /assetUsageContracts/{contractId} {
-       allow read, write: if request.auth.token.canManageAssets == true || request.auth.token.isDev == true;
+       allow read, write: if request.auth.token.canManageAssets == true || isDev();
     }
     match /documentTemplates/{templateId} {
-       allow read, write: if request.auth.token.canManageAssets == true || request.auth.token.isDev == true;
+       allow read, write: if request.auth.token.canManageAssets == true || isDev();
     }
     
     // ===== REGRAS DE CHECKLISTS =====
     match /checklists/{checklistId} {
       allow read: if request.auth != null; 
-      allow write: if request.auth.token.canManageChecklists == true || request.auth.token.isDev == true;
+      allow write: if request.auth.token.canManageChecklists == true || isDev();
     }
      match /checklists/{checklistId}/items/{itemId} {
-      allow read, write: if request.auth.token.canManageChecklists == true || request.auth.token.isDev == true;
+      allow read, write: if request.auth.token.canManageChecklists == true || isDev();
     }
     match /checklistExecutions/{executionId} {
        allow read, write: if request.auth != null; 
@@ -123,10 +133,11 @@ service cloud.firestore {
     // ===== REGRAS DE SUPORTE E LOGS =====
     match /tickets/{ticketId} {
       allow create: if request.auth.uid == request.resource.data.requesterId;
-      allow read, update: if request.auth.uid == resource.data.requesterId || request.auth.token.canManageSupport == true || request.auth.token.isDev == true;
+      allow read, update: if request.auth.uid == resource.data.requesterId || request.auth.token.canManageSupport == true || isDev();
     }
     match /errorLogs/{logId} {
-      allow read, write: if request.auth.token.isDev == true;
+      allow create: if request.auth != null;
+      allow read, update, delete: if isDev();
     }
     
     // Regra de fallback: nega tudo que não foi permitido explicitamente.
