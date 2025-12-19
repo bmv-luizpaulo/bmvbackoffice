@@ -10,7 +10,7 @@ interface LogActivityParams {
   userId: string;
   action: ActivityAction;
   description: string;
-  performedBy?: string;
+  performedBy: string; // Tornar obrigatório
   ipAddress?: string;
   userAgent?: string;
 }
@@ -24,7 +24,7 @@ export async function logUserActivity({
   ipAddress,
   userAgent
 }: LogActivityParams): Promise<void> {
-  if (!firestore) return;
+  if (!firestore || !userId) return;
 
   try {
     const activityData: Omit<UserActivityLog, 'id'> = {
@@ -32,12 +32,11 @@ export async function logUserActivity({
       action,
       description,
       timestamp: serverTimestamp(),
-      performedBy: performedBy || userId, // Default to the user if no admin is specified
-      ipAddress,
-      userAgent
+      performedBy,
+      ipAddress: ipAddress || 'N/A',
+      userAgent: userAgent || 'N/A'
     };
 
-    // Corrigido: Registra na subcoleção do usuário.
     await addDoc(collection(firestore, `users/${userId}/activityLogs`), activityData);
   } catch (error) {
     console.error('Erro ao registrar atividade do usuário:', error);
@@ -52,6 +51,7 @@ export const ActivityLogger = {
       userId,
       action: 'login',
       description: 'Usuário fez login no sistema',
+      performedBy: userId,
       ipAddress,
       userAgent
     }),
@@ -61,10 +61,11 @@ export const ActivityLogger = {
       firestore,
       userId,
       action: 'logout',
-      description: 'Usuário fez logout do sistema'
+      description: 'Usuário fez logout do sistema',
+      performedBy: userId,
     }),
 
-  profileUpdate: (firestore: any, userId: string, performedBy?: string) =>
+  profileUpdate: (firestore: any, userId: string, performedBy: string) =>
     logUserActivity({
       firestore,
       userId,
@@ -75,7 +76,7 @@ export const ActivityLogger = {
       performedBy
     }),
 
-  passwordChange: (firestore: any, userId: string, performedBy?: string) =>
+  passwordChange: (firestore: any, userId: string, performedBy: string) =>
     logUserActivity({
       firestore,
       userId,
