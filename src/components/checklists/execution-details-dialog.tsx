@@ -43,7 +43,7 @@ export function ExecutionDetailsDialog({ isOpen, onOpenChange, checklist, isMana
   }, [firestore, checklist?.id, isExecution]);
   
   const { data: checklistItemsData, isLoading: isLoadingItems } = useCollection<ChecklistItem>(itemsQuery);
-  const checklistItems = isExecution ? checklist?.items : checklistItemsData;
+  const checklistItems = isExecution ? (checklist as ChecklistExecution)?.items : checklistItemsData;
   
   const [commentDebounceTimers, setCommentDebounceTimers] = React.useState<Record<string, NodeJS.Timeout>>({});
   const [isFinishing, setIsFinishing] = React.useState(false);
@@ -106,7 +106,7 @@ export function ExecutionDetailsDialog({ isOpen, onOpenChange, checklist, isMana
     if (!firestore || !checklistItems || checklistItems.length === 0 || !checklist || isExecution) return;
     const batch = writeBatch(firestore);
     checklistItems.forEach(item => {
-        const itemRef = doc(firestore, `checklists/${checklist.id}/items`, item.id);
+        const itemRef = doc(firestore, `checklists/${checklist!.id}/items`, item.id);
         if (item.type === 'item') {
             batch.update(itemRef, { isCompleted: false });
         } else if (item.type === 'yes_no') {
@@ -125,7 +125,7 @@ export function ExecutionDetailsDialog({ isOpen, onOpenChange, checklist, isMana
     try {
       const executionData = {
         checklistId: checklist.id,
-        checklistName: checklist.name,
+        checklistName: (checklist as Checklist).name,
         createdAt: checklist.createdAt,
         teamId: checklist.teamId,
         executedAt: serverTimestamp(),
@@ -149,8 +149,8 @@ export function ExecutionDetailsDialog({ isOpen, onOpenChange, checklist, isMana
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl">
         <DialogHeader>
-          <DialogTitle>{isExecution ? (checklist as ChecklistExecution).checklistName : checklist.name}</DialogTitle>
-          <DialogDescription>{isExecution ? `Executado por ${userName} em nome da equipe ${teamName}` : checklist.description}</DialogDescription>
+          <DialogTitle>{isExecution ? (checklist as ChecklistExecution).checklistName : (checklist as Checklist).name}</DialogTitle>
+          <DialogDescription>{isExecution ? `Executado por ${userName} em nome da equipe ${teamName}` : (checklist as Checklist).description}</DialogDescription>
         </DialogHeader>
         
         <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground mt-2">
@@ -276,5 +276,3 @@ export function ExecutionDetailsDialog({ isOpen, onOpenChange, checklist, isMana
     </Dialog>
   );
 }
-
-    

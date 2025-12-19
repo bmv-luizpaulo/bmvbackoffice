@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from "react"
@@ -348,7 +349,7 @@ export function SealOrderDataTable({ statusFilter }: SealOrderDataTableProps) {
               </SelectTrigger>
               <SelectContent>
                 {uniquePrograms.map(program => (
-                    <SelectItem key={program} value={program}>{program}</SelectItem>
+                    <SelectItem key={program} value={program || ''}>{program}</SelectItem>
                 ))}
               </SelectContent>
             </Select>

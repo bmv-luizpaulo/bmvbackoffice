@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from "react";
@@ -90,8 +91,8 @@ const formSchema = z.object({
 const defaultValues: z.input<typeof formSchema> = {
   name: '',
   description: '',
-  department: undefined,
-  hierarchyLevel: undefined,
+  department: 'Operações',
+  hierarchyLevel: 'Analista',
   mission: '',
   responsibilities: [],
   kpis: [],
