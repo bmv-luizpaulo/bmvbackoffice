@@ -4,9 +4,9 @@
 import * as React from 'react';
 import dynamic from 'next/dynamic';
 import { useSearchParams } from "next/navigation";
-import { useFirestore, useCollection, useMemoFirebase, useUser as useAuthUser, useDoc } from "@/firebase";
-import { collection, query, where, or, and, collectionGroup, doc } from "firebase/firestore";
-import type { Project, User, Role, Task } from "@/lib/types";
+import { useFirestore, useCollection, useMemoFirebase, useUser as useAuthUser, usePermissions } from "@/firebase";
+import { collection, query, where, or } from "firebase/firestore";
+import type { Project, User, Task } from "@/lib/types";
 
 import { FolderKanban, Plus, SlidersHorizontal, User as UserIcon } from 'lucide-react';
 import { Button } from "@/components/ui/button";
@@ -24,6 +24,7 @@ const ProjectCard = dynamic(() => import("@/components/projects/project-card").t
 export default function ProjectsListPage() {
   const firestore = useFirestore();
   const { user: authUser } = useAuthUser();
+  const { ready: permissionsReady, isManager } = usePermissions();
   const searchParams = useSearchParams();
   const filter = searchParams.get('filter');
   
@@ -33,24 +34,17 @@ export default function ProjectsListPage() {
   const [projectToEdit, setProjectToEdit] = React.useState<Project | null>(null);
 
   // --- Data Fetching ---
-  const userProfileQuery = useMemoFirebase(() => firestore && authUser?.uid ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser?.uid]);
-  const { data: userProfile } = useDoc<User>(userProfileQuery);
-  
-  const roleQuery = useMemoFirebase(() => firestore && userProfile?.roleId ? doc(firestore, 'roles', userProfile.roleId) : null, [firestore, userProfile?.roleId]);
-  const { data: role } = useDoc<Role>(roleQuery);
-  const isManager = role?.permissions?.isManager || role?.permissions?.isDev;
-
   const projectsQuery = useMemoFirebase(() => {
-    if (!firestore || !authUser || !role) return null;
+    if (!firestore || !authUser || !permissionsReady) return null;
     let q = query(collection(firestore, 'projects'), where('status', '==', 'Em execução'));
     
-    if (filter === 'me' && !isManager) {
+    if (!isManager) {
         if (!authUser.uid) return null; // Guard to ensure authUser.uid is available
         q = query(q, or(where('ownerId', '==', authUser.uid), where('teamMembers', 'array-contains', authUser.uid)));
     }
     
     return q;
-  }, [firestore, authUser, role, filter, isManager]);
+  }, [firestore, authUser, permissionsReady, isManager]);
 
   const { data: projectsData, isLoading: isLoadingProjects } = useCollection<Project>(projectsQuery);
 
@@ -58,7 +52,7 @@ export default function ProjectsListPage() {
   const { data: usersData, isLoading: isLoadingUsers } = useCollection<User>(usersQuery);
   const usersMap = React.useMemo(() => new Map(usersData?.map(u => [u.id, u])), [usersData]);
 
-  const tasksQuery = useMemoFirebase(() => firestore ? query(collectionGroup(firestore, 'tasks')) : null, [firestore]);
+  const tasksQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'tasks')) : null, [firestore]);
   const { data: allTasks, isLoading: isLoadingTasks } = useCollection<Task>(tasksQuery);
   
   const tasksByProject = React.useMemo(() => {
@@ -72,17 +66,22 @@ export default function ProjectsListPage() {
     }, new Map<string, Task[]>());
   }, [allTasks]);
 
-  const isLoading = isLoadingProjects || isLoadingUsers || isLoadingTasks;
+  const isLoading = isLoadingProjects || isLoadingUsers || isLoadingTasks || !permissionsReady;
 
   // --- Filtering Logic ---
+  const myProjects = React.useMemo(() => {
+    if (filter !== 'me' || isManager || !projectsData || !authUser) return projectsData;
+    return projectsData.filter(p => p.ownerId === authUser.uid || p.teamMembers?.includes(authUser.uid));
+  }, [filter, isManager, projectsData, authUser]);
+
   const filteredProjects = React.useMemo(() => {
-    if (!projectsData) return [];
-    return projectsData.filter(project => {
+    const dataToFilter = myProjects || [];
+    return dataToFilter.filter(project => {
       const nameMatch = searchTerm.trim() === '' || project.name.toLowerCase().includes(searchTerm.toLowerCase());
       const ownerMatch = ownerFilter === 'all' || project.ownerId === ownerFilter;
       return nameMatch && ownerMatch;
     });
-  }, [projectsData, searchTerm, ownerFilter]);
+  }, [myProjects, searchTerm, ownerFilter]);
 
   const ownerOptions = React.useMemo(() => {
     if (!usersData) return [];
@@ -104,10 +103,10 @@ export default function ProjectsListPage() {
             <div>
                 <h1 className="font-headline text-3xl font-bold tracking-tight flex items-center gap-2">
                     <FolderKanban className="h-8 w-8 text-primary" />
-                    {filter === 'me' ? 'Meus Projetos' : 'Projetos'}
+                    {filter === 'me' && !isManager ? 'Meus Projetos' : 'Projetos'}
                 </h1>
                 <p className="text-muted-foreground">
-                {filter === 'me'
+                {filter === 'me' && !isManager
                     ? 'Visualize os projetos em que você está envolvido.'
                     : 'Visualize e gerencie todos os seus projetos em um só lugar.'
                 }
@@ -126,7 +125,7 @@ export default function ProjectsListPage() {
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                 />
-                <Select value={ownerFilter} onValueChange={setOwnerFilter}>
+                <Select value={ownerFilter} onValueChange={setOwnerFilter} disabled={!isManager}>
                     <SelectTrigger>
                         <div className="flex items-center gap-2">
                             <UserIcon className="h-4 w-4 text-muted-foreground"/>

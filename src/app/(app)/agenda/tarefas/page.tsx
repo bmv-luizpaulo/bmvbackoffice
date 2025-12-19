@@ -3,7 +3,7 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { useUser, useCollection, useDoc, useFirestore, useMemoFirebase, usePermissions } from '@/firebase';
-import { collection, query, where, doc } from 'firebase/firestore';
+import { collection, query, where, doc, or } from 'firebase/firestore';
 import type { Task, User, Project, Meeting } from '@/lib/types';
 import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -70,10 +70,13 @@ export default function TaskAgendaPage() {
     let q = query(collection(firestore, 'meetings'));
 
     if (isManager) {
+      // For managers, we can query all meetings if "all users" is selected.
+      // If a specific user is selected, we filter by that user.
       if (selectedUserId && selectedUserId !== 'all') {
          q = query(q, where('participantIds', 'array-contains', selectedUserId));
       }
     } else {
+       // For non-managers, always filter by their own UID.
        q = query(q, where('participantIds', 'array-contains', authUser.uid));
     }
     return q;
@@ -81,7 +84,20 @@ export default function TaskAgendaPage() {
 
   const { data: meetingsData, isLoading: isLoadingMeetings } = useCollection<Meeting>(meetingsQuery);
 
-  const projectsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'projects') : null, [firestore]);
+  const projectsQuery = useMemoFirebase(() => {
+    if (!firestore || !authUser || !permissionsReady) return null;
+    const projectsCollection = collection(firestore, 'projects');
+    if (isManager) {
+        return projectsCollection;
+    }
+    return query(
+        projectsCollection,
+        or(
+            where('ownerId', '==', authUser.uid),
+            where('teamMembers', 'array-contains', authUser.uid)
+        )
+    );
+  }, [firestore, authUser, permissionsReady, isManager]);
   const { data: projectsData } = useCollection<Project>(projectsQuery);
 
   const projectsMap = useMemo(() => new Map(projectsData?.map(p => [p.id, p])), [projectsData]);
