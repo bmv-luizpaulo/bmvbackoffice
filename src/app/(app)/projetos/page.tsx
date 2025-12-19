@@ -45,6 +45,7 @@ export default function ProjectsListPage() {
     let q = query(collection(firestore, 'projects'), where('status', '==', 'Em execução'));
     
     if (filter === 'me' && !isManager) {
+        if (!authUser.uid) return null; // Guard to ensure authUser.uid is available
         q = query(q, or(where('ownerId', '==', authUser.uid), where('teamMembers', 'array-contains', authUser.uid)));
     }
     
