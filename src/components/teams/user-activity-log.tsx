@@ -31,7 +31,6 @@ export function UserActivityLogComponent({ user }: UserActivityLogProps) {
   
   const activityQuery = useMemoFirebase(() => {
     if (!firestore || !user.id) return null;
-    // Corrigido: Busca na subcoleção do usuário específico.
     return query(
       collection(firestore, `users/${user.id}/activityLogs`),
       orderBy('timestamp', 'desc'),
