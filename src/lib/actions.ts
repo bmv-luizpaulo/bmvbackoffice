@@ -61,10 +61,27 @@ async function getAdminUidFromToken(): Promise<string | null> {
         const idToken = authorization.split('Bearer ')[1];
         const decodedToken = await admin.auth().verifyIdToken(idToken);
         
-        if (decodedToken.isDev !== true && decodedToken.canManageUsers !== true) {
-             throw new Error("Permissão negada: Apenas administradores podem criar usuários.");
+        // As a fallback, we can also check the roles collection
+        const hasAdminClaims = decodedToken.isDev === true || decodedToken.canManageUsers === true;
+        
+        if (hasAdminClaims) {
+            return decodedToken.uid;
         }
-        return decodedToken.uid;
+
+        // Fallback check in Firestore if claims are not present (e.g. during first login)
+        const { firestore } = initializeFirebase();
+        const userDoc = await firestore.collection('users').doc(decodedToken.uid).get();
+        const userData = userDoc.data();
+        if (userData?.roleId) {
+            const roleDoc = await firestore.collection('roles').doc(userData.roleId).get();
+            const roleData = roleDoc.data();
+            if (roleData?.permissions?.isDev === true || roleData?.permissions?.canManageUsers === true) {
+                return decodedToken.uid;
+            }
+        }
+        
+        throw new Error("Permissão negada: Apenas administradores podem criar usuários.");
+
     } catch (error) {
         console.error("Auth check failed:", error);
         throw new Error("Não autorizado para realizar esta ação.");
@@ -84,7 +101,7 @@ export async function createUserAction(userData: Omit<User, 'id' | 'avatarUrl' |
     
     const userRecord = await admin.auth().createUser({
         email: userData.email,
-        emailVerified: true, // User will get a verification email
+        emailVerified: true, 
         displayName: userData.name,
         disabled: userData.status === 'suspended',
     });
