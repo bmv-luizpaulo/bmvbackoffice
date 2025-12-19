@@ -36,7 +36,7 @@ service cloud.firestore {
     // ===== REGRAS OPERACIONAIS (PROJETOS E TAREFAS) =====
     match /projects/{projectId} {
       allow get: if request.auth.token.canViewAllProjects == true || request.auth.token.isDev == true || request.auth.uid == resource.data.ownerId || request.auth.uid in resource.data.teamMembers;
-      allow list: if request.auth.token.canViewAllProjects == true || request.auth.token.isDev == true;
+      allow list: if request.auth.token.canViewAllProjects == true || request.auth.token.isDev == true || (request.query.where != null && request.query.where.size() > 0 && request.query.where[0][0] == 'ownerId' && request.query.where[0][2] == request.auth.uid);
       allow write: if request.auth.token.canManageProjects == true || request.auth.uid == resource.data.ownerId;
       allow create: if request.auth.token.canManageProjects == true || request.auth.token.isDev == true;
     }
@@ -46,12 +46,7 @@ service cloud.firestore {
     }
 
     match /tasks/{taskId} {
-      // Regra para leitura de um único documento
       allow get: if request.auth.token.canViewAllProjects == true || request.auth.token.isDev == true || resource.data.assigneeId == request.auth.uid;
-      
-      // Regra para listagem de documentos
-      // Gestores/Devs podem listar a coleção toda.
-      // Usuários normais só podem listar tarefas atribuídas a eles.
       allow list: if request.auth.token.canViewAllProjects == true || request.auth.token.isDev == true
                   || (request.query.where != null && request.query.where.size() > 0 && request.query.where[0][0] == 'assigneeId' && request.query.where[0][2] == request.auth.uid);
 

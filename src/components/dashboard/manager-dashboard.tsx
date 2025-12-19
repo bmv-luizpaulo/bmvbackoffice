@@ -5,10 +5,9 @@ import { KpiCard } from "@/components/dashboard/kpi-card";
 import { CheckCircle, Target, FolderKanban, Award, RefreshCw, Info } from "lucide-react";
 import { motion, AnimatePresence } from 'framer-motion';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { PipelineChart } from "@/components/dashboard/pipeline-chart";
 import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
-import { collection, collectionGroup, query, where } from "firebase/firestore";
-import type { Project, Task, Stage, Seal } from '@/lib/types';
+import { collection, query, where } from "firebase/firestore";
+import type { Project, Task, Seal } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { isPast } from 'date-fns';
 import React from 'react';
@@ -47,13 +46,12 @@ interface KpiData {
   taskCompletionRate: number;
 }
 
-interface ManagerDashboardProps {
-  isManager: boolean;
-}
 
 const RecentTasksCard = dynamic(() => import('@/components/dashboard/recent-tasks-card'), {
   loading: () => <Skeleton className="h-[400px]" />,
 });
+const PipelineChart = dynamic(() => import("@/components/dashboard/pipeline-chart").then(m => m.PipelineChart), { ssr: false });
+
 
 // Ações rápidas com ícones e melhor visual
 function QuickActionsCard() {
@@ -120,21 +118,21 @@ function QuickActionsCard() {
 }
 
 
-function ManagerDashboard({ isManager }: ManagerDashboardProps) {
+function ManagerDashboard() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const firestore = useFirestore();
 
   const projectsQuery = useMemoFirebase(
-    () => (firestore && isManager) ? collection(firestore, 'projects') : null, 
-    [firestore, isManager]
+    () => (firestore) ? collection(firestore, 'projects') : null, 
+    [firestore]
   );
   const { data: projects = [], loading: projectsLoading, refresh: refreshProjects } = useCollection<FirebaseProject>(
     projectsQuery
   ) as unknown as UseCollectionResult<FirebaseProject> & { refresh: () => Promise<void> };
 
   const tasksQuery = useMemoFirebase(
-    () => (firestore && isManager) ? collection(firestore, 'tasks') : null, 
-    [firestore, isManager]
+    () => (firestore) ? collection(firestore, 'tasks') : null, 
+    [firestore]
   );
   const { data: tasks = [], loading: tasksLoading, refresh: refreshTasks } = useCollection<FirebaseTask>(
     tasksQuery
@@ -281,25 +279,7 @@ function ManagerDashboard({ isManager }: ManagerDashboardProps) {
       </AnimatePresence>
 
       <div className="grid grid-cols-1 gap-6">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="font-headline">Pipeline de Projetos</CardTitle>
-          </CardHeader>
-          <CardContent className="h-[300px] p-2">
-            <PipelineChart data={projects ? projects.map(p => ({
-              name: p.status,
-              total: 1
-            })).reduce((acc, curr) => {
-              const existing = acc.find(item => item.name === curr.name);
-              if (existing) {
-                existing.total += 1;
-              } else {
-                acc.push({ ...curr });
-              }
-              return acc;
-            }, [] as Array<{ name: string; total: number }>) : []} isLoading={projectsLoading} />
-          </CardContent>
-        </Card>
+        <PipelineChart data={[]} isLoading={false} />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

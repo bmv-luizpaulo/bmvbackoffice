@@ -1,6 +1,6 @@
 'use client';
 
-import { useFirestore, useDoc, useMemoFirebase, useUser } from "@/firebase";
+import { useFirestore, useDoc, useMemoFirebase, useUser, useFirebase } from "@/firebase";
 import { doc } from "firebase/firestore";
 import type { User as UserType, Role } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -45,26 +45,24 @@ function DashboardSkeleton() {
 
 function DashboardPage() {
   const firestore = useFirestore();
-  const { user: authUser, isUserLoading } = useUser();
+  const { user: authUser, isUserLoading, claims, areClaimsReady } = useFirebase();
   
   const userProfileQuery = useMemoFirebase(() => firestore && authUser?.uid ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser?.uid]);
   const { data: userProfile, isLoading: isLoadingProfile } = useDoc<UserType>(userProfileQuery);
   
-  const roleQuery = useMemoFirebase(() => firestore && userProfile?.roleId ? doc(firestore, 'roles', userProfile.roleId) : null, [firestore, userProfile?.roleId]);
-  const { data: role, isLoading: isLoadingRole } = useDoc<Role>(roleQuery);
+  // Directly use claims for permissions
+  const isManager = claims?.isManager || claims?.isDev;
 
-  const isLoading = isUserLoading || isLoadingProfile || isLoadingRole;
+  const isLoading = isUserLoading || !areClaimsReady || isLoadingProfile;
   
   if (isLoading) {
     return <DashboardSkeleton />;
   }
   
-  const isManager = role?.permissions?.isManager || role?.permissions?.isDev;
-
   return (
     <Suspense fallback={<DashboardSkeleton />}>
         {isManager ? (
-          <ManagerDashboard isManager={isManager} /> 
+          <ManagerDashboard /> 
         ) : userProfile ? (
           <UserDashboard user={userProfile} /> 
         ) : (

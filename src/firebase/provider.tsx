@@ -84,6 +84,7 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
     const unsubscribe = onAuthStateChanged(
       auth,
       async (firebaseUser) => {
+        setAreClaimsReady(false); // Set claims to not ready on user change
         // Update auth state
         setUserAuthState({ user: firebaseUser, isUserLoading: false, userError: null });
         if (firebaseUser) {
@@ -226,5 +227,3 @@ export const usePermissions = () => {
     has,
   } as const;
 };
-
-    
