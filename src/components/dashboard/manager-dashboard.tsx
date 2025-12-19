@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useMemo, useState, useEffect } from 'react';
@@ -8,7 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { PipelineChart } from "@/components/dashboard/pipeline-chart";
 import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
-import { collection, collectionGroup } from "firebase/firestore";
+import { collection, collectionGroup, query, where } from "firebase/firestore";
 import type { Project, Task, Stage, Seal } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { isPast } from 'date-fns';
@@ -46,6 +45,10 @@ interface KpiData {
   overdueTasks: number;
   completionRate: number;
   taskCompletionRate: number;
+}
+
+interface ManagerDashboardProps {
+  isManager: boolean;
 }
 
 const RecentTasksCard = dynamic(() => import('@/components/dashboard/recent-tasks-card'), {
@@ -117,21 +120,21 @@ function QuickActionsCard() {
 }
 
 
-function ManagerDashboard() {
+function ManagerDashboard({ isManager }: ManagerDashboardProps) {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const firestore = useFirestore();
 
   const projectsQuery = useMemoFirebase(
-    () => firestore ? collection(firestore, 'projects') : null, 
-    [firestore]
+    () => (firestore && isManager) ? collection(firestore, 'projects') : null, 
+    [firestore, isManager]
   );
   const { data: projects = [], loading: projectsLoading, refresh: refreshProjects } = useCollection<FirebaseProject>(
     projectsQuery
   ) as unknown as UseCollectionResult<FirebaseProject> & { refresh: () => Promise<void> };
 
   const tasksQuery = useMemoFirebase(
-    () => firestore ? collection(firestore, 'tasks') : null, 
-    [firestore]
+    () => (firestore && isManager) ? collection(firestore, 'tasks') : null, 
+    [firestore, isManager]
   );
   const { data: tasks = [], loading: tasksLoading, refresh: refreshTasks } = useCollection<FirebaseTask>(
     tasksQuery

@@ -1,4 +1,3 @@
-
 'use client';
 import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { collection, collectionGroup, query, where, orderBy, limit } from "firebase/firestore";
@@ -28,6 +27,8 @@ function RecentTasksCard({ userId }: RecentTasksCardProps) {
         );
 
         if (userId) {
+            // Note: This requires a composite index in Firestore. 
+            // If it fails, the query logic needs to be re-evaluated.
             q = query(q, where('assigneeId', '==', userId));
         }
         
@@ -91,5 +92,3 @@ function RecentTasksCard({ userId }: RecentTasksCardProps) {
 }
 
 export default RecentTasksCard;
-
-    
