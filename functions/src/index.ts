@@ -103,59 +103,48 @@ export const onUserUpdate = functions.firestore
 // Cloud Function para criar um novo usuário
 export const createUser = functions.https.onRequest((req, res) => {
   corsHandler(req, res, async () => {
-    // A preflight request OPTIONS deve passar
-    if (req.method === 'OPTIONS') {
-        res.status(204).send('');
-        return;
-    }
-
     if (req.method !== 'POST') {
+      // O cors-handler lida com a resposta OPTIONS.
+      // Retornamos um erro 405 para qualquer outro método que não seja POST.
       res.status(405).send({ success: false, error: 'Method not allowed' });
       return;
     }
 
-    // 1. Verificação de autenticação e permissão
-    if (!req.headers.authorization || !req.headers.authorization.startsWith('Bearer ')) {
-        res.status(403).send({ success: false, error: "Unauthorized" });
-        return;
-    }
-
-    const idToken = req.headers.authorization.split('Bearer ')[1];
-    let decodedIdToken;
     try {
-        decodedIdToken = await admin.auth().verifyIdToken(idToken);
-    } catch (error) {
-        functions.logger.error("Error verifying token:", error);
-        res.status(403).send({ success: false, error: "Invalid token" });
-        return;
-    }
-    
-    const adminUid = decodedIdToken.uid;
-    const adminUserDoc = await db.collection('users').doc(adminUid).get();
-    const adminUserData = adminUserDoc.data();
-    const adminRoleId = adminUserData?.roleId;
+        // 1. Verificação de autenticação e permissão
+        if (!req.headers.authorization || !req.headers.authorization.startsWith('Bearer ')) {
+            res.status(403).send({ success: false, error: "Unauthorized: Missing or invalid token." });
+            return;
+        }
 
-    if (!adminRoleId) {
-        res.status(403).send({ success: false, error: "Administrador não possui um cargo definido."});
-        return;
-    }
+        const idToken = req.headers.authorization.split('Bearer ')[1];
+        const decodedIdToken = await admin.auth().verifyIdToken(idToken);
+        
+        const adminUid = decodedIdToken.uid;
+        const adminUserDoc = await db.collection('users').doc(adminUid).get();
+        const adminUserData = adminUserDoc.data();
+        const adminRoleId = adminUserData?.roleId;
 
-    const adminRoleDoc = await db.collection('roles').doc(adminRoleId).get();
-    const adminRoleData = adminRoleDoc.data();
+        if (!adminRoleId) {
+            res.status(403).send({ success: false, error: "Permission denied: Administrator does not have a defined role."});
+            return;
+        }
 
-    if (adminRoleData?.permissions?.isDev !== true && adminRoleData?.permissions?.canManageUsers !== true) {
-        res.status(403).send({ success: false, error: "Você não tem permissão para criar usuários."});
-        return;
-    }
+        const adminRoleDoc = await db.collection('roles').doc(adminRoleId).get();
+        const adminRoleData = adminRoleDoc.data();
 
-    // 2. Extração e validação dos dados de entrada
-    const { email, name, status, ...restOfData } = req.body;
-    if (!email || !name) {
-        res.status(400).send({ success: false, error: 'O email e o nome do usuário são obrigatórios.'});
-        return;
-    }
+        if (adminRoleData?.permissions?.isDev !== true && adminRoleData?.permissions?.canManageUsers !== true) {
+            res.status(403).send({ success: false, error: "Permission denied: You do not have permission to create users."});
+            return;
+        }
 
-    try {
+        // 2. Extração e validação dos dados de entrada
+        const { email, name, status, ...restOfData } = req.body;
+        if (!email || !name) {
+            res.status(400).send({ success: false, error: 'Email and name are required.'});
+            return;
+        }
+
         // 3. Geração de senha temporária segura
         const tempPassword = `bmv-${randomBytes(4).toString('hex')}`;
         
@@ -167,7 +156,7 @@ export const createUser = functions.https.onRequest((req, res) => {
         // 4. Criação do usuário no Firebase Authentication
         const userRecord = await admin.auth().createUser({
             email: email,
-            emailVerified: true, // É um fluxo administrativo, então confiamos na verificação
+            emailVerified: true,
             password: tempPassword,
             displayName: name,
             disabled: safeStatus === 'suspended',
@@ -194,15 +183,17 @@ export const createUser = functions.https.onRequest((req, res) => {
         await db.collection("users").doc(userRecord.uid).set(newUserProfile);
 
         // 7. Retorno do sucesso com as credenciais
-        functions.logger.log(`Usuário ${userRecord.uid} criado por ${adminUid}.`);
+        functions.logger.log(`User ${userRecord.uid} created by ${adminUid}.`);
         res.status(200).send({ success: true, data: { uid: userRecord.uid, email: email, tempPassword: tempPassword } });
 
     } catch (error: any) {
-        functions.logger.error("Erro ao criar usuário na Cloud Function:", error);
+        functions.logger.error("Error creating user in Cloud Function:", error);
         if (error.code === 'auth/email-already-exists') {
-             res.status(409).send({ success: false, error: 'Este e-mail já está em uso por outra conta.' });
+             res.status(409).send({ success: false, error: 'This email is already in use by another account.' });
+        } else if (error.code === 'auth/id-token-expired') {
+             res.status(403).send({ success: false, error: "Unauthorized: Token has expired." });
         } else {
-            res.status(500).send({ success: false, error: error.message || 'Ocorreu um erro interno ao criar o usuário.' });
+            res.status(500).send({ success: false, error: error.message || 'An internal error occurred while creating the user.' });
         }
     }
   });
