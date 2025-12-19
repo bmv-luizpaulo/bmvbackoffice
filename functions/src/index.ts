@@ -4,6 +4,7 @@ import * as admin from "firebase-admin";
 import { QueryDocumentSnapshot } from 'firebase-admin/firestore';
 import { Change, EventContext } from 'firebase-functions';
 import * as cors from 'cors';
+import { randomBytes } from "crypto";
 
 const corsHandler = cors({ origin: true });
 
@@ -35,8 +36,17 @@ const setCustomClaimsForUser = async (userId: string, roleId: string | null) => 
   }
 
   try {
+    // Busca os claims existentes para não os sobrescrever
+    const user = await admin.auth().getUser(userId);
+    const existingClaims = user.customClaims || {};
+
     // Define os custom claims no Firebase Auth
-    await admin.auth().setCustomUserClaims(userId, { isManager, isDev, roleId });
+    await admin.auth().setCustomUserClaims(userId, { 
+      ...existingClaims,
+      isManager, 
+      isDev, 
+      roleId 
+    });
     functions.logger.log(`Successfully set custom claims for user ${userId}:`, { isManager, isDev, roleId });
 
     // Dispara a atualização do token no cliente
@@ -85,6 +95,12 @@ export const onUserUpdate = functions.firestore
 // Cloud Function para criar um novo usuário
 export const createUser = functions.https.onRequest((req, res) => {
     corsHandler(req, res, async () => {
+        // Validação do método HTTP
+        if (req.method !== 'POST') {
+          res.status(405).send({ success: false, error: 'Method not allowed' });
+          return;
+        }
+
         // 1. Verificação de autenticação e permissão
         if (!req.headers.authorization || !req.headers.authorization.startsWith('Bearer ')) {
             res.status(403).send({ success: false, error: "Unauthorized" });
@@ -127,30 +143,44 @@ export const createUser = functions.https.onRequest((req, res) => {
         }
 
         try {
-            // 3. Geração de senha temporária
-            const tempPassword = `bmv-${Math.random().toString(36).slice(-6)}`;
+            // 3. Geração de senha temporária segura
+            const tempPassword = `bmv-${randomBytes(4).toString('hex')}`;
+            
+            // Validação de status
+            const allowedStatus = ['active', 'inactive', 'suspended'];
+            const safeStatus = allowedStatus.includes(status) ? status : 'active';
+
 
             // 4. Criação do usuário no Firebase Authentication
             const userRecord = await admin.auth().createUser({
                 email: email,
-                emailVerified: true,
+                emailVerified: true, // É um fluxo administrativo, então confiamos na verificação
                 password: tempPassword,
                 displayName: name,
-                disabled: status === 'suspended',
+                disabled: safeStatus === 'suspended',
             });
+            
+            // 5. Whitelist de campos para o Firestore
+            const allowedFields = ['roleId', 'phone', 'linkedinUrl', 'personalDocument', 'address', 'teamIds'];
+            const safeData: { [key: string]: any } = {};
+            for (const key of allowedFields) {
+              if (restOfData[key] !== undefined) {
+                safeData[key] = restOfData[key];
+              }
+            }
 
-            // 5. Criação do perfil do usuário no Firestore
+            // 6. Criação do perfil do usuário no Firestore
             const newUserProfile = {
-                ...restOfData,
+                ...safeData,
                 name,
                 email,
-                status: status || 'active',
+                status: safeStatus,
                 avatarUrl: `https://picsum.photos/seed/${userRecord.uid}/200`,
                 createdAt: admin.firestore.FieldValue.serverTimestamp()
             };
             await db.collection("users").doc(userRecord.uid).set(newUserProfile);
 
-            // 6. Retorno do sucesso com as credenciais
+            // 7. Retorno do sucesso com as credenciais
             functions.logger.log(`Usuário ${userRecord.uid} criado por ${adminUid}.`);
             res.status(200).send({ success: true, data: { uid: userRecord.uid, email: email, tempPassword: tempPassword } });
 
