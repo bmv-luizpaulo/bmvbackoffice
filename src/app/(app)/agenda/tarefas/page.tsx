@@ -53,10 +53,10 @@ export default function TaskAgendaPage() {
   const tasksQuery = useMemoFirebase(() => {
     if (!firestore || !authUser?.uid) return null;
     
-    let q = query(collection(firestore, 'tasks'));
-
     // If role is still loading, we can't determine the correct query yet.
     if (isRoleLoading) return null;
+    
+    let q = query(collection(firestore, 'tasks'));
 
     if (isGestor) {
       if (selectedUserId !== 'all') {
