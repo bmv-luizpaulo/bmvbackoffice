@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from "react"
@@ -32,10 +31,10 @@ import {
 } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import type { Reimbursement, User } from "@/lib/types";
+import type { Reimbursement, User, Project } from "@/lib/types";
 import dynamic from "next/dynamic";
 import { useFirestore, useCollection, useMemoFirebase, useUser as useAuthUser, usePermissions } from "@/firebase";
-import { collection, doc, query, where, serverTimestamp } from "firebase/firestore";
+import { collection, doc, query, where, serverTimestamp, or } from "firebase/firestore";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -77,8 +76,25 @@ export function ReembolsoDataTable({ filterUserId }: { filterUserId?: string }) 
   }, [firestore, authUser, isManager, filterUserId, permissionsReady]);
 
   const { data: reembolsosData, isLoading } = useCollection<Reimbursement>(reembolsosQuery);
+  
   const usersQuery = useMemoFirebase(() => firestore ? collection(firestore, 'users') : null, [firestore]);
   const { data: usersData } = useCollection<User>(usersQuery);
+
+  const projectsQuery = useMemoFirebase(() => {
+    if (!firestore || !authUser || !permissionsReady) return null;
+    const projectsCollection = collection(firestore, 'projects');
+    if (isManager) {
+        return projectsCollection;
+    }
+    return query(
+        projectsCollection,
+        or(
+            where('ownerId', '==', authUser.uid),
+            where('teamMembers', 'array-contains', authUser.uid)
+        )
+    );
+  }, [firestore, authUser, permissionsReady, isManager]);
+  const { data: projectsData } = useCollection<Project>(projectsQuery);
   
   const usersMap = React.useMemo(() => new Map(usersData?.map(u => [u.id, u.name])), [usersData]);
   const [statusFilter, setStatusFilter] = React.useState<'Todos' | 'Pendente' | 'Aprovado' | 'Recusado'>('Todos');
@@ -346,6 +362,7 @@ export function ReembolsoDataTable({ filterUserId }: { filterUserId?: string }) 
           onOpenChange={setIsFormOpen}
           onSave={handleSaveReimbursement}
           reimbursement={selectedReimbursement}
+          projects={projectsData || []}
         />
       )}
 

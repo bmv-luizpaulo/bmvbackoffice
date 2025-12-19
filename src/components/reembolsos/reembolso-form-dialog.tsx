@@ -31,7 +31,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from "../ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { Calendar } from "../ui/calendar";
-import type { CostCenter, Reimbursement } from "@/lib/types";
+import type { CostCenter, Reimbursement, Project } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
 import { collection, serverTimestamp } from "firebase/firestore";
@@ -42,6 +42,7 @@ type ReembolsoFormDialogProps = {
   onOpenChange: (isOpen: boolean) => void;
   onSave: (reimbursement: Omit<Reimbursement, 'id' | 'requesterId'>, receiptFile?: File) => void;
   reimbursement?: Reimbursement | null;
+  projects: Project[];
 };
 
 const formSchema = z.object({
@@ -49,11 +50,12 @@ const formSchema = z.object({
   amount: z.coerce.number().min(0.01, "O valor deve ser maior que zero."),
   requestDate: z.date({ required_error: "A data da despesa é obrigatória." }),
   costCenterId: z.string().optional(),
+  projectId: z.string().optional(),
   notes: z.string().optional(),
   receipt: z.any().optional(),
 });
 
-export function ReembolsoFormDialog({ isOpen, onOpenChange, onSave, reimbursement }: ReembolsoFormDialogProps) {
+export function ReembolsoFormDialog({ isOpen, onOpenChange, onSave, reimbursement, projects }: ReembolsoFormDialogProps) {
   const { toast } = useToast();
   const firestore = useFirestore();
   const [receiptFile, setReceiptFile] = React.useState<File | undefined>();
@@ -75,11 +77,12 @@ export function ReembolsoFormDialog({ isOpen, onOpenChange, onSave, reimbursemen
           amount: reimbursement.amount,
           requestDate: new Date(reimbursement.requestDate),
           costCenterId: reimbursement.costCenterId,
+          projectId: reimbursement.projectId,
           notes: reimbursement.notes || '',
         });
         setReceiptFile(undefined);
       } else {
-        form.reset({ description: '', amount: 0, requestDate: new Date(), notes: '', costCenterId: undefined });
+        form.reset({ description: '', amount: 0, requestDate: new Date(), notes: '', costCenterId: undefined, projectId: undefined });
         setReceiptFile(undefined);
       }
     }
@@ -165,28 +168,52 @@ export function ReembolsoFormDialog({ isOpen, onOpenChange, onSave, reimbursemen
                         )}
                     />
                 </div>
-                 <FormField
-                    control={form.control}
-                    name="costCenterId"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Centro de Custo (Opcional)</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl>
-                            <SelectTrigger>
-                                <SelectValue placeholder="Associe a um centro de custo" />
-                            </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                                {costCentersData?.map(cc => (
-                                    <SelectItem key={cc.id} value={cc.id}>{cc.name}</SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                />
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                        control={form.control}
+                        name="costCenterId"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Centro de Custo (Opcional)</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                                <FormControl>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Associe a um centro de custo" />
+                                </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                    {costCentersData?.map(cc => (
+                                        <SelectItem key={cc.id} value={cc.id}>{cc.name}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={form.control}
+                        name="projectId"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Projeto (Opcional)</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                                <FormControl>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Associe a um projeto" />
+                                </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                    {projects?.map(p => (
+                                        <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                 </div>
                  <FormField
                     control={form.control}
                     name="notes"
