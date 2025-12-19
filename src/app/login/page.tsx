@@ -52,7 +52,7 @@ export default function LoginPage() {
           transition={{ duration: 0.8 }}
         >
           <Image
-            src="https://picsum.photos/seed/tech/1920/1080"
+            src="/image/Tech_37.jpg"
             alt="Background"
             fill
             priority
