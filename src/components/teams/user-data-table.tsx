@@ -21,7 +21,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { MoreHorizontal, Pencil, ShieldCheck, ShieldOff, Trash2, UserCheck, UserX, UserMinus, Eye, FileSpreadsheet, Copy, Link } from "lucide-react"
+import { MoreHorizontal, Pencil, ShieldCheck, ShieldOff, Trash2, UserCheck, UserX, UserMinus, Eye, FileSpreadsheet, Copy, Link, Mail, MessageSquare } from "lucide-react"
 
 import {
   Table,
@@ -67,6 +67,13 @@ const UserFormDialog = dynamic(() => import('./user-form-dialog').then(m => m.Us
 const UserProfileDialog = dynamic(() => import('./user-profile-dialog').then(m => m.UserProfileDialog), { ssr: false });
 const UserImportExportDialog = dynamic(() => import('./user-import-export').then(m => m.UserImportExportDialog), { ssr: false });
 
+type GeneratedCredentials = {
+  email: string;
+  tempPassword?: string;
+  setupLink?: string;
+};
+
+
 export function UserDataTable() {
   const firestore = useFirestore();
   const { user: currentUser, isUserLoading: isAuthUserLoading } = useAuthUser();
@@ -88,7 +95,7 @@ export function UserDataTable() {
   const [isAlertOpen, setIsAlertOpen] = React.useState(false);
   const [isProfileOpen, setIsProfileOpen] = React.useState(false);
   const [isImportExportOpen, setIsImportExportOpen] = React.useState(false);
-  const [generatedLink, setGeneratedLink] = React.useState<string | null>(null);
+  const [generatedCredentials, setGeneratedCredentials] = React.useState<GeneratedCredentials | null>(null);
   const [selectedUser, setSelectedUser] = React.useState<User | null>(null);
 
   const isLoading = isLoadingUsers || isLoadingRoles || isAuthUserLoading;
@@ -127,8 +134,8 @@ export function UserDataTable() {
         // Create new user
         const result = await createUserAction(userData);
         if (result.success && result.data) {
-            toast({ title: "Usuário Criado com Sucesso", description: `Um link para definição de senha foi gerado para ${userData.name}.` });
-            setGeneratedLink(result.data.setupLink);
+            toast({ title: "Usuário Criado com Sucesso", description: `As credenciais de acesso para ${userData.name} foram geradas.` });
+            setGeneratedCredentials(result.data);
         } else {
             toast({ variant: 'destructive', title: "Erro ao Criar Usuário", description: result.error || "Ocorreu um erro desconhecido." });
         }
@@ -519,45 +526,52 @@ export function UserDataTable() {
         roles={rolesData || []}
       />
 
-       <Dialog open={!!generatedLink} onOpenChange={() => setGeneratedLink(null)}>
+       <Dialog open={!!generatedCredentials} onOpenChange={() => setGeneratedCredentials(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Link de Configuração de Senha</DialogTitle>
+            <DialogTitle>Credenciais do Novo Usuário</DialogTitle>
             <DialogDescription>
-              Copie e envie este link para o novo usuário configurar sua senha e acessar a plataforma.
+              Copie e envie os dados de acesso para o novo usuário. Ele será solicitado a alterar a senha no primeiro login.
             </DialogDescription>
           </DialogHeader>
-          <div className="flex items-center space-x-2">
-            <div className="grid flex-1 gap-2">
-              <Label htmlFor="link" className="sr-only">
-                Link
-              </Label>
-              <Input
-                id="link"
-                defaultValue={generatedLink || ''}
-                readOnly
-              />
+          <div className="space-y-4 py-4">
+            <div className="grid gap-2">
+                <Label htmlFor="email">Email</Label>
+                <Input id="email" defaultValue={generatedCredentials?.email || ''} readOnly />
             </div>
-            <Button type="submit" size="sm" className="px-3" onClick={() => {
-                navigator.clipboard.writeText(generatedLink || '');
-                toast({ title: 'Link copiado!' });
-            }}>
-              <span className="sr-only">Copy</span>
-              <Copy className="h-4 w-4" />
-            </Button>
+            <div className="grid gap-2">
+                <Label htmlFor="password">Senha Temporária</Label>
+                <Input id="password" defaultValue={generatedCredentials?.tempPassword || ''} readOnly />
+            </div>
           </div>
-           <DialogFooter className="sm:justify-start">
-             <a
-                href={`https://wa.me/?text=Olá! Para configurar sua senha de acesso ao nosso sistema, por favor, use o seguinte link: ${encodeURIComponent(generatedLink || '')}`}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-              <Button type="button" variant="secondary">
-                Enviar por WhatsApp
-              </Button>
-            </a>
-            <Button type="button" variant="outline" onClick={() => setGeneratedLink(null)}>
-              Fechar
+           <DialogFooter className="sm:justify-between gap-2">
+             <div className="flex gap-2">
+                <a
+                    href={`https://wa.me/?text=${encodeURIComponent(`Olá! Bem-vindo(a) ao SGI. Suas credenciais de acesso são:\n\n*Email:* ${generatedCredentials?.email}\n*Senha Temporária:* ${generatedCredentials?.tempPassword}\n\n*Acesse em:* ${window.location.origin}/login`)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                  <Button type="button" variant="secondary" className="bg-green-100 text-green-800 hover:bg-green-200">
+                    <MessageSquare className="mr-2 h-4 w-4" />
+                    Enviar por WhatsApp
+                  </Button>
+                </a>
+                <a
+                    href={`mailto:${generatedCredentials?.email}?subject=${encodeURIComponent('Suas credenciais de acesso ao SGI')}&body=${encodeURIComponent(`Olá! Bem-vindo(a) ao SGI.\n\nSuas credenciais de acesso são:\n\nEmail: ${generatedCredentials?.email}\nSenha Temporária: ${generatedCredentials?.tempPassword}\n\nAcesse em: ${window.location.origin}/login\n\nRecomendamos que você altere sua senha no primeiro acesso através do menu de configurações.`)}`}
+                >
+                    <Button type="button" variant="secondary">
+                        <Mail className="mr-2 h-4 w-4" />
+                        Enviar por Email
+                    </Button>
+                </a>
+             </div>
+            <Button type="button" onClick={() => {
+                const textToCopy = `Email: ${generatedCredentials?.email}\nSenha Temporária: ${generatedCredentials?.tempPassword}`;
+                navigator.clipboard.writeText(textToCopy);
+                toast({ title: 'Credenciais copiadas!' });
+            }}>
+              <Copy className="h-4 w-4 mr-2" />
+              Copiar
             </Button>
           </DialogFooter>
         </DialogContent>

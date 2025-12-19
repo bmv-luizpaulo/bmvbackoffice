@@ -45,7 +45,6 @@ export async function createUserAction(userData: Omit<User, 'id' | 'avatarUrl'>)
 
         // Verify the calling user is an admin/manager
         const headersList = await headers();
-        const origin = headersList.get('origin');
         const idToken = headersList.get('Authorization')?.split('Bearer ')[1];
         if (!idToken) {
             return { success: false, error: 'Usuário não autenticado.' };
@@ -71,9 +70,10 @@ export async function createUserAction(userData: Omit<User, 'id' | 'avatarUrl'>)
             return { success: false, error: 'Permissão negada. Você não tem autorização para criar novos usuários.' };
         }
 
+        // Generate a more user-friendly temporary password
+        const tempPassword = `bmv-${Math.random().toString(36).slice(-6)}`;
 
         // Create user in Firebase Auth
-        const tempPassword = Math.random().toString(36).slice(-16);
         const userRecord = await auth.createUser({
             email: userData.email,
             emailVerified: true,
@@ -92,15 +92,7 @@ export async function createUserAction(userData: Omit<User, 'id' | 'avatarUrl'>)
         
         await ActivityLogger.profileUpdate(firestore, userRecord.uid, decodedToken.uid);
 
-
-        // Generate custom password reset link
-        const actionCodeSettings = {
-            url: `${origin}/set-password`,
-            handleCodeInApp: true,
-        };
-        const link = await auth.generatePasswordResetLink(userData.email, actionCodeSettings);
-
-        return { success: true, data: { uid: userRecord.uid, setupLink: link } };
+        return { success: true, data: { uid: userRecord.uid, email: userData.email, tempPassword: tempPassword } };
     } catch (error: any) {
         console.error("Erro ao criar usuário:", error);
         
