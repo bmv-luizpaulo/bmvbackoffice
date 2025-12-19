@@ -6,11 +6,36 @@ import { Change, EventContext } from 'firebase-functions';
 import * as cors from 'cors';
 import { randomBytes } from "crypto";
 
+const allowedOrigins = new Set([
+  'https://sgibmv.vercel.app',
+  'http://localhost:9002',
+  'http://127.0.0.1:9002',
+]);
+
 const corsHandler = cors({
-  origin: [
-    'https://sgibmv.vercel.app',
-    'http://localhost:9002'
-  ],
+  origin: (origin, callback) => {
+    if (!origin) {
+      callback(null, true);
+      return;
+    }
+
+    if (allowedOrigins.has(origin)) {
+      callback(null, true);
+      return;
+    }
+
+    try {
+      const url = new URL(origin);
+      if (url.hostname.endsWith('.vercel.app')) {
+        callback(null, true);
+        return;
+      }
+    } catch {
+      // ignore
+    }
+
+    callback(new Error('Not allowed by CORS'));
+  },
   methods: ['POST', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 });
@@ -124,21 +149,25 @@ export const createUser = functions.https.onRequest((req, res) => {
         const decodedIdToken = await admin.auth().verifyIdToken(idToken);
         
         const adminUid = decodedIdToken.uid;
-        const adminUserDoc = await db.collection('users').doc(adminUid).get();
-        const adminUserData = adminUserDoc.data();
-        const adminRoleId = adminUserData?.roleId;
 
-        if (!adminRoleId) {
-            res.status(403).send({ success: false, error: "Permission denied: Administrator does not have a defined role."});
-            return;
-        }
+        const canManageUsersFromClaims = decodedIdToken.isDev === true || decodedIdToken.canManageUsers === true;
+        if (!canManageUsersFromClaims) {
+          const adminUserDoc = await db.collection('users').doc(adminUid).get();
+          const adminUserData = adminUserDoc.data();
+          const adminRoleId = adminUserData?.roleId;
 
-        const adminRoleDoc = await db.collection('roles').doc(adminRoleId).get();
-        const adminRoleData = adminRoleDoc.data();
+          if (!adminRoleId) {
+              res.status(403).send({ success: false, error: "Permission denied: Administrator does not have a defined role."});
+              return;
+          }
 
-        if (adminRoleData?.permissions?.isDev !== true && adminRoleData?.permissions?.canManageUsers !== true) {
-            res.status(403).send({ success: false, error: "Permission denied: You do not have permission to create users."});
-            return;
+          const adminRoleDoc = await db.collection('roles').doc(adminRoleId).get();
+          const adminRoleData = adminRoleDoc.data();
+
+          if (adminRoleData?.permissions?.isDev !== true && adminRoleData?.permissions?.canManageUsers !== true) {
+              res.status(403).send({ success: false, error: "Permission denied: You do not have permission to create users."});
+              return;
+          }
         }
 
         // 2. Extração e validação dos dados de entrada

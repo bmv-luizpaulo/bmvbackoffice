@@ -81,6 +81,11 @@ export function UserDataTable() {
   const auth = useAuth();
   const { user: currentUser, isUserLoading: isAuthUserLoading } = useAuthUser();
   const { toast } = useToast();
+
+  const createUserFunctionUrl = React.useMemo(() => {
+    const projectId = auth?.app?.options?.projectId;
+    return projectId ? `https://us-central1-${projectId}.cloudfunctions.net/createUser` : null;
+  }, [auth]);
   
   const usersQuery = useMemoFirebase(() => firestore ? collection(firestore, 'users') : null, [firestore]);
   const { data: usersData, isLoading: isLoadingUsers } = useCollection<User>(usersQuery);
@@ -140,7 +145,11 @@ export function UserDataTable() {
                 throw new Error("Não foi possível obter o token de autenticação.");
             }
 
-            const response = await fetch('https://us-central1-studio-4461945520-252d9.cloudfunctions.net/createUser', {
+            if (!createUserFunctionUrl) {
+                throw new Error("Não foi possível identificar o projectId do Firebase para chamar a Cloud Function.");
+            }
+
+            const response = await fetch(createUserFunctionUrl, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -149,13 +158,19 @@ export function UserDataTable() {
                 body: JSON.stringify(userData)
             });
 
-            const result = await response.json();
+            let result: any = null;
+            try {
+                result = await response.json();
+            } catch {
+                result = null;
+            }
 
             if (response.ok && result.success) {
                 toast({ title: "Usuário Criado com Sucesso", description: `As credenciais de acesso para ${userData.name} foram geradas.` });
                 setGeneratedCredentials(result.data);
             } else {
-                throw new Error(result.error || `Ocorreu um erro desconhecido (HTTP ${response.status})`);
+                const errorMessage = result?.error || `Ocorreu um erro desconhecido (HTTP ${response.status})`;
+                throw new Error(errorMessage);
             }
         } catch (error: any) {
             console.error("Erro ao chamar Cloud Function 'createUser':", error);
@@ -168,7 +183,7 @@ export function UserDataTable() {
     }
     setIsFormOpen(false);
 
-}, [firestore, selectedUser, currentUser, auth, toast]);
+}, [firestore, selectedUser, currentUser, auth, toast, createUserFunctionUrl]);
 
 
   const handleDeleteUser = React.useCallback(() => {
