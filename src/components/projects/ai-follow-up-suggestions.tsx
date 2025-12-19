@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -34,9 +35,9 @@ export function AiFollowUpSuggestions({ project }: AiFollowUpSuggestionsProps) {
         const result = { success: false, error: "A funcionalidade de sugestões de IA foi desativada temporariamente." };
 
 
-        if (result.success && result.data) {
-            setSuggestions((result.data as any).suggestedActions);
-            setReasoning((result.data as any).reasoning);
+        if (result.success) {
+            setSuggestions((result as any).data.suggestedActions);
+            setReasoning((result as any).data.reasoning);
             toast({
                 title: "Sugestões Geradas",
                 description: "A IA analisou o projeto e forneceu algumas ideias.",
@@ -97,3 +98,5 @@ export function AiFollowUpSuggestions({ project }: AiFollowUpSuggestionsProps) {
         </Accordion>
     );
 }
+
+    

@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -48,7 +49,9 @@ export default function DevToolsPage() {
             toast({ variant: "destructive", title: "Erro", description: "Você precisa estar logado." });
             return;
         }
-        createNotification(user.uid, values);
+        // Assuming a generic template 'generic_test' exists for this purpose.
+        // The template in Firestore would have a title/message like '{{title}}' and '{{message}}'.
+        createNotification(user.uid, 'generic_test', values);
         toast({ title: "Notificação Enviada", description: "Uma notificação de teste foi enviada para você." });
     };
 
@@ -337,3 +340,5 @@ export default function DevToolsPage() {
     </div>
   );
 }
+
+    

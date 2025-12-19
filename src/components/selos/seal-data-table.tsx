@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from "react"
@@ -144,10 +145,10 @@ export function SealDataTable() {
       const manager = usersData?.find(u => (u as any).role === 'Gestor');
       const notifyUserId = manager?.id || authUser.uid;
 
-      createNotification(notifyUserId, {
-        title: 'Renovação de Selo Próxima',
-        message: `Selo para ${productName} (${contactName}) vence em ${daysLeft + 1} dia(s).`,
-        link: `/selos`,
+      createNotification(notifyUserId, 'seal_expiring', {
+        productName,
+        contactName,
+        daysLeft: daysLeft + 1
       });
     }
   }, [firestore, authUser, toast, createNotification, productsMap, contactsMap, usersData]);
@@ -214,7 +215,7 @@ export function SealDataTable() {
         const daysLeft = differenceInDays(expiryDate, new Date());
 
         let calculatedStatus: 'Ativo' | 'Vencendo' | 'Vencido' | 'Em Renovação' | 'Solicitado' = row.original.status as any;
-        let variant: "default" | "destructive" | "outline" = 'default';
+        let variant: "default" | "destructive" | "outline" | "secondary" = 'default';
 
         if (row.original.status === 'Ativo') {
           if (isPast(expiryDate) && !isToday(expiryDate)) {
@@ -460,3 +461,5 @@ export function SealDataTable() {
     </div>
   )
 }
+
+    

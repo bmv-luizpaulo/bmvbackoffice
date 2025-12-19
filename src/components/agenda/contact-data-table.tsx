@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from "react"
@@ -362,7 +363,7 @@ export function ContactDataTable({ type }: ContactDataTableProps) {
         isOpen={isProfileOpen}
         onOpenChange={setIsProfileOpen}
         contact={selectedContact}
-        onUpdate={handleSaveContact}
+        onUpdate={(contactId, updates) => handleSaveContact(updates as any, contactId)}
         onEdit={(contact: Contact) => {
             setIsProfileOpen(false);
             handleEditClick(contact);
@@ -392,3 +393,5 @@ export function ContactDataTable({ type }: ContactDataTableProps) {
     </div>
   )
 }
+
+    

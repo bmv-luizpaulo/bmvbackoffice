@@ -26,7 +26,7 @@ const fadeIn = {
     y: 0,
     transition: {
       duration: 0.6,
-      ease: "easeOut"
+      ease: "easeOut" as any
     }
   }
 };
@@ -105,7 +105,7 @@ export default function LoginPage() {
             >
               <motion.div 
                 className="w-full max-w-md ml-auto mr-20"
-                variants={fadeIn}
+                variants={fadeIn as any}
               >
                 <Card 
                   className="w-full bg-white/90 backdrop-blur-sm border border-white/20 shadow-xl overflow-hidden relative group"
@@ -175,7 +175,7 @@ export default function LoginPage() {
                     >
                       <motion.div 
                         className="text-left px-6 pb-2"
-                        variants={fadeIn}
+                        variants={fadeIn as any}
                       >
                         <h2 
                           className="text-2xl font-bold mb-1"
@@ -202,7 +202,7 @@ export default function LoginPage() {
 
                       <motion.div 
                         className="text-center text-xs text-gray-500 flex items-center justify-center gap-2 p-4 border-t border-gray-100 mt-6"
-                        variants={fadeIn}
+                        variants={fadeIn as any}
                       >
                         <ShieldAlert className="h-3.5 w-3.5 flex-shrink-0" style={{ color: colors.green }} />
                         <p className="text-xs" style={{ fontFamily: 'Montserrat, sans-serif' }}>
@@ -239,3 +239,5 @@ export default function LoginPage() {
     </FirebaseClientProvider>
   );
 }
+
+    

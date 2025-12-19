@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from "react"
@@ -38,7 +39,7 @@ export default function CompletedTasksPage() {
 
   const tasksQuery = useMemoFirebase(
     () => firestore ? query(
-        collectionGroup(firestore, 'tasks'), 
+        collection(firestore, 'tasks'), 
         where('isCompleted', '==', true)
     ) : null,
     [firestore]
@@ -68,7 +69,7 @@ export default function CompletedTasksPage() {
     {
       accessorKey: "projectId",
       header: "Projeto",
-      cell: ({ row }) => projectsMap.get(row.original.projectId) || 'N/D',
+      cell: ({ row }) => projectsMap.get(row.original.projectId || '') || 'N/D',
     },
     {
       accessorKey: "assigneeId",
@@ -222,3 +223,5 @@ export default function CompletedTasksPage() {
     </div>
   )
 }
+
+    

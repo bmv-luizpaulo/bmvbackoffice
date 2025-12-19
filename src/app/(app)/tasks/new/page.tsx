@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -101,11 +102,14 @@ export default function NewTaskPage() {
 
             if (taskData.assigneeId) {
                 const project = projectsData?.find(p => p.id === values.projectId);
-                createNotification(taskData.assigneeId, {
-                    title: 'Nova Tarefa Atribuída',
-                    message: `Você foi atribuído à tarefa "${values.name}"${project ? ` no projeto "${project.name}"` : ''}.`,
-                    link: `/tasks/${docRef.id}`
-                });
+                createNotification(
+                    taskData.assigneeId, 
+                    'task_assigned', 
+                    {
+                        taskName: values.name,
+                        projectName: project ? ` no projeto "${project.name}"` : ''
+                    }
+                );
             }
 
             toast({ title: "Tarefa Criada", description: "Sua nova tarefa foi adicionada." });
@@ -170,3 +174,5 @@ export default function NewTaskPage() {
     </div>
   );
 }
+
+    

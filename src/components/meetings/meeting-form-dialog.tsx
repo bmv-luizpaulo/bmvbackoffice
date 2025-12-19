@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from "react";
@@ -51,7 +52,7 @@ const formSchema = z.object({
   description: z.string().optional(),
   dueDate: z.date({ required_error: "A data da reunião é obrigatória." }),
   meetLink: z.string().url("URL do Google Meet inválida.").optional().or(z.literal('')),
-  participantIds: z.array(z.string()).optional(),
+  participantIds: z.array(z.string()).min(1, "Selecione ao menos um participante."),
   isRecurring: z.boolean().default(false),
   recurrenceFrequency: z.enum(['diaria', 'semanal', 'mensal']).optional(),
   recurrenceEndDate: z.date().optional(),
@@ -119,7 +120,7 @@ export function MeetingFormDialog({ isOpen, onOpenChange, onSave, meeting, users
       delete (meetingData as Partial<typeof meetingData>).recurrenceFrequency;
       delete (meetingData as Partial<typeof meetingData>).recurrenceEndDate;
     }
-    onSave(meetingData, meeting?.id);
+    onSave(meetingData as Omit<Meeting, 'id' | 'createdAt'>, meeting?.id);
     onOpenChange(false);
   }
   
@@ -303,3 +304,5 @@ export function MeetingFormDialog({ isOpen, onOpenChange, onSave, meeting, users
     </Dialog>
   );
 }
+
+    

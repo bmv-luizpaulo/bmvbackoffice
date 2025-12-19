@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -22,8 +23,8 @@ export function ChatSummary() {
         const result = { success: false, error: "A funcionalidade de resumo de IA foi desativada temporariamente." };
 
 
-        if (result.success && result.data) {
-            setSummary((result.data as any).summary);
+        if (result.success) {
+            setSummary((result as any).data.summary);
             toast({
                 title: "Resumo Gerado",
                 description: "Os destaques do chat de hoje estão prontos.",
@@ -73,3 +74,5 @@ export function ChatSummary() {
         </Card>
     );
 }
+
+    

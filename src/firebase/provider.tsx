@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { createContext, useContext, ReactNode, useMemo, useState, useEffect } from 'react';
@@ -88,7 +89,7 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
         if (firebaseUser) {
           try {
             const token = await firebaseUser.getIdTokenResult(); // Don't force refresh here
-            setClaims(token.claims || {});
+            setClaims(token?.claims || {});
           } catch (e) {
             setClaims(null);
           } finally {
@@ -122,7 +123,7 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
             try {
               // Force refresh the token to get new claims.
               const token = await userAuthState.user?.getIdTokenResult(true);
-              setClaims(token.claims || {});
+              setClaims(token?.claims || {});
             } catch (e) {
               console.error("Error refreshing token after role change:", e);
             }
@@ -225,3 +226,5 @@ export const usePermissions = () => {
     has,
   } as const;
 };
+
+    

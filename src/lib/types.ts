@@ -1,3 +1,4 @@
+
 'use client';
 
 export type User = {
@@ -257,7 +258,7 @@ export type SealOrder = {
   quantity: number;
   tax?: number;
   total: number;
-  status: 'Pendente de Aprovação' | 'Pendente de Pagamento' | 'Pag. Efetuados' | 'Pré-processados' | 'Processados' | 'Falhas' | 'Negados' | 'Arquivado';
+  status: 'Pendente de Aprovação' | 'Pendente de Pagamento' | 'Pag. Efetuados' | 'Pré-processados' | 'Processados' | 'Falhas' | 'Negados' | 'Arquivado' | 'Vai Renovar' | 'Em Tratativa' | 'Não Tem Interesse';
 };
 
 export type Checklist = {
@@ -413,3 +414,5 @@ export type ErrorLog = {
     timestamp: any;
     isResolved: boolean;
 }
+
+    

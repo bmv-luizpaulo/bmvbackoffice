@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useMemo, useState, useEffect } from 'react';
@@ -150,7 +151,7 @@ function ManagerDashboard() {
   // Calcular KPIs
   const kpis = useMemo<KpiData>(() => {
     const totalProjects = projects?.length || 0;
-    const completedProjects = projects?.filter(p => p.status === 'concluido').length || 0;
+    const completedProjects = projects?.filter(p => p.status === 'Arquivado').length || 0;
     const inProgressTasks = tasks?.filter(t => t.status === 'em-andamento').length || 0;
     const completedTasks = tasks?.filter(t => t.status === 'concluida').length || 0;
     
@@ -307,3 +308,5 @@ function ManagerDashboard() {
 }
 
 export default ManagerDashboard;
+
+    

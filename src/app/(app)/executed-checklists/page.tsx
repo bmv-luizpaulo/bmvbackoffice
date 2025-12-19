@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -38,8 +39,9 @@ import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { Progress } from '@/components/ui/progress';
 import { MoreHorizontal } from 'lucide-react';
-import { ExecutionDetailsDialog } from '@/components/checklists/execution-details-dialog';
+import dynamic from 'next/dynamic';
 
+const ExecutionDetailsDialog = dynamic(() => import('@/components/checklists/execution-details-dialog').then(m => m.ExecutionDetailsDialog), { ssr: false });
 
 export default function ExecutedChecklistsPage() {
   const firestore = useFirestore();
@@ -78,7 +80,7 @@ export default function ExecutedChecklistsPage() {
     {
       accessorKey: 'executedAt',
       header: 'Data da Execução',
-      cell: ({ row }) => format(new Date(row.original.executedAt.toDate()), 'dd/MM/yyyy HH:mm', { locale: ptBR })
+      cell: ({ row }) => row.original.executedAt ? format(new Date(row.original.executedAt.toDate()), 'dd/MM/yyyy HH:mm', { locale: ptBR }) : 'N/A'
     },
      {
       id: 'progress',
@@ -100,7 +102,7 @@ export default function ExecutedChecklistsPage() {
       id: 'executionTime',
       header: 'Tempo de Execução',
       cell: ({ row }) => {
-        if (!row.original.createdAt) return <span className="text-muted-foreground text-xs">N/A</span>;
+        if (!row.original.createdAt || !row.original.executedAt) return <span className="text-muted-foreground text-xs">N/A</span>;
         const startTime = new Date(row.original.createdAt.toDate());
         const endTime = new Date(row.original.executedAt.toDate());
         return <span className="text-sm font-medium">{formatDistanceStrict(endTime, startTime, { locale: ptBR, unit: 'minute' })}</span>
@@ -215,7 +217,7 @@ export default function ExecutedChecklistsPage() {
         <ExecutionDetailsDialog
             isOpen={!!selectedExecution}
             onOpenChange={(open) => { if (!open) setSelectedExecution(null) }}
-            execution={selectedExecution}
+            checklist={selectedExecution as any}
             teamName={teamsMap.get(selectedExecution.teamId) || 'N/A'}
             userName={usersMap.get(selectedExecution.executedBy) || 'N/A'}
         />
@@ -223,3 +225,5 @@ export default function ExecutedChecklistsPage() {
     </>
   );
 }
+
+    

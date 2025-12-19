@@ -1,3 +1,4 @@
+
 'use client';
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -138,9 +139,7 @@ export function LoginForm() {
           type="submit" 
           className="w-full h-11 rounded-lg bg-[#3A452D] hover:bg-[#4a5a3a] text-white font-medium text-sm transition-all duration-200 shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
           style={{
-            backgroundColor: '#3A452D', // Verde BMV
-            '--tw-shadow': '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
-            '--tw-shadow-colored': '0 4px 6px -1px var(--tw-shadow-color), 0 2px 4px -1px var(--tw-shadow-color)',
+            backgroundColor: '#3A452D'
           }}
           disabled={isLoading}
         >
@@ -157,3 +156,5 @@ export function LoginForm() {
     </Form>
   );
 }
+
+    

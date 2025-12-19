@@ -1,3 +1,4 @@
+
 'use client';
 import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { collection, collectionGroup, query, where, orderBy, limit } from "firebase/firestore";
@@ -20,7 +21,7 @@ function RecentTasksCard({ userId }: RecentTasksCardProps) {
         if (!firestore) return null;
         
         let q = query(
-            collectionGroup(firestore, 'tasks'), 
+            collection(firestore, 'tasks'), 
             where('isCompleted', '==', false),
             orderBy('createdAt', 'desc'),
             limit(5)
@@ -72,7 +73,7 @@ function RecentTasksCard({ userId }: RecentTasksCardProps) {
                                     <p className="font-semibold truncate">{task.name}</p>
                                     <div className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
                                         <Folder className="h-3 w-3"/>
-                                        <span>{projectsMap.get(task.projectId) || 'Projeto desconhecido'}</span>
+                                        <span>{projectsMap.get(task.projectId || '') || 'Projeto desconhecido'}</span>
                                     </div>
                                 </div>
                             </div>
@@ -90,3 +91,5 @@ function RecentTasksCard({ userId }: RecentTasksCardProps) {
 }
 
 export default RecentTasksCard;
+
+    

@@ -1,7 +1,8 @@
+
 'use client';
 
 import * as React from 'react';
-import type { Checklist, ChecklistItem, Team, User } from '@/lib/types';
+import type { Checklist, ChecklistItem, ChecklistExecution, Team, User } from '@/lib/types';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '../ui/scroll-area';
@@ -23,17 +24,26 @@ import { Label } from '../ui/label';
 type ExecutionDetailsDialogProps = {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
-  checklist: Checklist | null;
+  checklist: Checklist | ChecklistExecution | null;
   isManager?: boolean;
+  teamName?: string;
+  userName?: string;
 };
 
-export function ExecutionDetailsDialog({ isOpen, onOpenChange, checklist, isManager }: ExecutionDetailsDialogProps) {
+export function ExecutionDetailsDialog({ isOpen, onOpenChange, checklist, isManager, teamName, userName }: ExecutionDetailsDialogProps) {
   const firestore = useFirestore();
   const { user: authUser } = useUser();
   const { toast } = useToast();
   
-  const itemsQuery = useMemoFirebase(() => firestore && checklist ? query(collection(firestore, `checklists/${checklist.id}/items`), orderBy('order')) : null, [firestore, checklist?.id]);
-  const { data: checklistItems, isLoading: isLoadingItems } = useCollection<ChecklistItem>(itemsQuery);
+  const isExecution = 'executedAt' in (checklist || {});
+  
+  const itemsQuery = useMemoFirebase(() => {
+    if (!firestore || !checklist || isExecution) return null;
+    return query(collection(firestore, `checklists/${checklist.id}/items`), orderBy('order'))
+  }, [firestore, checklist?.id, isExecution]);
+  
+  const { data: checklistItemsData, isLoading: isLoadingItems } = useCollection<ChecklistItem>(itemsQuery);
+  const checklistItems = isExecution ? checklist?.items : checklistItemsData;
   
   const [commentDebounceTimers, setCommentDebounceTimers] = React.useState<Record<string, NodeJS.Timeout>>({});
   const [isFinishing, setIsFinishing] = React.useState(false);
@@ -50,7 +60,7 @@ export function ExecutionDetailsDialog({ isOpen, onOpenChange, checklist, isMana
   }, [checklistItems]);
 
   const handleAddNewItem = React.useCallback(async () => {
-    if (!firestore || !checklist || !newItemText.trim()) return;
+    if (!firestore || !checklist || isExecution || !newItemText.trim()) return;
     const itemsCollection = collection(firestore, `checklists/${checklist.id}/items`);
     const newOrder = (checklistItems?.length || 0) + 1;
     const newItem: Partial<ChecklistItem> = {
@@ -63,37 +73,37 @@ export function ExecutionDetailsDialog({ isOpen, onOpenChange, checklist, isMana
     if (newItemType === 'yes_no') { newItem.answer = 'unanswered'; newItem.comment = ''; }
     await addDocumentNonBlocking(itemsCollection, newItem);
     setNewItemText('');
-  }, [firestore, checklist, newItemText, newItemType, checklistItems]);
+  }, [firestore, checklist, isExecution, newItemText, newItemType, checklistItems]);
 
   const handleDeleteItem = React.useCallback((itemId: string) => {
-    if (!firestore || !checklist) return;
+    if (!firestore || !checklist || isExecution) return;
     deleteDocumentNonBlocking(doc(firestore, `checklists/${checklist.id}/items`, itemId));
-  }, [firestore, checklist]);
+  }, [firestore, checklist, isExecution]);
   
   const handleToggleItem = React.useCallback((item: ChecklistItem) => {
-    if (!firestore || !checklist || item.type !== 'item') return;
+    if (!firestore || !checklist || isExecution || item.type !== 'item') return;
     const itemRef = doc(firestore, `checklists/${checklist.id}/items`, item.id);
     updateDocumentNonBlocking(itemRef, { isCompleted: !item.isCompleted });
-  }, [firestore, checklist]);
+  }, [firestore, checklist, isExecution]);
   
   const handleAnswerItem = React.useCallback((item: ChecklistItem, answer: 'yes' | 'no') => {
-    if (!firestore || !checklist || item.type !== 'yes_no') return;
+    if (!firestore || !checklist || isExecution || item.type !== 'yes_no') return;
     const itemRef = doc(firestore, `checklists/${checklist.id}/items`, item.id);
     updateDocumentNonBlocking(itemRef, { answer });
-  }, [firestore, checklist]);
+  }, [firestore, checklist, isExecution]);
 
   const handleCommentChange = React.useCallback((item: ChecklistItem, comment: string) => {
-    if (!firestore || !checklist || item.type !== 'yes_no') return;
+    if (!firestore || !checklist || isExecution || item.type !== 'yes_no') return;
     if (commentDebounceTimers[item.id]) clearTimeout(commentDebounceTimers[item.id]);
     const timer = setTimeout(() => {
       const itemRef = doc(firestore, `checklists/${checklist.id}/items`, item.id);
       updateDocumentNonBlocking(itemRef, { comment });
     }, 1000);
     setCommentDebounceTimers(prev => ({ ...prev, [item.id]: timer }));
-  }, [firestore, checklist, commentDebounceTimers]);
+  }, [firestore, checklist, isExecution, commentDebounceTimers]);
 
   const resetChecklist = async () => {
-    if (!firestore || !checklistItems || checklistItems.length === 0) return;
+    if (!firestore || !checklistItems || checklistItems.length === 0 || !checklist || isExecution) return;
     const batch = writeBatch(firestore);
     checklistItems.forEach(item => {
         const itemRef = doc(firestore, `checklists/${checklist.id}/items`, item.id);
@@ -107,7 +117,7 @@ export function ExecutionDetailsDialog({ isOpen, onOpenChange, checklist, isMana
   };
 
   const handleFinishAndSave = async () => {
-    if (!checklist || !checklistItems || !authUser || !firestore) {
+    if (!checklist || !checklistItems || !authUser || !firestore || isExecution) {
       toast({ variant: 'destructive', title: 'Erro', description: 'Dados insuficientes para finalizar.' });
       return;
     }
@@ -124,7 +134,7 @@ export function ExecutionDetailsDialog({ isOpen, onOpenChange, checklist, isMana
       };
       await addDocumentNonBlocking(collection(firestore, 'checklistExecutions'), executionData);
       await resetChecklist();
-      toast({ title: 'Checklist Finalizado', description: 'A execução foi salva e o checklist zerado para a próxima vez.'});
+      toast({ title: 'Checklist Finalizado', description: 'A execução foi salva e o checklist zerado para o próximo uso.'});
       onOpenChange(false);
     } catch (error) {
       toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível salvar a execução.' });
@@ -139,8 +149,8 @@ export function ExecutionDetailsDialog({ isOpen, onOpenChange, checklist, isMana
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl">
         <DialogHeader>
-          <DialogTitle>{checklist.name}</DialogTitle>
-          <DialogDescription>{checklist.description}</DialogDescription>
+          <DialogTitle>{isExecution ? (checklist as ChecklistExecution).checklistName : checklist.name}</DialogTitle>
+          <DialogDescription>{isExecution ? `Executado por ${userName} em nome da equipe ${teamName}` : checklist.description}</DialogDescription>
         </DialogHeader>
         
         <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground mt-2">
@@ -158,7 +168,7 @@ export function ExecutionDetailsDialog({ isOpen, onOpenChange, checklist, isMana
                       return (
                           <div key={item.id} className="flex items-center gap-3 bg-muted p-3 rounded-md mt-4 mb-2">
                               <h4 className="flex-1 font-semibold text-sm">{item.description}</h4>
-                              {isManager && (
+                              {isManager && !isExecution && (
                                   <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive/70 hover:text-destructive/100" onClick={() => handleDeleteItem(item.id)}>
                                   <Trash2 className="h-4 w-4" />
                                   </Button>
@@ -172,9 +182,9 @@ export function ExecutionDetailsDialog({ isOpen, onOpenChange, checklist, isMana
                               <div className="flex items-start justify-between">
                                   <label className="text-sm flex-1 pr-4">{item.description}</label>
                                   <div className="flex items-center gap-2">
-                                      <Button size="sm" variant={item.answer === 'yes' ? 'default' : 'outline'} onClick={() => handleAnswerItem(item, 'yes')} className='h-8'><Check className='h-4 w-4 mr-1'/>Sim</Button>
-                                      <Button size="sm" variant={item.answer === 'no' ? 'destructive' : 'outline'} onClick={() => handleAnswerItem(item, 'no')} className='h-8'><X className='h-4 w-4 mr-1'/>Não</Button>
-                                      {isManager && (
+                                      <Button size="sm" variant={item.answer === 'yes' ? 'default' : 'outline'} onClick={() => handleAnswerItem(item, 'yes')} className='h-8' disabled={isExecution}><Check className='h-4 w-4 mr-1'/>Sim</Button>
+                                      <Button size="sm" variant={item.answer === 'no' ? 'destructive' : 'outline'} onClick={() => handleAnswerItem(item, 'no')} className='h-8' disabled={isExecution}><X className='h-4 w-4 mr-1'/>Não</Button>
+                                      {isManager && !isExecution && (
                                           <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive/70 hover:text-destructive/100" onClick={() => handleDeleteItem(item.id)}>
                                               <Trash2 className="h-4 w-4" />
                                           </Button>
@@ -186,15 +196,16 @@ export function ExecutionDetailsDialog({ isOpen, onOpenChange, checklist, isMana
                                   defaultValue={item.comment || ''}
                                   onChange={(e) => handleCommentChange(item, e.target.value)}
                                   className="text-sm"
+                                  disabled={isExecution}
                               />
                           </div>
                       )
                   }
                   return (
                       <div key={item.id} className="flex items-center gap-3 p-3 rounded-md hover:bg-muted/40 transition-colors">
-                          <Checkbox id={`item-${item.id}`} checked={!!item.isCompleted} onCheckedChange={() => handleToggleItem(item)} />
-                          <label htmlFor={`item-${item.id}`} className={cn("flex-1 text-sm cursor-pointer", item.isCompleted && "line-through text-muted-foreground")}>{item.description}</label>
-                          {isManager && (
+                          <Checkbox id={`item-${item.id}`} checked={!!item.isCompleted} onCheckedChange={() => handleToggleItem(item)} disabled={isExecution} />
+                          <label htmlFor={`item-${item.id}`} className={cn("flex-1 text-sm cursor-pointer", item.isCompleted && "line-through text-muted-foreground", isExecution && "cursor-default")}>{item.description}</label>
+                          {isManager && !isExecution && (
                               <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive/70 hover:text-destructive/100" onClick={() => handleDeleteItem(item.id)}>
                               <Trash2 className="h-4 w-4" />
                               </Button>
@@ -206,7 +217,7 @@ export function ExecutionDetailsDialog({ isOpen, onOpenChange, checklist, isMana
               <p className="text-sm text-muted-foreground py-4 text-center">Nenhum passo adicionado ainda.</p>
             )}
           </div>
-          {isManager && (
+          {isManager && !isExecution && (
             <form
                 onSubmit={(e) => { e.preventDefault(); handleAddNewItem(); }}
                 className="flex flex-col gap-4 pt-6 border-t mt-6"
@@ -228,38 +239,42 @@ export function ExecutionDetailsDialog({ isOpen, onOpenChange, checklist, isMana
           )}
         </ScrollArea>
         
-        <DialogFooter className="border-t pt-4 flex sm:justify-between items-center">
-            <Button variant="outline" asChild>
-                <Link href={`/reports/checklist/${checklist.id}`} target="_blank">
-                    <FileText className="mr-2 h-4 w-4" />
-                    Gerar PDF (Preview)
-                </Link>
-            </Button>
-            <div className="flex gap-2">
-              <DialogClose asChild><Button type="button" variant="secondary">Fechar</Button></DialogClose>
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button disabled={isFinishing || progress < 100}>
-                    {isFinishing && <Loader2 className='mr-2 h-4 w-4 animate-spin' />}
-                    Finalizar Execução
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                      <AlertDialogTitle>Finalizar e Salvar Execução?</AlertDialogTitle>
-                      <AlertDialogDescription>
-                          Esta ação salvará um registro desta execução e zerará o checklist para o próximo uso. Deseja continuar?
-                      </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                      <AlertDialogAction onClick={handleFinishAndSave}>Confirmar</AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            </div>
-        </DialogFooter>
+        {!isExecution && (
+          <DialogFooter className="border-t pt-4 flex sm:justify-between items-center">
+              <Button variant="outline" asChild>
+                  <Link href={`/reports/checklist/${checklist.id}`} target="_blank">
+                      <FileText className="mr-2 h-4 w-4" />
+                      Gerar PDF (Preview)
+                  </Link>
+              </Button>
+              <div className="flex gap-2">
+                <DialogClose asChild><Button type="button" variant="secondary">Fechar</Button></DialogClose>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button disabled={isFinishing || progress < 100}>
+                      {isFinishing && <Loader2 className='mr-2 h-4 w-4 animate-spin' />}
+                      Finalizar Execução
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Finalizar e Salvar Execução?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Esta ação salvará um registro desta execução e zerará o checklist para o próximo uso. Deseja continuar?
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleFinishAndSave}>Confirmar</AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
+          </DialogFooter>
+        )}
       </DialogContent>
     </Dialog>
   );
 }
+
+    
