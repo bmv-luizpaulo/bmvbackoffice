@@ -11,7 +11,10 @@ export default function ChatPage() {
         <p className="text-muted-foreground">Converse diretamente com os membros da sua equipe.</p>
       </header>
       <div className="flex-1 overflow-hidden rounded-lg border bg-card">
-        <ChatLayout conversationType="direct" />
+        {/* O componente ChatLayout foi removido pois estava vazio */}
+        <div className="flex h-full items-center justify-center">
+          <p className="text-muted-foreground">O chat está sendo implementado.</p>
+        </div>
       </div>
     </div>
   );
