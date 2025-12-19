@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -94,13 +95,14 @@ export function useCollection<T = any>(
   const [error, setError] = useState<FirestoreError | Error | null>(null);
 
   useEffect(() => {
+    // If the query is not ready, reset state and do nothing.
     if (!targetRefOrQuery) {
       setData(null);
       setIsLoading(false);
       setError(null);
       return;
     }
-
+    
     // Defensive check to prevent invalid queries from even attempting a snapshot
     const queryPath = getQueryPath(targetRefOrQuery);
     if (!queryPath || queryPath.includes('undefined') || queryPath.includes('null')) {
@@ -110,7 +112,10 @@ export function useCollection<T = any>(
       return;
     }
 
+    // Set loading state and reset previous data/error
     setIsLoading(true);
+    setData(null);
+    setError(null);
     
     const unsubscribe = onSnapshot(
       targetRefOrQuery,
@@ -118,16 +123,15 @@ export function useCollection<T = any>(
         if (!snapshot || !snapshot.docs) {
           setData([]);
           setError(null);
-          setIsLoading(false);
-          return;
+        } else {
+            const results: ResultItemType[] = snapshot.docs.map(doc => {
+            const docData = doc.data() as T;
+            const dataWithConvertedTimestamps = convertTimestampsToISO(docData);
+            return { ...dataWithConvertedTimestamps, id: doc.id };
+            });
+            setData(results);
+            setError(null);
         }
-        const results: ResultItemType[] = snapshot.docs.map(doc => {
-           const docData = doc.data() as T;
-           const dataWithConvertedTimestamps = convertTimestampsToISO(docData);
-           return { ...dataWithConvertedTimestamps, id: doc.id };
-        });
-        setData(results);
-        setError(null);
         setIsLoading(false);
       },
       (error: FirestoreError) => {
@@ -138,7 +142,7 @@ export function useCollection<T = any>(
         });
 
         setError(contextualError);
-setData(null);
+        setData(null);
         setIsLoading(false);
 
         // trigger global error propagation
@@ -146,8 +150,16 @@ setData(null);
       }
     );
 
-    return () => unsubscribe();
+    // Cleanup function
+    return () => {
+        // Ensure unsubscribe is a function before calling it.
+        // This prevents errors if the onSnapshot call fails to return a function.
+        if (typeof unsubscribe === 'function') {
+            unsubscribe();
+        }
+    };
   }, [targetRefOrQuery]);
   
   return { data, isLoading, error };
 }
+
