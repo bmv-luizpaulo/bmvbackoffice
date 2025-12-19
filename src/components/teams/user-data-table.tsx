@@ -181,7 +181,7 @@ export function UserDataTable() {
   }, [firestore, selectedUser, toast]);
 
   const handleRoleChange = React.useCallback(async (user: User, newRoleId: string) => {
-    if (!firestore || !currentUser) return;
+    if (!firestore) return;
     const result = await updateUserRoleAction(user.id, newRoleId);
     if (!result.success) {
         toast({ title: "Falha na Permissão", description: result.error, variant: 'destructive'});
@@ -190,10 +190,12 @@ export function UserDataTable() {
 
     const userRef = doc(firestore, 'users', user.id);
     await updateDocumentNonBlocking(userRef, { roleId: newRoleId });
-    currentUser.getIdToken(true); // Force token refresh to get new claims
+    currentUser?.getIdToken(true); // Force token refresh to get new claims
     const newRole = rolesMap.get(newRoleId);
     
-    await ActivityLogger.roleChange(firestore, user.id, newRole?.name || 'Cargo removido', currentUser.uid);
+    if (currentUser?.uid) {
+        await ActivityLogger.roleChange(firestore, user.id, newRole?.name || 'Cargo removido', currentUser.uid);
+    }
     
     toast({ 
         title: "Cargo Alterado", 
