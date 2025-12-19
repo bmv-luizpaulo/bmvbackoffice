@@ -73,6 +73,7 @@ export const AssetDataTable = React.memo(function AssetDataTable({ ownerFilter }
     if (!firestore || !authUser) return null;
     let q = collection(firestore, 'assets');
     if (ownerFilter === 'me') {
+      if (!authUser.uid) return null; // Aguarda o UID estar disponível
       return query(q, where('assigneeId', '==', authUser.uid));
     }
     return q;
@@ -880,5 +881,3 @@ export const AssetDataTable = React.memo(function AssetDataTable({ ownerFilter }
     </div>
   )
 });
-
-    
