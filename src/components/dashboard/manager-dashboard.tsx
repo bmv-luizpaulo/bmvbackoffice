@@ -6,7 +6,7 @@ import { KpiCard } from "@/components/dashboard/kpi-card";
 import { CheckCircle, Target, FolderKanban, Award, RefreshCw } from "lucide-react";
 import { motion, AnimatePresence } from 'framer-motion';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { useFirestore, useCollection, useMemoFirebase, useUser } from "@/firebase";
+import { useFirestore, useCollection, useMemoFirebase, usePermissions } from "@/firebase";
 import { collection, query } from "firebase/firestore";
 import type { Project, Task, User as UserType } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -101,30 +101,51 @@ function QuickActionsCard() {
 }
 
 interface ManagerDashboardProps {
-    isManager?: boolean;
     user: UserType | null;
 }
 
-function ManagerDashboard({ isManager, user }: ManagerDashboardProps) {
+function ManagerDashboard({ user }: ManagerDashboardProps) {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const firestore = useFirestore();
+  const { ready: permissionsReady, isManager } = usePermissions();
 
   const projectsQuery = useMemoFirebase(
-    () => (firestore && isManager) ? collection(firestore, 'projects') : null, 
-    [firestore, isManager]
+    () => (firestore && permissionsReady && isManager) ? collection(firestore, 'projects') : null, 
+    [firestore, permissionsReady, isManager]
   );
   const { data: projects, isLoading: projectsLoading } = useCollection<Project>(
     projectsQuery
   );
 
   const tasksQuery = useMemoFirebase(
-    () => (firestore && isManager) ? collection(firestore, 'tasks') : null, 
-    [firestore, isManager]
+    () => (firestore && permissionsReady && isManager) ? collection(firestore, 'tasks') : null, 
+    [firestore, permissionsReady, isManager]
   );
   const { data: tasks, isLoading: tasksLoading } = useCollection<Task>(
     tasksQuery
   );
   
+  if (!permissionsReady) {
+      // Show skeleton while permissions are loading to avoid rendering UserDashboard prematurely
+      return (
+        <div className="space-y-6">
+          <header>
+              <Skeleton className="h-9 w-48" />
+              <Skeleton className="h-4 w-72 mt-2" />
+          </header>
+           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+              {[1, 2, 3, 4].map((i) => (
+                <Skeleton key={i} className="h-36 rounded-xl" />
+              ))}
+            </div>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+              <Skeleton className="col-span-4 h-[400px] rounded-xl" />
+              <Skeleton className="col-span-3 h-[400px] rounded-xl" />
+            </div>
+        </div>
+      );
+  }
+
   if (!isManager && user) {
     return <UserDashboard user={user} />;
   }
@@ -276,5 +297,3 @@ function ManagerDashboard({ isManager, user }: ManagerDashboardProps) {
 }
 
 export default ManagerDashboard;
-
-    
