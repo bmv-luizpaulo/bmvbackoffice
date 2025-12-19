@@ -3,8 +3,8 @@
 import * as React from 'react';
 import dynamic from 'next/dynamic';
 import { useSearchParams } from "next/navigation";
-import { useFirestore, useCollection, useMemoFirebase, useUser as useAuthUser } from "@/firebase";
-import { collection, query, where, or, and, collectionGroup } from "firebase/firestore";
+import { useFirestore, useCollection, useMemoFirebase, useUser as useAuthUser, useDoc } from "@/firebase";
+import { collection, query, where, or, and, collectionGroup, doc } from "firebase/firestore";
 import type { Project, User, Role, Task } from "@/lib/types";
 
 import { FolderKanban, Plus, SlidersHorizontal, User as UserIcon } from 'lucide-react';
@@ -31,11 +31,12 @@ export default function ProjectsListPage() {
   const [projectToEdit, setProjectToEdit] = React.useState<Project | null>(null);
 
   // --- Data Fetching ---
-  const userProfileQuery = React.useMemo(() => firestore && authUser?.uid ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser?.uid]);
-  const { data: userProfile } = useDoc<User>(userProfileQuery as any);
-  const roleQuery = React.useMemo(() => firestore && userProfile?.roleId ? doc(firestore, 'roles', userProfile.roleId) : null, [firestore, userProfile?.roleId]);
-  const { data: role } = useDoc<Role>(roleQuery as any);
-  const isManager = role?.isManager || role?.isDev;
+  const userProfileQuery = useMemoFirebase(() => firestore && authUser?.uid ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser?.uid]);
+  const { data: userProfile } = useDoc<User>(userProfileQuery);
+  
+  const roleQuery = useMemoFirebase(() => firestore && userProfile?.roleId ? doc(firestore, 'roles', userProfile.roleId) : null, [firestore, userProfile?.roleId]);
+  const { data: role } = useDoc<Role>(roleQuery);
+  const isManager = role?.permissions?.isManager || role?.permissions?.isDev;
 
   const projectsQuery = useMemoFirebase(() => {
     if (!firestore || !authUser || !role) return null;
@@ -54,7 +55,7 @@ export default function ProjectsListPage() {
   const { data: usersData, isLoading: isLoadingUsers } = useCollection<User>(usersQuery);
   const usersMap = React.useMemo(() => new Map(usersData?.map(u => [u.id, u])), [usersData]);
 
-  const tasksQuery = useMemoFirebase(() => firestore ? collectionGroup(firestore, 'tasks') : null, [firestore]);
+  const tasksQuery = useMemoFirebase(() => firestore ? query(collectionGroup(firestore, 'tasks')) : null, [firestore]);
   const { data: allTasks, isLoading: isLoadingTasks } = useCollection<Task>(tasksQuery);
   
   const tasksByProject = React.useMemo(() => {
