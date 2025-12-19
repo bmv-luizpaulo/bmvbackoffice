@@ -357,7 +357,7 @@ export function UserDataTable() {
         const userRef = doc(firestore, 'users', user.id);
         await updateDocumentNonBlocking(userRef, { status: newStatus });
         
-        // Log activity for each user
+        // Log activity
         await ActivityLogger.statusChange(firestore, user.id, statusLabels[newStatus], currentUser.uid);
       }
     }
@@ -587,7 +587,7 @@ export function UserDataTable() {
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel onClick={() => setSelectedUser(null)}>Cancelar</AlertDialogCancel>
-              <AlertDialogAction onClick={handleDeleteUser}>Excluir</AlertDialogAction>
+              <AlertDialogAction onClick={handleDeleteUser} className="bg-destructive hover:bg-destructive/90">Excluir</AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
