@@ -39,10 +39,10 @@ function DashboardSkeleton() {
 
 
 function DashboardPage() {
-  const { user: authUser, isUserLoading, claims, areClaimsReady } = useFirebase();
+  const { user: authUser, isUserLoading, claims } = useFirebase();
 
   // Renderiza o esqueleto de carregamento enquanto o usuário ou suas permissões não estiverem prontos.
-  if (isUserLoading || !areClaimsReady) {
+  if (isUserLoading) {
     return <DashboardSkeleton />;
   }
 

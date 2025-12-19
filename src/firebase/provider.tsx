@@ -28,11 +28,11 @@ export interface FirebaseContextState {
   auth: Auth | null; // The Auth service instance
   // User authentication state
   user: User | null;
-  isUserLoading: boolean; // True during initial auth check
+  isUserLoading: boolean; // True during initial auth check AND claims hydration
   userError: Error | null; // Error from auth listener
   // Claims (permissions) hydrated from ID token
   claims: Record<string, any> | null;
-  areClaimsReady: boolean;
+  areClaimsReady: boolean; // True once claims have been loaded for the current user
 }
 
 // Return type for useFirebase()
@@ -67,7 +67,7 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
 
   const [userAuthState, setUserAuthState] = useState<UserAuthState>({
     user: null,
-    isUserLoading: true, // Start loading until first auth event
+    isUserLoading: true, // Start loading until first auth event AND claims are ready
     userError: null,
   });
 
@@ -85,23 +85,24 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
     const unsubscribe = onAuthStateChanged(
       auth,
       async (firebaseUser) => {
-        setAreClaimsReady(false); // Set claims to not ready on user change
-        // Update auth state
-        setUserAuthState({ user: firebaseUser, isUserLoading: false, userError: null });
+        setUserAuthState({ user: firebaseUser, isUserLoading: true, userError: null }); // Keep loading until claims are ready
+        setAreClaimsReady(false);
+
         if (firebaseUser) {
           try {
-            // This is the initial load, don't force a refresh
             const token = await firebaseUser.getIdTokenResult(false);
             setClaims(token?.claims || {});
           } catch (e) {
             setClaims(null);
           } finally {
             setAreClaimsReady(true);
+            setUserAuthState({ user: firebaseUser, isUserLoading: false, userError: null }); // Now we are fully loaded
             setLastTokenRefresh(Date.now());
           }
         } else {
           setClaims(null);
           setAreClaimsReady(true);
+          setUserAuthState({ user: null, isUserLoading: false, userError: null }); // Not logged in, so we are "loaded"
         }
       },
       (error) => {
