@@ -6,7 +6,6 @@ import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "fire
 import { initializeFirebase } from "@/firebase";
 import type { User } from "./types";
 import { unstable_noStore as noStore } from 'next/cache';
-import { getFunctions, httpsCallable } from "firebase/functions";
 import { ActivityLogger } from './activity-logger';
 
 type ViaCepResponse = {
