@@ -53,11 +53,7 @@ function DashboardPage() {
 
   return (
     <Suspense fallback={<DashboardSkeleton />}>
-        {isManager ? (
-            <ManagerDashboard />
-        ) : (
-            <UserDashboard user={authUser!} />
-        )}
+      <ManagerDashboard isManager={isManager} user={authUser} />
     </Suspense>
   );
 }

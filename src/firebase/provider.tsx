@@ -16,7 +16,7 @@ interface FirebaseProviderProps {
 // Internal state for user authentication
 interface UserAuthState {
   user: User | null;
-  isUserLoading: boolean; // This will now wait for claims as well
+  isUserLoading: boolean;
   userError: Error | null;
 }
 
@@ -26,13 +26,10 @@ export interface FirebaseContextState {
   firebaseApp: FirebaseApp | null;
   firestore: Firestore | null;
   auth: Auth | null; // The Auth service instance
-  // User authentication state
   user: User | null;
   isUserLoading: boolean; // True during initial auth check AND claims hydration
   userError: Error | null; // Error from auth listener
-  // Claims (permissions) hydrated from ID token
   claims: Record<string, any> | null;
-  areClaimsReady: boolean; // True once claims have been loaded for the current user
 }
 
 // Return type for useFirebase()
@@ -44,7 +41,6 @@ export interface FirebaseServicesAndUser {
   isUserLoading: boolean;
   userError: Error | null;
   claims: Record<string, any> | null;
-  areClaimsReady: boolean;
 }
 
 // Return type for useUser() - specific to user auth state
@@ -57,9 +53,6 @@ export interface UserHookResult {
 // React Context
 export const FirebaseContext = createContext<FirebaseContextState | undefined>(undefined);
 
-/**
- * FirebaseProvider manages and provides Firebase services and user authentication state.
- */
 export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
   children,
 }) => {
@@ -67,88 +60,79 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
 
   const [userAuthState, setUserAuthState] = useState<UserAuthState>({
     user: null,
-    isUserLoading: true, // Start loading until first auth event AND claims are ready
+    isUserLoading: true,
     userError: null,
   });
 
   const [claims, setClaims] = useState<Record<string, any> | null>(null);
-  const [areClaimsReady, setAreClaimsReady] = useState<boolean>(false);
-  const [lastTokenRefresh, setLastTokenRefresh] = useState(0);
+  const [tokenRefreshTrigger, setTokenRefreshTrigger] = useState(0);
 
-  // Effect to subscribe to Firebase auth state changes and manage user profile
+  // Effect 1: Subscribe to Firebase auth state changes
   useEffect(() => {
-    if (!auth || !firestore) {
-      setUserAuthState({ user: null, isUserLoading: false, userError: new Error("Auth or Firestore service not provided.") });
+    if (!auth) {
+      setUserAuthState({ user: null, isUserLoading: false, userError: new Error("Auth service not provided.") });
       return;
     }
 
     const unsubscribe = onAuthStateChanged(
       auth,
-      async (firebaseUser) => {
-        setUserAuthState({ user: firebaseUser, isUserLoading: true, userError: null }); // Keep loading until claims are ready
-        setAreClaimsReady(false);
-
-        if (firebaseUser) {
-          try {
-            const token = await firebaseUser.getIdTokenResult(false);
-            setClaims(token?.claims || {});
-          } catch (e) {
-            setClaims(null);
-          } finally {
-            setAreClaimsReady(true);
-            setUserAuthState(prev => ({ ...prev, isUserLoading: false })); // Now we are fully loaded
-            setLastTokenRefresh(Date.now());
-          }
-        } else {
+      (firebaseUser) => {
+        setUserAuthState({ user: firebaseUser, isUserLoading: true, userError: null });
+        if (!firebaseUser) {
+          // If no user, claims are definitely not ready, and we are "loaded"
           setClaims(null);
-          setAreClaimsReady(true);
-          setUserAuthState({ user: null, isUserLoading: false, userError: null }); // Not logged in, so we are "loaded"
+          setUserAuthState(prev => ({ ...prev, isUserLoading: false }));
         }
+        // The claims loading logic is now handled in the next effect
       },
       (error) => {
         console.error("FirebaseProvider: onAuthStateChanged error:", error);
         setUserAuthState({ user: null, isUserLoading: false, userError: error });
         setClaims(null);
-        setAreClaimsReady(true);
       }
     );
 
     return () => unsubscribe();
-  }, [auth, firestore]);
+  }, [auth]);
 
-  // Effect to force token refresh when claims might have changed
+  // Effect 2: Load claims when user changes or a refresh is triggered
+  useEffect(() => {
+    const loadClaims = async () => {
+      if (userAuthState.user) {
+        try {
+          const tokenResult = await userAuthState.user.getIdTokenResult(true); // Force refresh
+          setClaims(tokenResult.claims);
+        } catch (e) {
+          console.error("Error fetching user claims:", e);
+          setClaims(null);
+        } finally {
+          setUserAuthState(prev => ({ ...prev, isUserLoading: false }));
+        }
+      }
+    };
+    
+    loadClaims();
+  }, [userAuthState.user, tokenRefreshTrigger]);
+
+  // Effect 3: Listen for Firestore document changes to trigger a token refresh
   useEffect(() => {
     if (userAuthState.user && firestore) {
       const userDocRef = doc(firestore, 'users', userAuthState.user.uid);
       
-      const unsubscribe = onSnapshot(userDocRef, async (docSnapshot) => {
+      const unsubscribe = onSnapshot(userDocRef, (docSnapshot) => {
         const userData = docSnapshot.data() as UserProfile | undefined;
         const tokenRefreshedTime = userData?._tokenRefreshed?.toDate()?.getTime();
-        
-        // If a refresh timestamp exists and it's newer than our last refresh, force a new token
-        if (tokenRefreshedTime && tokenRefreshedTime > lastTokenRefresh) {
-          console.log("Detected role change, forcing token refresh...");
-          setUserAuthState(prev => ({ ...prev, isUserLoading: true }));
-          setAreClaimsReady(false);
-          try {
-            const token = await userAuthState.user?.getIdTokenResult(true); // Force refresh
-            setClaims(token?.claims || {});
-          } catch (e) {
-            console.error("Error refreshing token after role change:", e);
-          } finally {
-            setAreClaimsReady(true);
-            setUserAuthState(prev => ({ ...prev, isUserLoading: false }));
-            setLastTokenRefresh(Date.now());
-          }
+
+        if (tokenRefreshedTime) {
+           console.log("Detected role change, triggering token refresh...");
+           setTokenRefreshTrigger(Date.now());
         }
       });
 
       return () => unsubscribe();
     }
-  }, [userAuthState.user, firestore, lastTokenRefresh]);
+  }, [userAuthState.user, firestore]);
 
-
-  // Memoize the context value
   const contextValue = useMemo((): FirebaseContextState => {
     const servicesAvailable = !!(firebaseApp && firestore && auth);
     return {
@@ -160,9 +144,8 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
       isUserLoading: userAuthState.isUserLoading,
       userError: userAuthState.userError,
       claims,
-      areClaimsReady,
     };
-  }, [firebaseApp, firestore, auth, userAuthState, claims, areClaimsReady]);
+  }, [firebaseApp, firestore, auth, userAuthState, claims]);
 
   return (
     <FirebaseContext.Provider value={contextValue}>
@@ -172,10 +155,7 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
   );
 };
 
-/**
- * Hook to access core Firebase services and user authentication state.
- * Throws error if core services are not available or used outside provider.
- */
+
 export const useFirebase = (): FirebaseServicesAndUser => {
   const context = useContext(FirebaseContext);
 
@@ -195,44 +175,34 @@ export const useFirebase = (): FirebaseServicesAndUser => {
     isUserLoading: context.isUserLoading,
     userError: context.userError,
     claims: context.claims,
-    areClaimsReady: context.areClaimsReady,
   };
 };
 
-/** Hook to access Firebase Auth instance. */
 export const useAuth = (): Auth => {
   const { auth } = useFirebase();
   return auth;
 };
 
-/** Hook to access Firestore instance. */
 export const useFirestore = (): Firestore => {
   const { firestore } = useFirebase();
   return firestore;
 };
 
-/** Hook to access Firebase App instance. */
 export const useFirebaseApp = (): FirebaseApp => {
   const { firebaseApp } = useFirebase();
   return firebaseApp;
 };
 
-/**
- * Hook specifically for accessing the authenticated user's state.
- * This provides the User object, loading status, and any auth errors.
- * @returns {UserHookResult} Object with user, isUserLoading, userError.
- */
 export const useUser = (): UserHookResult => {
-  const { user, isUserLoading, userError } = useFirebase(); // Leverages the main hook
+  const { user, isUserLoading, userError } = useFirebase();
   return { user, isUserLoading, userError };
 };
 
-// Permissions hook based on claims-only
 export const usePermissions = () => {
-  const { claims, areClaimsReady } = useFirebase();
+  const { claims, isUserLoading } = useFirebase();
   const has = (key: string) => !!(claims && (claims as any)[key] === true);
   return {
-    ready: areClaimsReady,
+    ready: !isUserLoading, // Claims are ready when the user is no longer loading
     claims: claims || {},
     isManager: has('isManager'),
     isDev: has('isDev'),
