@@ -21,8 +21,8 @@ const colors = {
 
 const fadeIn = {
   hidden: { opacity: 0, y: 20 },
-  visible: { 
-    opacity: 1, 
+  visible: {
+    opacity: 1,
     y: 0,
     transition: {
       duration: 0.6,
@@ -45,7 +45,7 @@ export default function LoginPage() {
     <FirebaseClientProvider>
       <div className="relative min-h-screen w-full overflow-hidden">
         {/* Background com imagem e sobreposição */}
-        <motion.div 
+        <motion.div
           className="fixed inset-0 -z-10"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -59,7 +59,7 @@ export default function LoginPage() {
             quality={100}
             className="object-cover"
           />
-          <div 
+          <div
             className="absolute inset-0"
             style={{
               background: `linear-gradient(135deg, ${colors.green}80 0%, ${colors.blue}90 100%)`,
@@ -70,7 +70,7 @@ export default function LoginPage() {
 
         <AnimatePresence>
           {isLoading ? (
-            <motion.div 
+            <motion.div
               className="fixed inset-0 flex items-center justify-center bg-background/80 backdrop-blur-sm z-50"
               initial={{ opacity: 1 }}
               exit={{ opacity: 0, transition: { duration: 0.5 } }}
@@ -81,9 +81,9 @@ export default function LoginPage() {
                 transition={{ duration: 0.4 }}
                 className="flex flex-col items-center"
               >
-                <Image 
-                  src="/image/BMV.png" 
-                  alt="SGI Logo" 
+                <Image
+                  src="/image/BMV.png"
+                  alt="SGI Logo"
                   width={100}
                   height={28}
                   className="mb-4 animate-pulse"
@@ -93,7 +93,7 @@ export default function LoginPage() {
               </motion.div>
             </motion.div>
           ) : (
-            <motion.main 
+            <motion.main
               className="relative flex min-h-screen items-center justify-end p-4 sm:p-8"
               initial="hidden"
               animate="visible"
@@ -103,11 +103,11 @@ export default function LoginPage() {
                 }
               }}
             >
-              <motion.div 
+              <motion.div
                 className="w-full max-w-md ml-auto mr-20"
                 variants={fadeIn as any}
               >
-                <Card 
+                <Card
                   className="w-full bg-white/90 backdrop-blur-sm border border-white/20 shadow-xl overflow-hidden relative group"
                   onMouseEnter={() => setIsHovered(true)}
                   onMouseLeave={() => setIsHovered(false)}
@@ -116,30 +116,30 @@ export default function LoginPage() {
                   }}
                 >
                   {/* Barra superior com cor de destaque */}
-                  <div 
+                  <div
                     className="h-2 w-full"
                     style={{ backgroundColor: colors.green }}
                   />
-                  
+
                   <div className="p-8">
-                    <motion.div 
+                    <motion.div
                       className="flex flex-col items-center py-8 px-6"
                       initial={{ y: 20, opacity: 0 }}
                       animate={{ y: 0, opacity: 1 }}
                       transition={{ delay: 0.2 }}
                     >
                       <div className="mb-6">
-                        <Image 
-                          src="/image/BMV.png" 
-                          alt="BMV Logo" 
+                        <Image
+                          src="/image/BMV.png"
+                          alt="BMV Logo"
                           width={120}
                           height={34}
                           className="mx-auto"
                           priority
                         />
                       </div>
-                      
-                      <h1 
+
+                      <h1
                         className="text-4xl font-extrabold mb-2"
                         style={{
                           fontFamily: 'Raleway, sans-serif',
@@ -150,7 +150,7 @@ export default function LoginPage() {
                       >
                         SGI
                       </h1>
-                      <p 
+                      <p
                         className="text-gray-700 text-sm font-medium"
                         style={{
                           fontFamily: 'Montserrat, sans-serif',
@@ -161,7 +161,7 @@ export default function LoginPage() {
                       </p>
                     </motion.div>
 
-                    <motion.div 
+                    <motion.div
                       className="w-full space-y-6"
                       variants={{
                         hidden: { opacity: 0 },
@@ -173,11 +173,11 @@ export default function LoginPage() {
                         }
                       }}
                     >
-                      <motion.div 
+                      <motion.div
                         className="text-left px-6 pb-2"
                         variants={fadeIn as any}
                       >
-                        <h2 
+                        <h2
                           className="text-2xl font-bold mb-1"
                           style={{
                             fontFamily: 'Raleway, sans-serif',
@@ -187,7 +187,7 @@ export default function LoginPage() {
                         >
                           Bem-vindo
                         </h2>
-                        <p 
+                        <p
                           className="text-gray-600 text-sm"
                           style={{
                             fontFamily: 'Montserrat, sans-serif',
@@ -200,7 +200,7 @@ export default function LoginPage() {
 
                       <LoginForm />
 
-                      <motion.div 
+                      <motion.div
                         className="text-center text-xs text-gray-500 flex items-center justify-center gap-2 p-4 border-t border-gray-100 mt-6"
                         variants={fadeIn as any}
                       >
@@ -213,23 +213,23 @@ export default function LoginPage() {
                   </div>
                 </Card>
 
-                <motion.div 
+                <motion.div
                   className="mt-8 text-center"
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.4 }}
                 >
-                  <a 
-                    href="#" 
-                    className="inline-flex items-center text-sm text-gray-600 hover:text-gray-800 transition-colors group"
-                    style={{ fontFamily: 'Montserrat, sans-serif' }}
+                  <a
+                    href="/suporte"
+                    className="inline-flex items-center text-sm text-white hover:text-white/90 transition-colors group font-montserrat"
+                    aria-label="Falar com o suporte"
                   >
                     Precisa de ajuda? Fale com o suporte
-                    <ArrowRight 
-                      className="ml-1 h-4 w-4 transition-transform group-hover:translate-x-1" 
-                      style={{ color: colors.green }}
+                    <ArrowRight
+                      className="ml-1 h-4 w-4 text-green-500 transition-transform group-hover:translate-x-1"
                     />
                   </a>
+
                 </motion.div>
               </motion.div>
             </motion.main>
@@ -240,4 +240,3 @@ export default function LoginPage() {
   );
 }
 
-    
