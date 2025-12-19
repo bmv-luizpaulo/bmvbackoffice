@@ -1,11 +1,12 @@
 'use client';
 
-import { useFirestore, useDoc, useMemoFirebase, useUser, useFirebase } from "@/firebase";
+import { useDoc, useMemoFirebase, useFirebase } from "@/firebase";
 import { doc } from "firebase/firestore";
 import type { User as UserType, Role } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import React, { Suspense } from 'react';
 import dynamic from 'next/dynamic';
+import { useFirestore } from "@/firebase";
 
 const ManagerDashboard = dynamic(() => import('@/components/dashboard/manager-dashboard'), {
   loading: () => <DashboardSkeleton />,
@@ -44,28 +45,27 @@ function DashboardSkeleton() {
 
 
 function DashboardPage() {
-  const firestore = useFirestore();
   const { user: authUser, isUserLoading, claims, areClaimsReady } = useFirebase();
-  
-  const userProfileQuery = useMemoFirebase(() => firestore && authUser?.uid ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser?.uid]);
-  const { data: userProfile, isLoading: isLoadingProfile } = useDoc<UserType>(userProfileQuery);
-  
-  // Directly use claims for permissions
-  const isManager = claims?.isManager || claims?.isDev;
 
-  const isLoading = isUserLoading || !areClaimsReady || isLoadingProfile;
-  
+  // isLoading é verdadeiro se o usuário ainda não foi autenticado
+  // ou se as permissões (claims) ainda não estão prontas.
+  const isLoading = isUserLoading || !areClaimsReady;
+
   if (isLoading) {
     return <DashboardSkeleton />;
   }
-  
+
+  // A partir daqui, temos certeza que as claims estão carregadas.
+  const isManager = claims?.isManager || claims?.isDev;
+
   return (
     <Suspense fallback={<DashboardSkeleton />}>
         {isManager ? (
-          <ManagerDashboard /> 
-        ) : userProfile ? (
-          <UserDashboard user={userProfile} /> 
+          <ManagerDashboard />
+        ) : authUser ? (
+          <UserDashboard user={authUser as any} />
         ) : (
+          // Caso de fallback se o usuário não for gestor e o objeto de usuário não estiver disponível
           <DashboardSkeleton />
         )}
     </Suspense>

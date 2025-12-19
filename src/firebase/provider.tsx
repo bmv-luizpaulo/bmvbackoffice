@@ -73,6 +73,7 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
 
   const [claims, setClaims] = useState<Record<string, any> | null>(null);
   const [areClaimsReady, setAreClaimsReady] = useState<boolean>(false);
+  const [lastTokenRefresh, setLastTokenRefresh] = useState(0);
 
   // Effect to subscribe to Firebase auth state changes and manage user profile
   useEffect(() => {
@@ -89,12 +90,14 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
         setUserAuthState({ user: firebaseUser, isUserLoading: false, userError: null });
         if (firebaseUser) {
           try {
-            const token = await firebaseUser.getIdTokenResult(); // Don't force refresh here
+            // This is the initial load, don't force a refresh
+            const token = await firebaseUser.getIdTokenResult(false);
             setClaims(token?.claims || {});
           } catch (e) {
             setClaims(null);
           } finally {
             setAreClaimsReady(true);
+            setLastTokenRefresh(Date.now());
           }
         } else {
           setClaims(null);
@@ -114,26 +117,32 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
 
   // Effect to force token refresh when claims might have changed
   useEffect(() => {
-    if (userAuthState.user) {
+    if (userAuthState.user && firestore) {
       const userDocRef = doc(firestore, 'users', userAuthState.user.uid);
-      const unsubscribe = onSnapshot(userDocRef, async (doc) => {
-        const data = doc.data() as UserProfile;
-        // The Cloud Function updates `_tokenRefreshed`. When it changes, force a token refresh.
-        if (data && data._tokenRefreshed) {
-            console.log("Detected role change, forcing token refresh...");
-            try {
-              // Force refresh the token to get new claims.
-              const token = await userAuthState.user?.getIdTokenResult(true);
-              setClaims(token?.claims || {});
-            } catch (e) {
-              console.error("Error refreshing token after role change:", e);
-            }
+      
+      const unsubscribe = onSnapshot(userDocRef, async (docSnapshot) => {
+        const userData = docSnapshot.data() as UserProfile | undefined;
+        const tokenRefreshedTime = userData?._tokenRefreshed?.toDate()?.getTime();
+        
+        // If a refresh timestamp exists and it's newer than our last refresh, force a new token
+        if (tokenRefreshedTime && tokenRefreshedTime > lastTokenRefresh) {
+          console.log("Detected role change, forcing token refresh...");
+          setAreClaimsReady(false);
+          try {
+            const token = await userAuthState.user?.getIdTokenResult(true); // Force refresh
+            setClaims(token?.claims || {});
+          } catch (e) {
+            console.error("Error refreshing token after role change:", e);
+          } finally {
+            setAreClaimsReady(true);
+            setLastTokenRefresh(Date.now());
+          }
         }
       });
 
       return () => unsubscribe();
     }
-  }, [userAuthState.user, firestore]);
+  }, [userAuthState.user, firestore, lastTokenRefresh]);
 
 
   // Memoize the context value
