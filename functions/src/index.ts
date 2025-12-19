@@ -6,7 +6,15 @@ import { Change, EventContext } from 'firebase-functions';
 import * as cors from 'cors';
 import { randomBytes } from "crypto";
 
-const corsHandler = cors({ origin: true });
+const corsHandler = cors({
+  origin: [
+    'https://sgibmv.vercel.app',
+    'http://localhost:9002'
+  ],
+  methods: ['POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+});
+
 
 admin.initializeApp();
 
