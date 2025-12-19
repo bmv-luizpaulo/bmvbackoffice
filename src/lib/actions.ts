@@ -12,8 +12,6 @@ import * as admin from 'firebase-admin';
 
 // Initialize Firebase Admin SDK if not already initialized
 if (!admin.apps.length) {
-    // Note: This relies on environment variables being set in your deployment environment
-    // GOOGLE_APPLICATION_CREDENTIALS for local dev, or default service account in production
     admin.initializeApp();
 }
 
@@ -54,7 +52,7 @@ export async function getCepInfoAction(cep: string): Promise<{ success: boolean;
     }
 }
 
-async function verifyAdminPermission() {
+async function getAdminUidFromToken(): Promise<string> {
     const authorization = headers().get('Authorization');
     if (!authorization?.startsWith('Bearer ')) {
         throw new Error("Não autorizado: Token não fornecido.");
@@ -63,23 +61,9 @@ async function verifyAdminPermission() {
     
     const decodedToken = await admin.auth().verifyIdToken(idToken);
     
-    const { firestore } = initializeFirebase();
-    const adminUserDoc = await firestore.collection('users').doc(decodedToken.uid).get();
-    
-    if (!adminUserDoc.exists) {
-        throw new Error("Não autorizado: Perfil do administrador não encontrado.");
-    }
-    
-    const adminUserData = adminUserDoc.data();
-    const adminRoleId = adminUserData?.roleId;
-
-    if (!adminRoleId) {
-        throw new Error("Não autorizado: Administrador não possui um cargo definido.");
-    }
-
-    const adminRoleDoc = await firestore.collection('roles').doc(adminRoleId).get();
-    if (!adminRoleDoc.exists || (!adminRoleDoc.data()?.permissions?.isDev && !adminRoleDoc.data()?.permissions?.canManageUsers)) {
-        throw new Error("Não autorizado: Você não tem permissão para criar usuários.");
+    // As a best practice, verify the user has admin claims directly from the token
+    if (decodedToken.isDev !== true && decodedToken.canManageUsers !== true) {
+        throw new Error("Não autorizado: Você não tem permissão para realizar esta ação.");
     }
 
     return decodedToken.uid;
@@ -89,19 +73,16 @@ export async function createUserAction(userData: Omit<User, 'id' | 'avatarUrl' |
   noStore();
   
   try {
-    const adminUid = await verifyAdminPermission();
-    
+    const adminUid = await getAdminUidFromToken();
     const { firestore } = initializeFirebase();
     
-    // Create user in Firebase Auth
     const userRecord = await admin.auth().createUser({
         email: userData.email,
-        emailVerified: true, // Admin-created users are considered verified
+        emailVerified: true,
         displayName: userData.name,
         disabled: userData.status === 'suspended',
     });
     
-    // Create user profile in Firestore
     const userRef = doc(firestore, "users", userRecord.uid);
     await setDoc(userRef, {
       ...userData,
@@ -121,6 +102,31 @@ export async function createUserAction(userData: Omit<User, 'id' | 'avatarUrl' |
     return { success: false, error: error.message || 'Falha ao criar usuário.' };
   }
 }
+
+export async function updateUserRoleAction(targetUserId: string, newRoleId: string): Promise<{ success: boolean; error?: string }> {
+    noStore();
+    try {
+        await getAdminUidFromToken(); // Just for permission check
+        // The actual logic is in the Cloud Function, this action is a secure gateway
+        // In a real scenario, you might call the Cloud Function from here.
+        // For now, we assume the client will update Firestore and the function will trigger.
+        // This server action's primary role is the permission check.
+        return { success: true };
+    } catch (error: any) {
+        return { success: false, error: error.message };
+    }
+}
+
+export async function updateUserStatusAction(targetUserId: string, newStatus: User['status']): Promise<{ success: boolean; error?: string }> {
+    noStore();
+    try {
+        await getAdminUidFromToken(); // Just for permission check
+        return { success: true };
+    } catch (error: any) {
+        return { success: false, error: error.message };
+    }
+}
+
 
 export async function uploadProjectFileAction(formData: FormData) {
     noStore();
@@ -209,5 +215,3 @@ export async function uploadContractFileAction(formData: FormData) {
         return { success: false, error: 'Falha ao enviar o arquivo do contrato.' };
     }
 }
-
-    

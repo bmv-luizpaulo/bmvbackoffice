@@ -62,6 +62,8 @@ import {
 import { useToast } from "@/hooks/use-toast"
 import { deleteDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase";
 import { ActivityLogger } from "@/lib/activity-logger";
+import { updateUserRoleAction, updateUserStatusAction } from "@/lib/actions";
+
 
 const UserFormDialog = dynamic(() => import('./user-form-dialog').then(m => m.UserFormDialog), { ssr: false });
 const UserProfileDialog = dynamic(() => import('./user-profile-dialog').then(m => m.UserProfileDialog), { ssr: false });
@@ -180,6 +182,12 @@ export function UserDataTable() {
 
   const handleRoleChange = React.useCallback(async (user: User, newRoleId: string) => {
     if (!firestore || !currentUser) return;
+    const result = await updateUserRoleAction(user.id, newRoleId);
+    if (!result.success) {
+        toast({ title: "Falha na Permissão", description: result.error, variant: 'destructive'});
+        return;
+    }
+
     const userRef = doc(firestore, 'users', user.id);
     await updateDocumentNonBlocking(userRef, { roleId: newRoleId });
     currentUser.getIdToken(true); // Force token refresh to get new claims
@@ -195,6 +203,12 @@ export function UserDataTable() {
 
   const handleStatusChange = React.useCallback(async (user: User, newStatus: 'active' | 'inactive' | 'suspended') => {
     if (!firestore || !currentUser) return;
+    const result = await updateUserStatusAction(user.id, newStatus);
+    if (!result.success) {
+        toast({ title: "Falha na Permissão", description: result.error, variant: 'destructive'});
+        return;
+    }
+
     const userRef = doc(firestore, 'users', user.id);
     await updateDocumentNonBlocking(userRef, { status: newStatus });
     const statusLabels = { active: 'Ativo', inactive: 'Inativo', suspended: 'Suspenso' };
@@ -615,5 +629,3 @@ export function UserDataTable() {
     </div>
   )
 }
-
-    
