@@ -60,11 +60,12 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogClose,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast"
 import { deleteDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase";
 import { ActivityLogger } from "@/lib/activity-logger";
-import { updateUserRoleAction, updateUserStatusAction } from "@/lib/actions";
+import { updateUserRoleAction, updateUserStatusAction, createUserAction } from "@/lib/actions";
 import { WhatsappIcon } from "../icons/whatsapp-icon";
 
 
@@ -177,7 +178,7 @@ export function UserDataTable() {
   }, [firestore, selectedUser, toast]);
 
   const handleRoleChange = React.useCallback(async (user: User, newRoleId: string) => {
-    if (!firestore) return;
+    if (!firestore || !currentUser) return;
     const result = await updateUserRoleAction(user.id, newRoleId);
     if (!result.success) {
         toast({ title: "Falha na Permissão", description: result.error, variant: 'destructive'});
@@ -660,4 +661,3 @@ function GeneratedCredentialsDialog({
     </Dialog>
   );
 }
-
