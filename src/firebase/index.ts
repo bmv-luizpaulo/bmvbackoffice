@@ -139,5 +139,5 @@ export * from './firestore/use-collection';
 export * from './firestore/use-doc';
 export * from './errors';
 export * from './error-emitter';
-export { useUser, useAuth, useFirestore, useFirebaseApp, FirebaseProvider } from './provider';
+export { useUser, useAuth, useFirestore, useFirebaseApp, useFirebase, FirebaseProvider } from './provider';
 export { FirebaseClientProvider } from './client-provider';
