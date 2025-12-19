@@ -414,5 +414,3 @@ export type ErrorLog = {
     timestamp: any;
     isResolved: boolean;
 }
-
-    

@@ -56,23 +56,14 @@ export async function getCepInfoAction(cep: string): Promise<{ success: boolean;
     }
 }
 
-async function getAdminUidFromToken(): Promise<string | null> {
-    try {
-        const authorization = headers().get('Authorization');
-        if (!authorization?.startsWith('Bearer ')) {
-            console.error("getAdminUidFromToken: No authorization header found.");
-            return null;
-        }
-
-        const idToken = authorization.split('Bearer ')[1];
-        const decodedToken = await admin.auth().verifyIdToken(idToken);
-        
-        return decodedToken.uid;
-
-    } catch (error: any) {
-        console.error("getAdminUidFromToken: Auth check failed:", error.message);
-        throw new Error("Não autorizado.");
+async function getAdminUidFromToken(): Promise<string> {
+    const authorization = headers().get('Authorization');
+    if (!authorization?.startsWith('Bearer ')) {
+      throw new Error("Não autorizado.");
     }
+    const idToken = authorization.split('Bearer ')[1];
+    const decodedToken = await admin.auth().verifyIdToken(idToken);
+    return decodedToken.uid;
 }
 
 
@@ -80,28 +71,11 @@ export async function createUserAction(userData: Omit<User, 'id' | 'avatarUrl' |
   noStore();
   
   try {
-    const adminUid = await getAdminUidFromToken();
-    if (!adminUid) {
-        return { success: false, error: "Não autorizado." };
-    }
-    
-    // Whitelist de campos para criação de usuário
-    const { name, email, status, ...restOfData } = userData;
-
-    if (!name || !email) {
-      return { success: false, error: 'Nome e e-mail são obrigatórios.' };
-    }
-
-    // Server-side logic to create user remains disabled for this context.
-    // The client will handle user creation directly with Firebase Auth SDK.
-    // This action now primarily serves as a permission check placeholder.
-    return { success: false, error: "A criação de usuário via Server Action está desabilitada. Use o SDK do cliente." };
+    await getAdminUidFromToken();
+    return { success: false, error: "A criação de usuário via Server Action está desabilitada. Use a Cloud Function." };
 
   } catch (error: any) {
     console.error("Error in createUserAction:", error);
-    if (error.code === 'auth/email-already-exists') {
-        return { success: false, error: 'Este e-mail já está em uso por outra conta.' };
-    }
     return { success: false, error: error.message || 'Falha ao criar usuário.' };
   }
 }
@@ -214,5 +188,3 @@ export async function uploadContractFileAction(formData: FormData) {
         return { success: false, error: 'Falha ao enviar o arquivo do contrato.' };
     }
 }
-
-    

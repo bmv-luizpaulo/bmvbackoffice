@@ -136,82 +136,73 @@ export const onUserUpdate = functions.firestore
 
 // Cloud Function para criar um novo usuário
 export const createUser = functions.https.onRequest((req, res) => {
-  corsHandler(req, res, async () => {
-    if (req.method === 'OPTIONS') {
+    corsHandler(req, res, async () => {
+      if (req.method === 'OPTIONS') {
         res.status(204).send('');
         return;
-    }
+      }
 
-    if (req.method !== 'POST') {
-      res.status(405).send({ success: false, error: 'Method not allowed' });
-      return;
-    }
+      if (req.method !== 'POST') {
+        res.status(405).send({ success: false, error: 'Method not allowed' });
+        return;
+      }
 
-    try {
+      try {
         // 1. Verificação de autenticação e permissão
         if (!req.headers.authorization || !req.headers.authorization.startsWith('Bearer ')) {
-            res.status(403).send({ success: false, error: "Unauthorized: Missing or invalid token." });
-            return;
+          res.status(403).send({ success: false, error: "Unauthorized: Missing or invalid token." });
+          return;
         }
 
         const idToken = req.headers.authorization.split('Bearer ')[1];
         const decodedIdToken = await admin.auth().verifyIdToken(idToken);
-        
         const adminUid = decodedIdToken.uid;
-        
-        let hasPermission = false;
-        const claims = decodedIdToken;
 
-        // Check 1: Permissions from claims in the token
-        if (claims.isDev === true || claims.canManageUsers === true) {
-            hasPermission = true;
+        let hasPermission = false;
+        if (decodedIdToken.isDev === true || decodedIdToken.canManageUsers === true) {
+          hasPermission = true;
         }
 
-        // Check 2: Fallback to Firestore if claims are not present/sufficient
         if (!hasPermission) {
-            const adminUserDoc = await db.collection('users').doc(adminUid).get();
+          const adminUserDoc = await db.collection('users').doc(adminUid).get();
+          if (adminUserDoc.exists) {
             const adminUserData = adminUserDoc.data();
             const adminRoleId = adminUserData?.roleId;
-
             if (adminRoleId) {
-                const adminRoleDoc = await db.collection('roles').doc(adminRoleId).get();
+              const adminRoleDoc = await db.collection('roles').doc(adminRoleId).get();
+              if (adminRoleDoc.exists) {
                 const adminRoleData = adminRoleDoc.data();
                 if (adminRoleData?.permissions?.isDev === true || adminRoleData?.permissions?.canManageUsers === true) {
-                    hasPermission = true;
+                  hasPermission = true;
                 }
+              }
             }
+          }
         }
         
         if (!hasPermission) {
-             res.status(403).send({ success: false, error: "Permission denied: You do not have permission to create users."});
-             return;
+          res.status(403).send({ success: false, error: "Permission denied: You do not have permission to create users."});
+          return;
         }
 
-        // 2. Extração e validação dos dados de entrada
         const { email, name, status, ...restOfData } = req.body;
         if (!email || !name) {
-            res.status(400).send({ success: false, error: 'Email and name are required.'});
-            return;
+          res.status(400).send({ success: false, error: 'Email and name are required.' });
+          return;
         }
 
-        // 3. Geração de senha temporária segura
         const tempPassword = `bmv-${randomBytes(4).toString('hex')}`;
-        
-        // Validação de status
         const allowedStatus = ['active', 'inactive', 'suspended'];
         const safeStatus = allowedStatus.includes(status) ? status : 'active';
 
-
-        // 4. Criação do usuário no Firebase Authentication
         const userRecord = await admin.auth().createUser({
-            email: email,
-            emailVerified: true,
-            password: tempPassword,
-            displayName: name,
-            disabled: safeStatus === 'suspended',
+          email: email,
+          emailVerified: false, // O usuário definirá a senha, então não precisa verificar
+          password: tempPassword,
+          displayName: name,
+          disabled: safeStatus !== 'active',
         });
-        
-        // 5. Whitelist de campos para o Firestore
+
         const allowedFields = ['roleId', 'phone', 'linkedinUrl', 'personalDocument', 'address', 'teamIds'];
         const safeData: { [key: string]: any } = {};
         for (const key of allowedFields) {
@@ -219,31 +210,39 @@ export const createUser = functions.https.onRequest((req, res) => {
             safeData[key] = restOfData[key];
           }
         }
+        
+        const resetLink = await admin.auth().generatePasswordResetLink(email);
 
-        // 6. Criação do perfil do usuário no Firestore
         const newUserProfile = {
-            ...safeData,
-            name,
-            email,
-            status: safeStatus,
-            avatarUrl: `https://picsum.photos/seed/${userRecord.uid}/200`,
-            createdAt: admin.firestore.FieldValue.serverTimestamp()
+          ...safeData,
+          name,
+          email,
+          status: safeStatus,
+          avatarUrl: `https://picsum.photos/seed/${userRecord.uid}/200`,
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
         };
         await db.collection("users").doc(userRecord.uid).set(newUserProfile);
 
-        // 7. Retorno do sucesso com as credenciais
         functions.logger.log(`User ${userRecord.uid} created by ${adminUid}.`);
-        res.status(200).send({ success: true, data: { uid: userRecord.uid, email: email, tempPassword: tempPassword } });
+        res.status(200).send({ 
+            success: true, 
+            data: { 
+                uid: userRecord.uid, 
+                email: email, 
+                tempPassword: tempPassword,
+                resetLink: resetLink
+            } 
+        });
 
-    } catch (error: any) {
+      } catch (error: any) {
         functions.logger.error("Error creating user in Cloud Function:", error);
         if (error.code === 'auth/email-already-exists') {
-             res.status(409).send({ success: false, error: 'This email is already in use by another account.' });
-        } else if (error.code === 'auth/id-token-expired') {
-             res.status(403).send({ success: false, error: "Unauthorized: Token has expired." });
+          res.status(409).send({ success: false, error: 'This email is already in use by another account.' });
+        } else if (error.code === 'auth/id-token-expired' || error.code === 'auth/argument-error') {
+          res.status(403).send({ success: false, error: "Unauthorized: Token has expired or is invalid." });
         } else {
-            res.status(500).send({ success: false, error: error.message || 'An internal error occurred while creating the user.' });
+          res.status(500).send({ success: false, error: error.message || 'An internal error occurred while creating the user.' });
         }
-    }
-  });
+      }
+    });
 });

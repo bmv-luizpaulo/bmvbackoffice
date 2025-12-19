@@ -22,7 +22,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { MoreHorizontal, Pencil, ShieldCheck, ShieldOff, Trash2, UserCheck, UserX, UserMinus, Eye, FileSpreadsheet, Copy, Link, Mail, MessageSquare } from "lucide-react"
+import { MoreHorizontal, Pencil, ShieldCheck, ShieldOff, Trash2, UserCheck, UserX, UserMinus, Eye, FileSpreadsheet, Copy, Link as LinkIcon, Mail, MessageSquare } from "lucide-react"
 
 import {
   Table,
@@ -41,7 +41,6 @@ import type { User, Role } from "@/lib/types";
 import dynamic from "next/dynamic";
 import { useAuth, useFirestore, useCollection, useUser as useAuthUser, useMemoFirebase } from "@/firebase";
 import { collection, doc, setDoc } from "firebase/firestore";
-import { createUserWithEmailAndPassword, sendPasswordResetEmail } from "firebase/auth";
 import { randomBytes } from "crypto";
 
 import {
@@ -66,6 +65,7 @@ import { useToast } from "@/hooks/use-toast"
 import { deleteDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase";
 import { ActivityLogger } from "@/lib/activity-logger";
 import { updateUserRoleAction, updateUserStatusAction } from "@/lib/actions";
+import { WhatsappIcon } from "../icons/whatsapp-icon";
 
 
 const UserFormDialog = dynamic(() => import('./user-form-dialog').then(m => m.UserFormDialog), { ssr: false });
@@ -74,6 +74,8 @@ const UserImportExportDialog = dynamic(() => import('./user-import-export').then
 
 type GeneratedCredentials = {
   email: string;
+  tempPassword?: string;
+  resetLink?: string;
 };
 
 
@@ -137,40 +139,27 @@ export function UserDataTable() {
     } else {
         // Create new user
         try {
-            // Use a temporary strong password
-            const tempPassword = `bmv-${randomBytes(8).toString('hex')}`;
+            const token = await currentUser.getIdToken();
+            const response = await fetch(`https://us-central1-studio-4461945520-252d9.cloudfunctions.net/createUser`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(userData),
+            });
             
-            const userCredential = await createUserWithEmailAndPassword(auth, userData.email, tempPassword);
-            const newUser = userCredential.user;
+            const result = await response.json();
 
-            const { email, ...restOfData } = userData;
-
-            const userProfileData = {
-                ...restOfData,
-                name: userData.name,
-                email: userData.email,
-                avatarUrl: `https://picsum.photos/seed/${newUser.uid}/200`,
-                createdAt: new Date().toISOString(),
-            };
-            
-            await setDoc(doc(firestore, "users", newUser.uid), userProfileData);
-
-            await sendPasswordResetEmail(auth, userData.email);
-
-            toast({ title: "Usuário Criado e E-mail Enviado", description: `A conta para ${userData.name} foi criada e um e-mail para definição de senha foi enviado.` });
-            setGeneratedCredentials({ email: userData.email });
-
-        } catch (error: any) {
-            console.error("Erro ao criar usuário:", error);
-            let errorMessage = "Não foi possível completar a operação.";
-            if (error.code === 'auth/email-already-in-use') {
-                errorMessage = "Este e-mail já está em uso por outra conta.";
-            } else if (error.code === 'auth/invalid-email') {
-                errorMessage = "O formato do e-mail é inválido.";
-            } else if (error.code === 'auth/weak-password') {
-                errorMessage = "A senha temporária gerada é fraca (isso não deveria acontecer).";
+            if (!response.ok || !result.success) {
+                throw new Error(result.error || `Falha ao chamar Cloud Function: ${response.statusText}`);
             }
-            toast({ variant: 'destructive', title: "Erro ao Criar Usuário", description: errorMessage });
+
+            setGeneratedCredentials(result.data);
+            
+        } catch (error: any) {
+            console.error("Erro ao chamar Cloud Function 'createUser':", error);
+            toast({ variant: 'destructive', title: "Erro ao Criar Usuário", description: error.message });
         }
     }
     setIsFormOpen(false);
@@ -188,7 +177,7 @@ export function UserDataTable() {
   }, [firestore, selectedUser, toast]);
 
   const handleRoleChange = React.useCallback(async (user: User, newRoleId: string) => {
-    if (!firestore || !currentUser) return;
+    if (!firestore) return;
     const result = await updateUserRoleAction(user.id, newRoleId);
     if (!result.success) {
         toast({ title: "Falha na Permissão", description: result.error, variant: 'destructive'});
@@ -570,19 +559,10 @@ export function UserDataTable() {
         roles={rolesData || []}
       />
 
-       <Dialog open={!!generatedCredentials} onOpenChange={() => setGeneratedCredentials(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Usuário Criado com Sucesso</DialogTitle>
-            <DialogDescription>
-              A conta para <strong>{generatedCredentials?.email}</strong> foi criada. Um e-mail para definição de senha foi enviado para o usuário.
-            </DialogDescription>
-          </DialogHeader>
-           <DialogFooter>
-             <Button onClick={() => setGeneratedCredentials(null)}>Fechar</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+       <GeneratedCredentialsDialog
+          credentials={generatedCredentials}
+          onOpenChange={() => setGeneratedCredentials(null)}
+       />
 
       <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
           <AlertDialogContent>
@@ -602,4 +582,82 @@ export function UserDataTable() {
   )
 }
 
-    
+function GeneratedCredentialsDialog({
+  credentials,
+  onOpenChange,
+}: {
+  credentials: GeneratedCredentials | null;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const { toast } = useToast();
+
+  const handleCopy = () => {
+    if (!credentials) return;
+    const text = `Email: ${credentials.email}\nSenha Temporária: ${credentials.tempPassword}\n\nFaça o primeiro login em: ${window.location.origin}/login\n\nLink para definir a senha: ${credentials.resetLink}`;
+    navigator.clipboard.writeText(text);
+    toast({ title: "Copiado!", description: "As credenciais foram copiadas para a área de transferência." });
+  };
+  
+  const handleWhatsapp = () => {
+    if (!credentials) return;
+    const message = `Olá! Seguem seus dados de acesso para o SGI:\n\n*Email:* ${credentials.email}\n*Senha Temporária:* ${credentials.tempPassword}\n\n*Acesse em:* ${window.location.origin}/login\n\n*Importante:* Use o link a seguir para definir sua senha pessoal: ${credentials.resetLink}`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
+  }
+
+  const handleEmail = () => {
+    if (!credentials) return;
+    const subject = "Seus dados de acesso ao SGI";
+    const body = `
+      <p>Olá,</p>
+      <p>Sua conta no SGI (Sistema de Gestão Integrada) foi criada. Use os dados abaixo para seu primeiro acesso:</p>
+      <p>
+        <strong>Email:</strong> ${credentials.email}<br>
+        <strong>Senha Temporária:</strong> ${credentials.tempPassword}
+      </p>
+      <p><strong>Acesse o sistema em:</strong> <a href="${window.location.origin}/login">${window.location.origin}/login</a></p>
+      <p><strong>IMPORTANTE:</strong> Para sua segurança, por favor, defina sua senha pessoal através do link abaixo antes de fazer o login:</p>
+      <p><a href="${credentials.resetLink}">Definir minha senha</a></p>
+      <br>
+      <p>Atenciosamente,</p>
+      <p><strong>Equipe SGI</strong></p>
+      <img src="https://firebasestorage.googleapis.com/v0/b/studio-4461945520-252d9.appspot.com/o/public%2FBMV.png?alt=media&token=48604313-a799-4b68-b800-e25f8c679a93" alt="Logo SGI" width="120">
+    `;
+    window.location.href = `mailto:${credentials.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  };
+  
+  return (
+    <Dialog open={!!credentials} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Usuário Criado com Sucesso</DialogTitle>
+          <DialogDescription>
+            Use as opções abaixo para compartilhar as credenciais com o novo usuário.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 py-4">
+          <div>
+            <Label htmlFor="email">Email</Label>
+            <Input id="email" readOnly value={credentials?.email} />
+          </div>
+          <div>
+            <Label htmlFor="password">Senha Temporária</Label>
+            <Input id="password" readOnly value={credentials?.tempPassword} />
+          </div>
+           <div>
+            <Label htmlFor="resetLink">Link para Definir Senha</Label>
+            <Input id="resetLink" readOnly value={credentials?.resetLink} />
+          </div>
+        </div>
+        <DialogFooter className="sm:justify-start gap-2">
+            <Button onClick={handleCopy}><Copy className="mr-2 h-4 w-4"/>Copiar Tudo</Button>
+            <Button onClick={handleWhatsapp} variant="outline"><WhatsappIcon className="mr-2 h-4 w-4"/>WhatsApp</Button>
+            <Button onClick={handleEmail} variant="outline"><Mail className="mr-2 h-4 w-4"/>Email</Button>
+            <DialogClose asChild>
+              <Button type="button" variant="secondary" className="sm:ml-auto">Fechar</Button>
+            </DialogClose>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
