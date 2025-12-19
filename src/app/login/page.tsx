@@ -209,28 +209,27 @@ export default function LoginPage() {
                           Uso restrito. As informações são confidenciais.
                         </p>
                       </motion.div>
+                      <motion.div
+                        className="mt-8 text-center"
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.4 }}
+                      >
+                        <a
+                          href="#"
+                          className="inline-flex items-center text-sm text-gray-600 hover:text-gray-800 transition-colors group"
+                          style={{ fontFamily: 'Montserrat, sans-serif' }}
+                        >
+                          Precisa de ajuda? Fale com o suporte
+                          <ArrowRight
+                            className="ml-1 h-4 w-4 transition-transform group-hover:translate-x-1"
+                            style={{ color: colors.green }}
+                          />
+                        </a>
+                      </motion.div>
                     </motion.div>
                   </div>
                 </Card>
-
-                <motion.div
-                  className="mt-8 text-center"
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.4 }}
-                >
-                  <a
-                    href="/suporte"
-                    className="inline-flex items-center text-sm text-white hover:text-white/90 transition-colors group font-montserrat"
-                    aria-label="Falar com o suporte"
-                  >
-                    Precisa de ajuda? Fale com o suporte
-                    <ArrowRight
-                      className="ml-1 h-4 w-4 text-green-500 transition-transform group-hover:translate-x-1"
-                    />
-                  </a>
-
-                </motion.div>
               </motion.div>
             </motion.main>
           )}
