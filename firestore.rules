@@ -3,9 +3,48 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Regra global: permite leitura e escrita para qualquer usuário autenticado em qualquer documento.
+    
+    // Regra geral: Usuários podem ler e escrever seus próprios documentos.
+    match /users/{userId} {
+      allow read, update, delete: if request.auth.uid == userId;
+      // Criação de conta é pública ou gerenciada por admin
+      allow create: if request.auth != null; 
+    }
+
+    // Funções e Times: Apenas leitura para usuários autenticados
+    match /roles/{roleId} {
+      allow read: if request.auth != null;
+      // Apenas admins podem modificar
+      allow write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.roleId == 'admin_role_id' || request.auth.token.isDev == true;
+    }
+
+    match /teams/{teamId} {
+      allow read: if request.auth != null;
+       // Apenas admins podem modificar
+      allow write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.roleId == 'admin_role_id' || request.auth.token.isDev == true;
+    }
+    
+    // Tarefas: Usuários podem ler/escrever suas próprias tarefas. Gestores podem ler tudo.
+    match /tasks/{taskId} {
+      allow read, write: if request.auth.uid == resource.data.assigneeId || request.auth.token.isManager == true;
+      allow create: if request.auth != null;
+    }
+
+    // Projetos: Membros do projeto ou gestores podem ler. Dono ou gestor pode escrever.
+    match /projects/{projectId} {
+      allow read: if request.auth.uid in resource.data.teamMembers || request.auth.uid == resource.data.ownerId || request.auth.token.isManager == true;
+      allow write: if request.auth.uid == resource.data.ownerId || request.auth.token.isManager == true;
+    }
+    
+    // Reuniões: Participantes ou gestores podem ler/escrever.
+    match /meetings/{meetingId} {
+       allow read, write: if request.auth.uid in resource.data.participantIds || request.auth.token.isManager == true;
+       allow create: if request.auth != null;
+    }
+
+    // Regra de fallback: nega acesso por padrão se nenhuma regra acima corresponder.
     match /{document=**} {
-      allow read, write: if request.auth != null;
+      allow read, write: if false;
     }
   }
 }
