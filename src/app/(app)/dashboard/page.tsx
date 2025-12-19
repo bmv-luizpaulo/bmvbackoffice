@@ -1,15 +1,17 @@
 
 'use client';
 
-import { useFirebase, useUser as useAuthUser, useDoc, useMemoFirebase } from "@/firebase";
+import { useFirebase, useUser as useAuthUser } from "@/firebase";
 import { Skeleton } from '@/components/ui/skeleton';
 import React, { Suspense } from 'react';
 import dynamic from 'next/dynamic';
-import type { User as UserType } from '@/lib/types';
-import { doc } from "firebase/firestore";
 
 const ManagerDashboard = dynamic(() => import('@/components/dashboard/manager-dashboard'), {
   loading: () => <DashboardSkeleton />,
+});
+
+const UserDashboard = dynamic(() => import('@/components/dashboard/user-dashboard'), {
+    loading: () => <DashboardSkeleton />,
 });
 
 function DashboardSkeleton() {
@@ -43,7 +45,6 @@ function DashboardSkeleton() {
 function DashboardPage() {
   const { user: authUser, isUserLoading, claims, areClaimsReady } = useFirebase();
 
-  // Show skeleton while auth state and claims are being resolved.
   if (isUserLoading || !areClaimsReady) {
     return <DashboardSkeleton />;
   }
@@ -52,9 +53,15 @@ function DashboardPage() {
 
   return (
     <Suspense fallback={<DashboardSkeleton />}>
-      <ManagerDashboard isManager={isManager} user={authUser} />
+        {isManager ? (
+            <ManagerDashboard />
+        ) : (
+            <UserDashboard user={authUser!} />
+        )}
     </Suspense>
   );
 }
 
 export default DashboardPage;
+
+    

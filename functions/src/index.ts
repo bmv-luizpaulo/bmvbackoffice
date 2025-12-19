@@ -3,7 +3,7 @@ import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
 import { QueryDocumentSnapshot } from 'firebase-admin/firestore';
 import { Change, EventContext } from 'firebase-functions';
-import * as cors from 'cors';
+import cors from 'cors';
 import { randomBytes } from "crypto";
 
 const allowedOrigins = new Set([
@@ -13,7 +13,7 @@ const allowedOrigins = new Set([
 ]);
 
 const corsHandler = cors({
-  origin: (origin, callback) => {
+  origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
     if (!origin) {
       callback(null, true);
       return;
@@ -246,3 +246,5 @@ export const createUser = functions.https.onRequest((req, res) => {
       }
     });
 });
+
+    

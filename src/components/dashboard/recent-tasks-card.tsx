@@ -1,6 +1,7 @@
+
 'use client';
 import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
-import { collection, collectionGroup, query, where, orderBy, limit } from "firebase/firestore";
+import { collection, query, where, orderBy, limit } from "firebase/firestore";
 import type { Task, Project } from "@/lib/types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ListTodo, Folder } from "lucide-react";
@@ -27,9 +28,17 @@ function RecentTasksCard({ userId }: RecentTasksCardProps) {
         );
 
         if (userId) {
-            // Note: This requires a composite index in Firestore. 
-            // If it fails, the query logic needs to be re-evaluated.
-            q = query(q, where('assigneeId', '==', userId));
+            // Firestore does not allow orderBy on a different field than where when using inequality filters.
+            // So we can't order by createdAt and filter by assigneeId directly in a complex way.
+            // The best approach here is to filter by assigneeId and then sort client-side.
+            // For this component showing only 5 tasks, it's acceptable.
+            return query(
+                collection(firestore, 'tasks'), 
+                where('assigneeId', '==', userId),
+                where('isCompleted', '==', false),
+                orderBy('createdAt', 'desc'),
+                limit(5)
+            );
         }
         
         return q;
@@ -92,3 +101,5 @@ function RecentTasksCard({ userId }: RecentTasksCardProps) {
 }
 
 export default RecentTasksCard;
+
+    

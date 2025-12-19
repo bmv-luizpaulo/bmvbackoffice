@@ -6,9 +6,9 @@ import { KpiCard } from "@/components/dashboard/kpi-card";
 import { CheckCircle, Target, FolderKanban, Award, RefreshCw } from "lucide-react";
 import { motion, AnimatePresence } from 'framer-motion';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
+import { useFirestore, useCollection, useMemoFirebase, useUser } from "@/firebase";
 import { collection, query } from "firebase/firestore";
-import type { Project, Task, User } from '@/lib/types';
+import type { Project, Task, User as UserType } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { isPast } from 'date-fns';
 import React from 'react';
@@ -102,7 +102,7 @@ function QuickActionsCard() {
 
 interface ManagerDashboardProps {
     isManager?: boolean;
-    user: User | null;
+    user: UserType | null;
 }
 
 function ManagerDashboard({ isManager, user }: ManagerDashboardProps) {
@@ -113,7 +113,7 @@ function ManagerDashboard({ isManager, user }: ManagerDashboardProps) {
     () => (firestore && isManager) ? collection(firestore, 'projects') : null, 
     [firestore, isManager]
   );
-  const { data: projects, isLoading: projectsLoading, refresh: refreshProjects } = useCollection<Project>(
+  const { data: projects, isLoading: projectsLoading } = useCollection<Project>(
     projectsQuery
   );
 
@@ -121,7 +121,7 @@ function ManagerDashboard({ isManager, user }: ManagerDashboardProps) {
     () => (firestore && isManager) ? collection(firestore, 'tasks') : null, 
     [firestore, isManager]
   );
-  const { data: tasks, isLoading: tasksLoading, refresh: refreshTasks } = useCollection<Task>(
+  const { data: tasks, isLoading: tasksLoading } = useCollection<Task>(
     tasksQuery
   );
   
@@ -130,15 +130,10 @@ function ManagerDashboard({ isManager, user }: ManagerDashboardProps) {
   }
 
   const refreshData = async () => {
-    if (!refreshProjects || !refreshTasks) return;
-    try {
+      // This is a placeholder for a potential manual refresh feature in the future.
+      // For now, it just simulates a refresh.
       setIsRefreshing(true);
-      await Promise.all([refreshProjects(), refreshTasks()]);
-    } catch (error) {
-      console.error('Erro ao atualizar dados:', error);
-    } finally {
-      setTimeout(() => setIsRefreshing(false), 500); // Tempo mínimo de carregamento para melhor UX
-    }
+      setTimeout(() => setIsRefreshing(false), 1000);
   };
 
   // Calcular KPIs
@@ -281,3 +276,5 @@ function ManagerDashboard({ isManager, user }: ManagerDashboardProps) {
 }
 
 export default ManagerDashboard;
+
+    

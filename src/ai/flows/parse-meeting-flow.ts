@@ -1,3 +1,4 @@
+
 'use client';
 
 import { ai } from '@/ai/genkit';
@@ -66,3 +67,5 @@ const parseMeetingFlow = ai.defineFlow(
 export async function parseMeeting(input: ParseMeetingInput): Promise<ParseMeetingOutput> {
   return parseMeetingFlow(input);
 }
+
+    

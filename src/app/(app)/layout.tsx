@@ -81,6 +81,7 @@ import { NotificationBell } from '@/components/notifications/notification-bell';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { cn } from '@/lib/utils';
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener';
+import GlobalErrorBoundary from '@/components/global-error-boundary';
 
 const navSections = [
     {
@@ -438,3 +439,5 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     </FirebaseClientProvider>
   );
 }
+
+    
