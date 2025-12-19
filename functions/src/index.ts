@@ -83,7 +83,7 @@ export const onUserUpdate = functions.firestore
 
 
 // Cloud Function para criar um novo usuário
-export const createUser = functions.https.onRequest(async (req, res) => {
+export const createUser = functions.https.onRequest((req, res) => {
     corsHandler(req, res, async () => {
         // 1. Verificação de autenticação e permissão
         if (!req.headers.authorization || !req.headers.authorization.startsWith('Bearer ')) {
