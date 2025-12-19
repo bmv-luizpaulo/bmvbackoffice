@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useMemo, useState, useEffect } from 'react';
@@ -16,14 +17,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import dynamic from 'next/dynamic';
 import UserDashboard from './user-dashboard';
-
-// Interface para o retorno do useCollection
-interface UseCollectionResult<T> {
-  data: T[] | null;
-  isLoading: boolean;
-  error?: Error;
-  refresh: () => Promise<void>;
-}
 
 // Tipos para os KPIs
 interface KpiData {
@@ -152,14 +145,14 @@ function ManagerDashboard({ isManager, user }: ManagerDashboardProps) {
   const kpis = useMemo<KpiData>(() => {
     const totalProjects = projects?.length || 0;
     const completedProjects = projects?.filter(p => p.status === 'Arquivado').length || 0;
-    const inProgressTasks = tasks?.filter(t => t.status === 'em-andamento').length || 0;
-    const completedTasks = tasks?.filter(t => t.status === 'concluida').length || 0;
+    const inProgressTasks = tasks?.filter(t => !t.isCompleted).length || 0;
+    const completedTasks = tasks?.filter(t => t.isCompleted).length || 0;
     
     const overdueTasks = tasks?.filter(t => {
-      if (!t.dueDate) return false;
+      if (!t.dueDate || t.isCompleted) return false;
       try {
         const dueDate = t.dueDate ? new Date(t.dueDate) : null;
-        return dueDate && !['concluida', 'cancelada'].includes(t.status as any) && isPast(dueDate);
+        return dueDate && isPast(dueDate);
       } catch (e) {
         console.error('Erro ao processar data:', e);
         return false;

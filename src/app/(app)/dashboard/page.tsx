@@ -50,7 +50,7 @@ function DashboardPage() {
 
   return (
     <Suspense fallback={<DashboardSkeleton />}>
-      <ManagerDashboard isManager={isManager} user={authUser as any} />
+      <ManagerDashboard isManager={isManager} user={authUser} />
     </Suspense>
   );
 }
