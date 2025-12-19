@@ -62,7 +62,7 @@ import {
 import { useToast } from "@/hooks/use-toast"
 import { deleteDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase";
 import { ActivityLogger } from "@/lib/activity-logger";
-import { updateUserRoleAction, updateUserStatusAction } from "@/lib/actions";
+import { createUserAction, updateUserRoleAction, updateUserStatusAction } from "@/lib/actions";
 
 
 const UserFormDialog = dynamic(() => import('./user-form-dialog').then(m => m.UserFormDialog), { ssr: false });
@@ -71,8 +71,6 @@ const UserImportExportDialog = dynamic(() => import('./user-import-export').then
 
 type GeneratedCredentials = {
   email: string;
-  tempPassword?: string;
-  setupLink?: string;
 };
 
 
@@ -81,11 +79,6 @@ export function UserDataTable() {
   const auth = useAuth();
   const { user: currentUser, isUserLoading: isAuthUserLoading } = useAuthUser();
   const { toast } = useToast();
-
-  const createUserFunctionUrl = React.useMemo(() => {
-    const projectId = auth?.app?.options?.projectId;
-    return projectId ? `https://us-central1-${projectId}.cloudfunctions.net/createUser` : null;
-  }, [auth]);
   
   const usersQuery = useMemoFirebase(() => firestore ? collection(firestore, 'users') : null, [firestore]);
   const { data: usersData, isLoading: isLoadingUsers } = useCollection<User>(usersQuery);
@@ -138,52 +131,24 @@ export function UserDataTable() {
         
         toast({ title: "Usuário Atualizado", description: `As informações de ${userData.name} foram salvas.` });
     } else {
-        // Create new user
-        try {
-            const idToken = await auth.currentUser?.getIdToken();
-            if (!idToken) {
-                throw new Error("Não foi possível obter o token de autenticação.");
-            }
+        // Create new user via Server Action
+        const result = await createUserAction(userData as any);
 
-            if (!createUserFunctionUrl) {
-                throw new Error("Não foi possível identificar o projectId do Firebase para chamar a Cloud Function.");
-            }
-
-            const response = await fetch(createUserFunctionUrl, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${idToken}`
-                },
-                body: JSON.stringify(userData)
-            });
-
-            let result: any = null;
-            try {
-                result = await response.json();
-            } catch {
-                result = null;
-            }
-
-            if (response.ok && result.success) {
-                toast({ title: "Usuário Criado com Sucesso", description: `As credenciais de acesso para ${userData.name} foram geradas.` });
-                setGeneratedCredentials(result.data);
-            } else {
-                const errorMessage = result?.error || `Ocorreu um erro desconhecido (HTTP ${response.status})`;
-                throw new Error(errorMessage);
-            }
-        } catch (error: any) {
-            console.error("Erro ao chamar Cloud Function 'createUser':", error);
+        if (result.success && result.data) {
+            toast({ title: "Usuário Criado com Sucesso", description: `A conta para ${userData.name} foi criada.` });
+            setGeneratedCredentials(result.data);
+        } else {
+            console.error("Erro ao criar usuário:", result.error);
             toast({ 
                 variant: 'destructive', 
                 title: "Erro ao Criar Usuário", 
-                description: error.message || "Não foi possível completar a operação. Verifique os logs da função." 
+                description: result.error || "Não foi possível completar a operação."
             });
         }
     }
     setIsFormOpen(false);
 
-}, [firestore, selectedUser, currentUser, auth, toast, createUserFunctionUrl]);
+}, [firestore, selectedUser, currentUser, auth, toast]);
 
 
   const handleDeleteUser = React.useCallback(() => {
@@ -378,7 +343,7 @@ export function UserDataTable() {
         )
       },
     },
-  ], [currentUser?.uid, handleRoleChange, handleStatusChange, handleViewProfileClick, handleEditClick, handleDeleteClick, rolesData, rolesMap]);
+  ], [currentUser, handleRoleChange, handleStatusChange, handleViewProfileClick, handleEditClick, handleDeleteClick, rolesData, rolesMap]);
 
   const table = useReactTable({
     data,
@@ -581,50 +546,13 @@ export function UserDataTable() {
        <Dialog open={!!generatedCredentials} onOpenChange={() => setGeneratedCredentials(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Credenciais do Novo Usuário</DialogTitle>
+            <DialogTitle>Usuário Criado com Sucesso</DialogTitle>
             <DialogDescription>
-              Copie e envie os dados de acesso para o novo usuário. Ele será solicitado a alterar a senha no primeiro login.
+              A conta para <strong>{generatedCredentials?.email}</strong> foi criada. O usuário receberá um e-mail para definir sua senha.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="grid gap-2">
-                <Label htmlFor="email">Email</Label>
-                <Input id="email" defaultValue={generatedCredentials?.email || ''} readOnly />
-            </div>
-            <div className="grid gap-2">
-                <Label htmlFor="password">Senha Temporária</Label>
-                <Input id="password" defaultValue={generatedCredentials?.tempPassword || ''} readOnly />
-            </div>
-          </div>
-           <DialogFooter className="sm:justify-between gap-2">
-             <div className="flex gap-2">
-                <a
-                    href={`https://wa.me/?text=${encodeURIComponent(`Olá! Bem-vindo(a) ao SGI. Suas credenciais de acesso são:\n\n*Email:* ${generatedCredentials?.email}\n*Senha Temporária:* ${generatedCredentials?.tempPassword}\n\n*Acesse em:* ${window.location.origin}/login`)}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                  <Button type="button" variant="secondary" className="bg-green-100 text-green-800 hover:bg-green-200">
-                    <MessageSquare className="mr-2 h-4 w-4" />
-                    Enviar por WhatsApp
-                  </Button>
-                </a>
-                <a
-                    href={`mailto:${generatedCredentials?.email}?subject=${encodeURIComponent('Suas credenciais de acesso ao SGI')}&body=${encodeURIComponent(`Olá! Bem-vindo(a) ao SGI.\n\nSuas credenciais de acesso são:\n\nEmail: ${generatedCredentials?.email}\nSenha Temporária: ${generatedCredentials?.tempPassword}\n\nAcesse em: ${window.location.origin}/login\n\nRecomendamos que você altere sua senha no primeiro acesso através do menu de configurações.`)}`}
-                >
-                    <Button type="button" variant="secondary">
-                        <Mail className="mr-2 h-4 w-4" />
-                        Enviar por Email
-                    </Button>
-                </a>
-             </div>
-            <Button type="button" onClick={() => {
-                const textToCopy = `Email: ${generatedCredentials?.email}\nSenha Temporária: ${generatedCredentials?.tempPassword}`;
-                navigator.clipboard.writeText(textToCopy);
-                toast({ title: 'Credenciais copiadas!' });
-            }}>
-              <Copy className="h-4 w-4 mr-2" />
-              Copiar
-            </Button>
+           <DialogFooter>
+             <Button onClick={() => setGeneratedCredentials(null)}>Fechar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

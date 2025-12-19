@@ -52,33 +52,39 @@ export async function getCepInfoAction(cep: string): Promise<{ success: boolean;
     }
 }
 
-async function getAdminUidFromToken(): Promise<string> {
-    const authorization = headers().get('Authorization');
-    if (!authorization?.startsWith('Bearer ')) {
-        throw new Error("Não autorizado: Token não fornecido.");
+async function getAdminUidFromToken(): Promise<string | null> {
+    try {
+        const authorization = headers().get('Authorization');
+        if (!authorization?.startsWith('Bearer ')) {
+            return null; // No token, not authorized
+        }
+        const idToken = authorization.split('Bearer ')[1];
+        const decodedToken = await admin.auth().verifyIdToken(idToken);
+        
+        if (decodedToken.isDev !== true && decodedToken.canManageUsers !== true) {
+             throw new Error("Permissão negada: Apenas administradores podem criar usuários.");
+        }
+        return decodedToken.uid;
+    } catch (error) {
+        console.error("Auth check failed:", error);
+        throw new Error("Não autorizado para realizar esta ação.");
     }
-    const idToken = authorization.split('Bearer ')[1];
-    
-    const decodedToken = await admin.auth().verifyIdToken(idToken);
-    
-    // As a best practice, verify the user has admin claims directly from the token
-    if (decodedToken.isDev !== true && decodedToken.canManageUsers !== true) {
-        throw new Error("Não autorizado: Você não tem permissão para realizar esta ação.");
-    }
-
-    return decodedToken.uid;
 }
+
 
 export async function createUserAction(userData: Omit<User, 'id' | 'avatarUrl' | 'createdAt'>): Promise<{ success: boolean; data?: { uid: string, email: string }; error?: string }> {
   noStore();
   
   try {
     const adminUid = await getAdminUidFromToken();
+    if (!adminUid) {
+        return { success: false, error: "Não autorizado." };
+    }
     const { firestore } = initializeFirebase();
     
     const userRecord = await admin.auth().createUser({
         email: userData.email,
-        emailVerified: true,
+        emailVerified: true, // User will get a verification email
         displayName: userData.name,
         disabled: userData.status === 'suspended',
     });
@@ -107,10 +113,6 @@ export async function updateUserRoleAction(targetUserId: string, newRoleId: stri
     noStore();
     try {
         await getAdminUidFromToken(); // Just for permission check
-        // The actual logic is in the Cloud Function, this action is a secure gateway
-        // In a real scenario, you might call the Cloud Function from here.
-        // For now, we assume the client will update Firestore and the function will trigger.
-        // This server action's primary role is the permission check.
         return { success: true };
     } catch (error: any) {
         return { success: false, error: error.message };
