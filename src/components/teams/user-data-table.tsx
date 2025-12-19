@@ -273,7 +273,7 @@ export function UserDataTable() {
                   disabled={isCurrentUser || user.roleId === role.id}
                   onClick={() => handleRoleChange(user, role.id)}
                 >
-                  {role.isManager ? <ShieldCheck className="mr-2 h-4 w-4 text-primary" /> : <ShieldOff className="mr-2 h-4 w-4 text-muted-foreground" />}
+                  {role.permissions?.isManager ? <ShieldCheck className="mr-2 h-4 w-4 text-primary" /> : <ShieldOff className="mr-2 h-4 w-4 text-muted-foreground" />}
                   {role.name}
                 </DropdownMenuItem>
               ))}
@@ -382,7 +382,7 @@ export function UserDataTable() {
               table.getColumn("roleId")?.setFilterValue(value === "all" ? "" : value)
             }
           >
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="w-full sm:w-[180px]">
               <SelectValue placeholder="Filtrar por cargo" />
             </SelectTrigger>
             <SelectContent>
@@ -398,7 +398,7 @@ export function UserDataTable() {
               table.getColumn("status")?.setFilterValue(value === "all" ? "" : value)
             }
           >
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="w-full sm:w-[180px]">
               <SelectValue placeholder="Filtrar por status" />
             </SelectTrigger>
             <SelectContent>

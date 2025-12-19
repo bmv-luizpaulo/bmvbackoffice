@@ -8,7 +8,6 @@ import { unstable_noStore as noStore } from 'next/cache';
 import * as admin from 'firebase-admin';
 import { headers } from 'next/headers';
 import { ActivityLogger } from './activity-logger';
-import { parseMeetingDetails } from '@/ai/flows/parse-meeting-flow';
 
 // This is a placeholder for a real chat log fetching mechanism
 const getChatLogForDay = async (): Promise<string> => {
@@ -244,8 +243,6 @@ export async function parseMeetingDetailsAction(meetingText: string): Promise<{ 
     noStore();
     try {
         // This functionality is temporarily disabled.
-        // const result = await parseMeetingDetails(meetingText);
-        // return { success: true, data: result };
         return { success: false, error: "Funcionalidade de IA desativada temporariamente." };
     } catch (error: any) {
         console.error("Error in parseMeetingDetailsAction:", error);

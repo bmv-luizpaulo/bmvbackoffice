@@ -85,7 +85,7 @@ export function UserImportExportDialog({ isOpen, onOpenChange, users, roles }: I
     });
 
     const csvContent = [headers, ...csvData]
-      .map(row => row.map(field => `"${field.replace(/"/g, '""')}"`).join(','))
+      .map(row => row.map(field => `"${(field || '').replace(/"/g, '""')}"`).join(','))
       .join('\r\n');
 
     // Adicionar BOM (Byte Order Mark) para UTF-8 para garantir compatibilidade com Excel
@@ -244,7 +244,7 @@ export function UserImportExportDialog({ isOpen, onOpenChange, users, roles }: I
             } : undefined
           };
 
-          const result = await createUserAction(userData);
+          const result = await createUserAction(userData as any);
           if (result.success) {
             successCount++;
           } else {
