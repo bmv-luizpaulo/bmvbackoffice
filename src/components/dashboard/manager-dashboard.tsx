@@ -130,7 +130,7 @@ function ManagerDashboard() {
   ) as unknown as UseCollectionResult<FirebaseProject> & { refresh: () => Promise<void> };
 
   const tasksQuery = useMemoFirebase(
-    () => firestore ? collectionGroup(firestore, 'tasks') : null, 
+    () => firestore ? collection(firestore, 'tasks') : null, 
     [firestore]
   );
   const { data: tasks = [], loading: tasksLoading, refresh: refreshTasks } = useCollection<FirebaseTask>(
@@ -308,5 +308,3 @@ function ManagerDashboard() {
 }
 
 export default ManagerDashboard;
-
-    

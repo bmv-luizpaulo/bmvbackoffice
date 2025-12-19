@@ -54,7 +54,7 @@ service cloud.firestore {
       allow list: if request.auth.token.canViewAllProjects == true || request.auth.token.isDev == true
                   || (request.query.where.size() > 0 && request.query.where[0][0] == 'assigneeId' && request.query.where[0][2] == request.auth.uid);
 
-      allow write: if request.auth.token.canManageProjects == true || request.auth.token.isDev == true || request.auth.uid == resource.data.assigneeId;
+      allow write: if request.auth.token.canManageProjects == true || request.auth.token.isDev == true || request.auth.uid == resource.data.assigneeId || (resource.data.assigneeId == null && request.auth.uid != null) ;
       allow create: if request.auth != null;
     }
 
