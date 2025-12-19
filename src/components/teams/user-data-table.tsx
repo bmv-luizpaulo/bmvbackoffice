@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from "react"
@@ -126,7 +127,6 @@ export function UserDataTable() {
         const userRef = doc(firestore, 'users', selectedUser.id);
         await updateDocumentNonBlocking(userRef, userData);
         
-        // Log activity
         await ActivityLogger.profileUpdate(firestore, selectedUser.id, currentUser.uid);
         
         toast({ title: "Usuário Atualizado", description: `As informações de ${userData.name} foram salvas.` });
@@ -161,7 +161,6 @@ export function UserDataTable() {
     currentUser.getIdToken(true); // Force token refresh to get new claims
     const newRole = rolesMap.get(newRoleId);
     
-    // Log activity
     await ActivityLogger.roleChange(firestore, user.id, newRole?.name || 'Cargo removido', currentUser.uid);
     
     toast({ 
@@ -176,7 +175,6 @@ export function UserDataTable() {
     await updateDocumentNonBlocking(userRef, { status: newStatus });
     const statusLabels = { active: 'Ativo', inactive: 'Inativo', suspended: 'Suspenso' };
     
-    // Log activity
     await ActivityLogger.statusChange(firestore, user.id, statusLabels[newStatus], currentUser.uid);
     
     toast({ 
@@ -357,7 +355,6 @@ export function UserDataTable() {
         const userRef = doc(firestore, 'users', user.id);
         await updateDocumentNonBlocking(userRef, { status: newStatus });
         
-        // Log activity
         await ActivityLogger.statusChange(firestore, user.id, statusLabels[newStatus], currentUser.uid);
       }
     }

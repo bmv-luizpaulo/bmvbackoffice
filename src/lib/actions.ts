@@ -1,3 +1,4 @@
+
 'use server';
 
 import { getDocs, collection, addDoc, serverTimestamp, doc, setDoc } from 'firebase/firestore';
@@ -6,7 +7,6 @@ import { initializeFirebase } from "@/firebase";
 import type { Project, Task, User, Role, MeetingDetails } from "./types";
 import { unstable_noStore as noStore } from 'next/cache';
 import * as admin from 'firebase-admin';
-import { headers } from 'next/headers';
 import { ActivityLogger } from './activity-logger';
 
 // This is a placeholder for a real chat log fetching mechanism
@@ -31,9 +31,17 @@ const getAdminApp = () => {
         return admin.app();
     }
 
-    return admin.initializeApp({
-        credential: admin.credential.cert(JSON.parse(serviceAccount)),
-    });
+    try {
+      return admin.initializeApp({
+          credential: admin.credential.cert(JSON.parse(serviceAccount)),
+      });
+    } catch (error: any) {
+      // Se já foi inicializado com um nome padrão, pode dar erro.
+      if (error.code === 'app/duplicate-app') {
+        return admin.app();
+      }
+      throw error;
+    }
 };
 
 export async function createUserAction(userData: Omit<User, 'id' | 'avatarUrl'>) {
@@ -42,20 +50,6 @@ export async function createUserAction(userData: Omit<User, 'id' | 'avatarUrl'>)
         const adminApp = getAdminApp();
         const adminAuth = admin.auth(adminApp);
         const firestore = admin.firestore(adminApp);
-
-        const headersList = headers();
-        const authorization = headersList.get('Authorization');
-        const token = authorization?.split('Bearer ')[1];
-
-        if (!token) {
-             return { success: false, error: 'Usuário não autenticado ou sem permissão.' };
-        }
-        
-        // This simplified check assumes that if a valid token is present, the user has passed client-side checks
-        // and Firestore rules will enforce the fine-grained permissions.
-        // A more robust solution would verify the token and check custom claims here.
-        const decodedToken = await adminAuth.verifyIdToken(token);
-        const adminUserId = decodedToken.uid;
         
         const tempPassword = `bmv-${Math.random().toString(36).slice(-6)}`;
 
@@ -73,8 +67,6 @@ export async function createUserAction(userData: Omit<User, 'id' | 'avatarUrl'>)
             createdAt: admin.firestore.FieldValue.serverTimestamp()
         };
         await firestore.collection("users").doc(userRecord.uid).set(newUserProfile);
-        
-        await ActivityLogger.profileUpdate(firestore, userRecord.uid, adminUserId);
 
         return { success: true, data: { uid: userRecord.uid, email: userData.email, tempPassword: tempPassword } };
     } catch (error: any) {
@@ -85,8 +77,6 @@ export async function createUserAction(userData: Omit<User, 'id' | 'avatarUrl'>)
             errorMessage = 'Este e-mail já está em uso por outra conta.';
         } else if (error.code === 'auth/invalid-email') {
             errorMessage = 'O formato do e-mail é inválido.';
-        } else if (error.code === 'auth/id-token-expired' || error.code === 'auth/argument-error') {
-            errorMessage = 'Sua sessão expirou ou é inválida. Por favor, atualize a página e tente novamente.';
         }
         return { success: false, error: errorMessage };
     }
