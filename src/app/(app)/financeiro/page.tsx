@@ -1,9 +1,10 @@
+
 'use client';
 
 import { useMemo } from 'react';
-import { useFirestore, useCollection, useMemoFirebase, useUser as useAuthUser, useDoc } from '@/firebase';
-import { collection, doc } from 'firebase/firestore';
-import type { Reimbursement, Role, User } from '@/lib/types';
+import { useFirestore, useCollection, useMemoFirebase, usePermissions } from '@/firebase';
+import { collection } from 'firebase/firestore';
+import type { Reimbursement } from '@/lib/types';
 import { KpiCard } from '@/components/dashboard/kpi-card';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -16,18 +17,10 @@ const ReembolsoDataTable = dynamic(() => import('@/components/reembolsos/reembol
 });
 
 export default function FinanceiroPage() {
+  const { ready: permissionsReady, isManager } = usePermissions();
+
   const firestore = useFirestore();
-  const { user: authUser } = useAuthUser();
-
-  const userProfileQuery = useMemoFirebase(() => firestore && authUser ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser]);
-  const { data: userProfile, isLoading: isLoadingProfile } = useDoc<User>(userProfileQuery);
-  const roleId = userProfile?.roleId;
-
-  const roleQuery = useMemoFirebase(() => firestore && roleId ? doc(firestore, 'roles', roleId) : null, [firestore, roleId]);
-  const { data: roleData, isLoading: isLoadingRole } = useDoc<Role>(roleQuery);
-  const isManager = roleData?.permissions?.isManager;
-
-  const reimbursementsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'reimbursements') : null, [firestore]);
+  const reimbursementsQuery = useMemoFirebase(() => (firestore && permissionsReady) ? collection(firestore, 'reimbursements') : null, [firestore, permissionsReady]);
   const { data: reimbursements, isLoading: isLoadingReimb } = useCollection<Reimbursement>(reimbursementsQuery);
 
   const { pendingCount, approvedCount, rejectedCount, pendingAmount } = useMemo(() => {
@@ -44,11 +37,9 @@ export default function FinanceiroPage() {
     };
   }, [reimbursements]);
 
-  const isLoading = isLoadingProfile || isLoadingRole || isLoadingReimb;
+  const isLoading = !permissionsReady || isLoadingReimb;
 
-  if (!authUser) return null;
-
-  if (!isLoading && !isManager) {
+  if (!isManager && permissionsReady) {
     return (
       <div className="flex h-[60vh] items-center justify-center">
         <Card className="max-w-md">

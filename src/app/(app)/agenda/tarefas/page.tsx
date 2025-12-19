@@ -23,28 +23,28 @@ export const dynamic = 'force-dynamic';
 export default function TaskAgendaPage() {
   const firestore = useFirestore();
   const { user: authUser, isUserLoading } = useUser();
-  const { ready: permissionsReady, isManager: isGestor } = usePermissions();
+  const { ready: permissionsReady, isManager } = usePermissions();
   const searchParams = useSearchParams();
   
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [selectedUserId, setSelectedUserId] = useState<string | 'all'>('all');
 
-  const allUsersQuery = useMemoFirebase(() => firestore && isGestor ? collection(firestore, 'users') : null, [firestore, isGestor]);
+  const allUsersQuery = useMemoFirebase(() => firestore && isManager ? collection(firestore, 'users') : null, [firestore, isManager]);
   const { data: allUsers } = useCollection<User>(allUsersQuery);
 
   const filterParam = searchParams.get('filter');
   
   useEffect(() => {
-    if (isUserLoading || !permissionsReady) return; // Wait until auth state is confirmed
+    if (!permissionsReady || isUserLoading) return; // Wait until auth state and permissions are confirmed
 
     if (filterParam === 'me' && authUser?.uid) {
       setSelectedUserId(authUser.uid);
-    } else if (isGestor) { // Only default to 'all' if the user is a manager
+    } else if (isManager) {
       setSelectedUserId('all');
-    } else if (authUser?.uid) { // Default non-manager to themselves
+    } else if (authUser?.uid) {
       setSelectedUserId(authUser.uid);
     }
-  }, [filterParam, authUser?.uid, isUserLoading, permissionsReady, isGestor]);
+  }, [filterParam, authUser?.uid, isUserLoading, permissionsReady, isManager]);
 
 
   const tasksQuery = useMemoFirebase(() => {
@@ -52,7 +52,7 @@ export default function TaskAgendaPage() {
     
     let q = query(collection(firestore, 'tasks'));
 
-    if (isGestor) {
+    if (isManager) {
       if (selectedUserId !== 'all') {
         q = query(q, where('assigneeId', '==', selectedUserId));
       }
@@ -60,7 +60,7 @@ export default function TaskAgendaPage() {
       q = query(q, where('assigneeId', '==', authUser.uid));
     }
     return q;
-  }, [firestore, authUser?.uid, isGestor, permissionsReady, selectedUserId]);
+  }, [firestore, authUser?.uid, isManager, permissionsReady, selectedUserId]);
 
   const { data: tasksData, isLoading: isLoadingTasks } = useCollection<Task>(tasksQuery);
   
@@ -69,17 +69,15 @@ export default function TaskAgendaPage() {
 
     let q = query(collection(firestore, 'meetings'));
 
-    if (isGestor) {
-      // Only apply this filter if a specific user is selected
+    if (isManager) {
       if (selectedUserId && selectedUserId !== 'all') {
          q = query(q, where('participantIds', 'array-contains', selectedUserId));
       }
     } else {
-      // Non-managers always see their own meetings
        q = query(q, where('participantIds', 'array-contains', authUser.uid));
     }
     return q;
-  }, [firestore, authUser?.uid, isGestor, permissionsReady, selectedUserId]);
+  }, [firestore, authUser?.uid, isManager, permissionsReady, selectedUserId]);
 
   const { data: meetingsData, isLoading: isLoadingMeetings } = useCollection<Meeting>(meetingsQuery);
 
@@ -155,7 +153,7 @@ export default function TaskAgendaPage() {
       
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-4">
-          {isGestor && (
+          {isManager && (
               <div className="w-full sm:w-64">
                   <Select value={selectedUserId} onValueChange={setSelectedUserId}>
                       <SelectTrigger>

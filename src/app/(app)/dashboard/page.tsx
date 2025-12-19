@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useFirebase } from "@/firebase";
+import { useUser, usePermissions } from "@/firebase";
 import { Skeleton } from '@/components/ui/skeleton';
 import React, { Suspense } from 'react';
 import dynamic from 'next/dynamic';
@@ -9,6 +9,11 @@ import dynamic from 'next/dynamic';
 const ManagerDashboard = dynamic(() => import('@/components/dashboard/manager-dashboard'), {
   loading: () => <DashboardSkeleton />,
 });
+
+const UserDashboard = dynamic(() => import('@/components/dashboard/user-dashboard'), {
+  loading: () => <DashboardSkeleton />,
+});
+
 
 function DashboardSkeleton() {
     return (
@@ -39,17 +44,16 @@ function DashboardSkeleton() {
 
 
 function DashboardPage() {
-  const { user, isUserLoading } = useFirebase();
+  const { user, isUserLoading } = useUser();
+  const { ready: permissionsReady, isManager } = usePermissions();
 
-  if (isUserLoading) {
+  if (isUserLoading || !permissionsReady) {
     return <DashboardSkeleton />;
   }
 
-  // O ManagerDashboard agora lida com a lógica de qual painel mostrar.
-  // Passamos o usuário para que ele possa decidir.
   return (
     <Suspense fallback={<DashboardSkeleton />}>
-      <ManagerDashboard user={user} />
+      {isManager ? <ManagerDashboard /> : <UserDashboard user={user!} />}
     </Suspense>
   );
 }

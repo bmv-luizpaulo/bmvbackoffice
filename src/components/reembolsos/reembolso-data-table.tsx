@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from "react"
@@ -31,9 +32,9 @@ import {
 } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import type { Reimbursement, User, Role } from "@/lib/types";
+import type { Reimbursement, User } from "@/lib/types";
 import dynamic from "next/dynamic";
-import { useFirestore, useCollection, useMemoFirebase, useUser as useAuthUser, useDoc } from "@/firebase";
+import { useFirestore, useCollection, useMemoFirebase, useUser as useAuthUser, usePermissions } from "@/firebase";
 import { collection, doc, query, where, serverTimestamp } from "firebase/firestore";
 import {
   AlertDialog,
@@ -57,22 +58,23 @@ const ReembolsoFormDialog = dynamic(() => import('./reembolso-form-dialog').then
 export function ReembolsoDataTable({ filterUserId }: { filterUserId?: string }) {
   const firestore = useFirestore();
   const { toast } = useToast();
-  const { user: authUser, claims } = useAuthUser();
-  const isManager = claims?.canAccessFinancial;
+  const { user: authUser } = useAuthUser();
+  const { ready: permissionsReady, isManager } = usePermissions();
 
   const reembolsosQuery = useMemoFirebase(() => {
-    if (!firestore || !authUser) return null;
+    if (!firestore || !authUser || !permissionsReady) return null;
     let q = collection(firestore, 'reimbursements');
+    
     if (filterUserId) {
-        if (!filterUserId) return null; // Wait for filterUserId
+        if (!filterUserId) return null;
         return query(q, where('requesterId', '==', filterUserId));
     }
+    
     if (!isManager) {
-        if (!authUser.uid) return null; // Wait for authUser.uid
         return query(q, where('requesterId', '==', authUser.uid));
     }
     return q;
-  }, [firestore, authUser, isManager, filterUserId]);
+  }, [firestore, authUser, isManager, filterUserId, permissionsReady]);
 
   const { data: reembolsosData, isLoading } = useCollection<Reimbursement>(reembolsosQuery);
   const usersQuery = useMemoFirebase(() => firestore ? collection(firestore, 'users') : null, [firestore]);
@@ -159,7 +161,8 @@ export function ReembolsoDataTable({ filterUserId }: { filterUserId?: string }) 
       header: "Descrição",
       cell: ({ row }) => <p className="font-medium max-w-xs truncate">{row.original.description}</p>
     },
-    ...(isManager ? [{
+    ...(isManager && !filterUserId ? [{
+        id: "requesterId",
         accessorKey: "requesterId",
         header: "Solicitante",
         cell: ({ row }: any) => usersMap.get(row.original.requesterId) || 'Desconhecido',
@@ -235,7 +238,7 @@ export function ReembolsoDataTable({ filterUserId }: { filterUserId?: string }) 
         )
       },
     },
-  ], [isManager, usersMap, authUser?.uid, handleStatusChange, handleEditClick]);
+  ], [isManager, usersMap, authUser?.uid, handleStatusChange, handleEditClick, filterUserId]);
 
   const table = useReactTable({
     data: filteredData,

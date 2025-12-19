@@ -1,18 +1,18 @@
+
 'use client';
 
 import * as React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, ListChecks, Trash2, Edit, Eye, Archive, ArchiveRestore, MoreHorizontal, CheckSquare, ThumbsUp, Heading2 } from "lucide-react";
-import { useCollection, useFirestore, useMemoFirebase, useUser, useDoc, usePermissions } from '@/firebase';
-import { collection, doc, orderBy, query, where, serverTimestamp } from 'firebase/firestore';
-import type { Checklist, Team, User as UserType, Role } from '@/lib/types';
+import { useCollection, useFirestore, useMemoFirebase, useUser, usePermissions } from '@/firebase';
+import { collection, doc, orderBy, query, serverTimestamp } from 'firebase/firestore';
+import type { Checklist, Team, User as UserType } from '@/lib/types';
 import { addDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import NextDynamic from 'next/dynamic';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { cn } from '@/lib/utils';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useSearchParams } from 'next/navigation';
@@ -25,7 +25,6 @@ const ExecutionDetailsDialog = NextDynamic(() => import('@/components/checklists
 export default function ChecklistsPage() {
   const firestore = useFirestore();
   const searchParams = useSearchParams();
-  const filterParam = searchParams.get('filter');
   const { toast } = useToast();
   const { user: authUser, isUserLoading } = useUser();
   const { ready: permissionsReady, isManager } = usePermissions();
@@ -38,23 +37,20 @@ export default function ChecklistsPage() {
   const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [checklistToEdit, setChecklistToEdit] = React.useState<Checklist | null>(null);
   const [checklistToDelete, setChecklistToDelete] = React.useState<Checklist | null>(null);
+  const filterParam = searchParams.get('filter');
 
   const checklistsQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
+    if (!firestore || !permissionsReady) return null; // Wait for permissions
     return query(collection(firestore, 'checklists'), orderBy('name'));
-  }, [firestore]);
+  }, [firestore, permissionsReady]);
 
   const { data: allChecklists, isLoading: isLoadingChecklists } = useCollection<Checklist>(checklistsQuery);
 
   const filteredChecklists = React.useMemo(() => {
     if (!allChecklists || !permissionsReady) return [];
-    if (isManager || !filterParam) {
-      return allChecklists;
-    }
-    if (filterParam === 'me') {
-      if (!userProfile || !userProfile.teamIds) {
-        return [];
-      }
+
+    if (!isManager && filterParam === 'me') {
+      if (!userProfile?.teamIds) return []; // Still loading profile
       const userTeamIds = userProfile.teamIds;
       return allChecklists.filter(c => userTeamIds.includes(c.teamId));
     }

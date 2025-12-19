@@ -1,23 +1,21 @@
+
 'use client';
 
 import { useMemo, useState, useEffect } from 'react';
 import { KpiCard } from "@/components/dashboard/kpi-card";
 import { CheckCircle, Target, FolderKanban, Award, RefreshCw } from "lucide-react";
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useFirestore, useCollection, useMemoFirebase, usePermissions } from "@/firebase";
 import { collection, query } from "firebase/firestore";
-import type { Project, Task, User as UserType } from '@/lib/types';
+import type { Project, Task } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { isPast } from 'date-fns';
 import React from 'react';
-import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import dynamic from 'next/dynamic';
-import UserDashboard from './user-dashboard';
 
-// Tipos para os KPIs
 interface KpiData {
   totalProjects: number;
   completedProjects: number;
@@ -28,14 +26,11 @@ interface KpiData {
   taskCompletionRate: number;
 }
 
-
 const RecentTasksCard = dynamic(() => import('@/components/dashboard/recent-tasks-card'), {
   loading: () => <Skeleton className="h-[400px]" />,
 });
 const PipelineChart = dynamic(() => import("@/components/dashboard/pipeline-chart").then(m => m.PipelineChart), { ssr: false });
 
-
-// Ações rápidas com ícones e melhor visual
 function QuickActionsCard() {
   const actions = [
     { 
@@ -83,7 +78,7 @@ function QuickActionsCard() {
             variant="ghost" 
             className={`h-auto py-3 px-4 justify-start text-left ${action.color} hover:shadow-sm transition-all`}
           >
-            <Link href={action.href} className="flex items-start gap-3">
+            <a href={action.href} className="flex items-start gap-3">
               <div className={`p-2 rounded-lg ${action.color.replace('hover:bg-', 'bg-').split(' ')[0] + '-100'}`}>
                 {action.icon}
               </div>
@@ -91,7 +86,7 @@ function QuickActionsCard() {
                 <div className="font-medium">{action.title}</div>
                 <div className="text-xs text-muted-foreground">{action.description}</div>
               </div>
-            </Link>
+            </a>
           </Button>
         ))}
       </CardContent>
@@ -99,11 +94,7 @@ function QuickActionsCard() {
   );
 }
 
-interface ManagerDashboardProps {
-    user: UserType | null;
-}
-
-function ManagerDashboard({ user }: ManagerDashboardProps) {
+function ManagerDashboard() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const firestore = useFirestore();
   const { ready: permissionsReady, isManager } = usePermissions();
@@ -123,40 +114,12 @@ function ManagerDashboard({ user }: ManagerDashboardProps) {
   const { data: tasks, isLoading: tasksLoading } = useCollection<Task>(
     tasksQuery
   );
-  
-  if (!permissionsReady) {
-      // Show skeleton while permissions are loading to avoid rendering UserDashboard prematurely
-      return (
-        <div className="space-y-6">
-          <header>
-              <Skeleton className="h-9 w-48" />
-              <Skeleton className="h-4 w-72 mt-2" />
-          </header>
-           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-              {[1, 2, 3, 4].map((i) => (
-                <Skeleton key={i} className="h-36 rounded-xl" />
-              ))}
-            </div>
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-              <Skeleton className="col-span-4 h-[400px] rounded-xl" />
-              <Skeleton className="col-span-3 h-[400px] rounded-xl" />
-            </div>
-        </div>
-      );
-  }
-
-  if (!isManager && user) {
-    return <UserDashboard user={user} />;
-  }
 
   const refreshData = async () => {
-      // This is a placeholder for a potential manual refresh feature in the future.
-      // For now, it just simulates a refresh.
       setIsRefreshing(true);
       setTimeout(() => setIsRefreshing(false), 1000);
   };
 
-  // Calcular KPIs
   const kpis = useMemo<KpiData>(() => {
     if (!permissionsReady || !isManager) return { totalProjects: 0, completedProjects: 0, inProgressTasks: 0, completedTasks: 0, overdueTasks: 0, completionRate: 0, taskCompletionRate: 0 };
     
@@ -187,7 +150,7 @@ function ManagerDashboard({ user }: ManagerDashboardProps) {
     };
   }, [projects, tasks, permissionsReady, isManager]);
 
-  if (projectsLoading || tasksLoading) {
+  if (projectsLoading || tasksLoading || !permissionsReady) {
     return (
       <div className="space-y-6">
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -230,17 +193,14 @@ function ManagerDashboard({ user }: ManagerDashboardProps) {
           </Tooltip>
         </TooltipProvider>
       </header>
-
-      {/* KPIs */}
-      <AnimatePresence mode="wait">
-        <motion.div 
-          key={isRefreshing ? 'loading' : 'loaded'}
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -20 }}
-          transition={{ duration: 0.3 }}
-          className="grid gap-4 md:grid-cols-2 lg:grid-cols-4"
-        >
+      <motion.div 
+        key={isRefreshing ? 'loading' : 'loaded'}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -20 }}
+        transition={{ duration: 0.3 }}
+        className="grid gap-4 md:grid-cols-2 lg:grid-cols-4"
+      >
         <KpiCard
           title="Projetos Ativos"
           value={kpis.totalProjects.toString()}
@@ -282,8 +242,7 @@ function ManagerDashboard({ user }: ManagerDashboardProps) {
           iconColor="text-purple-600"
           className="bg-white rounded-xl shadow-sm border border-gray-100"
         />
-        </motion.div>
-      </AnimatePresence>
+      </motion.div>
 
       <div className="grid grid-cols-1 gap-6">
         <PipelineChart data={[]} isLoading={false} />

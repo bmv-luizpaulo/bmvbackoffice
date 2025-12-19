@@ -23,17 +23,17 @@ function UserDashboard({ user }: UserDashboardProps) {
   const firestore = useFirestore();
 
   const userTasksQuery = useMemoFirebase(() => 
-    firestore && user 
+    firestore && user?.id
     ? query(
         collection(firestore, 'tasks'), 
         where('assigneeId', '==', user.id)
       ) 
     : null, 
-  [firestore, user]);
+  [firestore, user?.id]);
   const { data: tasksData, isLoading: isLoadingTasks } = useCollection<Task>(userTasksQuery);
   
   const userProjectsQuery = useMemoFirebase(() => 
-    firestore && user
+    firestore && user?.id
     ? query(
         collection(firestore, 'projects'),
         or(
@@ -42,7 +42,7 @@ function UserDashboard({ user }: UserDashboardProps) {
         )
     )
     : null,
-  [firestore, user]);
+  [firestore, user?.id]);
   const { data: projectsData, isLoading: isLoadingProjects } = useCollection<Project>(userProjectsQuery);
 
   const { openTasks, activeProjects } = useMemo(() => {
