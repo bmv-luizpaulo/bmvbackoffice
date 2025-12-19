@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -13,6 +14,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AddProjectDialog } from '@/components/projects/add-project-dialog';
+import { Card } from '@/components/ui/card';
 
 const ProjectCard = dynamic(() => import("@/components/projects/project-card").then(m => m.ProjectCard), { 
     ssr: false,
