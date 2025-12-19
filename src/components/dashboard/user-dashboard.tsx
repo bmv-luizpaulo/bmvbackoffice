@@ -4,7 +4,7 @@ import { useMemo } from 'react';
 import { KpiCard } from "@/components/dashboard/kpi-card";
 import { Target, FolderKanban } from "lucide-react";
 import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
-import { collection, collectionGroup, query, where } from "firebase/firestore";
+import { collection, query, where, or } from "firebase/firestore";
 import type { Project, Task, User } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import React from 'react';
@@ -24,7 +24,7 @@ function UserDashboard({ user }: UserDashboardProps) {
   const userTasksQuery = useMemoFirebase(() => 
     firestore && user 
     ? query(
-        collectionGroup(firestore, 'tasks'), 
+        collection(firestore, 'tasks'), 
         where('assigneeId', '==', user.id)
       ) 
     : null, 
@@ -35,7 +35,10 @@ function UserDashboard({ user }: UserDashboardProps) {
     firestore && user
     ? query(
         collection(firestore, 'projects'),
-        where('teamMembers', 'array-contains', user.id)
+        or(
+            where('ownerId', '==', user.id),
+            where('teamMembers', 'array-contains', user.id)
+        )
     )
     : null,
   [firestore, user]);
@@ -43,7 +46,7 @@ function UserDashboard({ user }: UserDashboardProps) {
 
   const { openTasks, activeProjects } = useMemo(() => {
     const openTasksCount = tasksData?.filter(task => !task.isCompleted).length || 0;
-    const activeProjectsCount = projectsData?.length || 0;
+    const activeProjectsCount = projectsData?.filter(p => p.status === 'Em execução').length || 0;
     return {
         openTasks: openTasksCount,
         activeProjects: activeProjectsCount,
@@ -71,7 +74,7 @@ function UserDashboard({ user }: UserDashboardProps) {
                   value={openTasks.toString()}
                   description="Total de tarefas atribuídas a você"
                   icon={<Target className="text-amber-500"/>}
-                  href="/agenda/tarefas"
+                  href="/agenda/tarefas?filter=me"
                 />
                 <KpiCard 
                   title="Meus Projetos Ativos" 

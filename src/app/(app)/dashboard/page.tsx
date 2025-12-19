@@ -1,19 +1,13 @@
+
 'use client';
 
-import { useDoc, useMemoFirebase, useFirebase } from "@/firebase";
-import { doc } from "firebase/firestore";
-import type { User as UserType, Role } from '@/lib/types';
+import { useFirebase } from "@/firebase";
 import { Skeleton } from '@/components/ui/skeleton';
 import React, { Suspense } from 'react';
 import dynamic from 'next/dynamic';
-import { useFirestore } from "@/firebase";
 
 const ManagerDashboard = dynamic(() => import('@/components/dashboard/manager-dashboard'), {
   loading: () => <DashboardSkeleton />,
-});
-
-const UserDashboard = dynamic(() => import('@/components/dashboard/user-dashboard'), {
-    loading: () => <DashboardSkeleton />,
 });
 
 function DashboardSkeleton() {
@@ -47,27 +41,16 @@ function DashboardSkeleton() {
 function DashboardPage() {
   const { user: authUser, isUserLoading, claims, areClaimsReady } = useFirebase();
 
-  // isLoading é verdadeiro se o usuário ainda não foi autenticado
-  // ou se as permissões (claims) ainda não estão prontas.
-  const isLoading = isUserLoading || !areClaimsReady;
-
-  if (isLoading) {
+  // Renderiza o esqueleto de carregamento enquanto o usuário ou suas permissões não estiverem prontos.
+  if (isUserLoading || !areClaimsReady) {
     return <DashboardSkeleton />;
   }
 
-  // A partir daqui, temos certeza que as claims estão carregadas.
   const isManager = claims?.isManager || claims?.isDev;
 
   return (
     <Suspense fallback={<DashboardSkeleton />}>
-        {isManager ? (
-          <ManagerDashboard />
-        ) : authUser ? (
-          <UserDashboard user={authUser as any} />
-        ) : (
-          // Caso de fallback se o usuário não for gestor e o objeto de usuário não estiver disponível
-          <DashboardSkeleton />
-        )}
+      <ManagerDashboard isManager={isManager} user={authUser as any} />
     </Suspense>
   );
 }

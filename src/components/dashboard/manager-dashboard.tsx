@@ -2,12 +2,12 @@
 
 import { useMemo, useState, useEffect } from 'react';
 import { KpiCard } from "@/components/dashboard/kpi-card";
-import { CheckCircle, Target, FolderKanban, Award, RefreshCw, Info } from "lucide-react";
+import { CheckCircle, Target, FolderKanban, Award, RefreshCw } from "lucide-react";
 import { motion, AnimatePresence } from 'framer-motion';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { collection, query, where } from "firebase/firestore";
-import type { Project, Task, Seal } from '@/lib/types';
+import type { Project, Task, User } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { isPast } from 'date-fns';
 import React from 'react';
@@ -15,24 +15,14 @@ import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import dynamic from 'next/dynamic';
+import UserDashboard from './user-dashboard';
 
 // Interface para o retorno do useCollection
 interface UseCollectionResult<T> {
-  data: T[];
-  loading: boolean;
+  data: T[] | null;
+  isLoading: boolean;
   error?: Error;
-}
-
-// Definir tipos para os dados do Firebase
-interface FirebaseTask extends Omit<Task, 'dueDate'> {
-  id: string;
-  dueDate?: string | { toDate: () => Date };
-  status: 'pendente' | 'em-andamento' | 'concluida' | 'atrasada';
-}
-
-interface FirebaseProject extends Omit<Project, 'status'> {
-  id: string;
-  status: 'Em execução' | 'Arquivado';
+  refresh: () => Promise<void>;
 }
 
 // Tipos para os KPIs
@@ -117,31 +107,40 @@ function QuickActionsCard() {
   );
 }
 
+interface ManagerDashboardProps {
+    isManager?: boolean;
+    user: User | null;
+}
 
-function ManagerDashboard() {
+function ManagerDashboard({ isManager, user }: ManagerDashboardProps) {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const firestore = useFirestore();
 
   const projectsQuery = useMemoFirebase(
-    () => (firestore) ? collection(firestore, 'projects') : null, 
-    [firestore]
+    () => (firestore && isManager) ? collection(firestore, 'projects') : null, 
+    [firestore, isManager]
   );
-  const { data: projects = [], loading: projectsLoading, refresh: refreshProjects } = useCollection<FirebaseProject>(
+  const { data: projects, isLoading: projectsLoading, refresh: refreshProjects } = useCollection<Project>(
     projectsQuery
-  ) as unknown as UseCollectionResult<FirebaseProject> & { refresh: () => Promise<void> };
+  );
 
   const tasksQuery = useMemoFirebase(
-    () => (firestore) ? collection(firestore, 'tasks') : null, 
-    [firestore]
+    () => (firestore && isManager) ? collection(firestore, 'tasks') : null, 
+    [firestore, isManager]
   );
-  const { data: tasks = [], loading: tasksLoading, refresh: refreshTasks } = useCollection<FirebaseTask>(
+  const { data: tasks, isLoading: tasksLoading, refresh: refreshTasks } = useCollection<Task>(
     tasksQuery
-  ) as unknown as UseCollectionResult<FirebaseTask> & { refresh: () => Promise<void> };
+  );
+  
+  if (!isManager && user) {
+    return <UserDashboard user={user} />;
+  }
 
   const refreshData = async () => {
+    if (!refreshProjects || !refreshTasks) return;
     try {
       setIsRefreshing(true);
-      await Promise.all([refreshProjects?.(), refreshTasks?.()]);
+      await Promise.all([refreshProjects(), refreshTasks()]);
     } catch (error) {
       console.error('Erro ao atualizar dados:', error);
     } finally {
@@ -159,10 +158,8 @@ function ManagerDashboard() {
     const overdueTasks = tasks?.filter(t => {
       if (!t.dueDate) return false;
       try {
-        const dueDate = typeof t.dueDate === 'object' && 'toDate' in t.dueDate 
-          ? t.dueDate.toDate() 
-          : new Date(t.dueDate as string);
-        return !['concluida', 'cancelada'].includes(t.status) && isPast(dueDate);
+        const dueDate = t.dueDate ? new Date(t.dueDate) : null;
+        return dueDate && !['concluida', 'cancelada'].includes(t.status as any) && isPast(dueDate);
       } catch (e) {
         console.error('Erro ao processar data:', e);
         return false;
@@ -200,8 +197,8 @@ function ManagerDashboard() {
     <div className="space-y-6">
       <header className="flex justify-between items-start">
         <div>
-          <h1 className="font-headline text-3xl font-bold tracking-tight">Visão Geral</h1>
-          <p className="text-muted-foreground">Bem-vindo de volta! Aqui está o resumo das suas atividades.</p>
+          <h1 className="font-headline text-3xl font-bold tracking-tight">Visão Geral de Gestão</h1>
+          <p className="text-muted-foreground">Bem-vindo de volta! Aqui está o resumo das atividades da empresa.</p>
         </div>
         <TooltipProvider>
           <Tooltip>
@@ -260,7 +257,7 @@ function ManagerDashboard() {
           icon={<Target className="h-6 w-6" />}
           description="tarefas fora do prazo"
           trend={kpis.overdueTasks > 0 ? 'down' : 'neutral'}
-          trendValue={kpis.overdueTasks > 0 ? 
+          trendValue={kpis.inProgressTasks > 0 ? 
             `${Math.round((kpis.overdueTasks / kpis.inProgressTasks) * 100)}%` : '0%'}
           iconColor="text-amber-500"
           className="bg-white rounded-xl shadow-sm border border-gray-100"
