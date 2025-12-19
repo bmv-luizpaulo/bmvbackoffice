@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useMemo, useState, useEffect } from 'react';
@@ -159,6 +158,8 @@ function ManagerDashboard({ user }: ManagerDashboardProps) {
 
   // Calcular KPIs
   const kpis = useMemo<KpiData>(() => {
+    if (!permissionsReady || !isManager) return { totalProjects: 0, completedProjects: 0, inProgressTasks: 0, completedTasks: 0, overdueTasks: 0, completionRate: 0, taskCompletionRate: 0 };
+    
     const totalProjects = projects?.length || 0;
     const completedProjects = projects?.filter(p => p.status === 'Arquivado').length || 0;
     const inProgressTasks = tasks?.filter(t => !t.isCompleted).length || 0;
@@ -184,7 +185,7 @@ function ManagerDashboard({ user }: ManagerDashboardProps) {
       completionRate: totalProjects > 0 ? Math.round((completedProjects / totalProjects) * 100) : 0,
       taskCompletionRate: tasks?.length ? Math.round((completedTasks / tasks.length) * 100) : 0,
     };
-  }, [projects, tasks]);
+  }, [projects, tasks, permissionsReady, isManager]);
 
   if (projectsLoading || tasksLoading) {
     return (

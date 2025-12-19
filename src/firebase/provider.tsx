@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { createContext, useContext, ReactNode, useMemo, useState, useEffect } from 'react';
@@ -50,60 +49,51 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
 }) => {
   const { firebaseApp, auth, firestore } = initializeFirebase();
   const [user, setUser] = useState<User | null>(null);
-  const [isUserLoading, setIsUserLoading] = useState(true);
-  const [userError, setUserError] = useState<Error | null>(null);
   const [claims, setClaims] = useState<Record<string, any> | null>(null);
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
+  const [isClaimsLoading, setIsClaimsLoading] = useState(true);
+  const [userError, setUserError] = useState<Error | null>(null);
   const [tokenRefreshTime, setTokenRefreshTime] = useState<number | null>(null);
+  
+  const isUserLoading = isAuthLoading || isClaimsLoading;
 
   // Effect 1: Handle auth state changes from Firebase
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      setIsUserLoading(true); // Start loading whenever auth state might change
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       setUser(firebaseUser);
-      setClaims(null); // Reset claims immediately
-
-      if (firebaseUser) {
-        try {
-          // Force refresh is not consistently reliable here on first load.
-          // Getting the token result is the most reliable way to get initial claims.
-          const tokenResult = await getIdTokenResult(firebaseUser);
-          setClaims(tokenResult.claims);
-        } catch (e) {
-          console.error("FirebaseProvider: Error fetching user claims on auth change:", e);
-          setUserError(e as Error);
-          setClaims(null);
-        } finally {
-          setIsUserLoading(false); // Stop loading once claims are processed
-        }
-      } else {
-        setIsUserLoading(false); // No user, stop loading
-        setUserError(null);
-      }
+      setIsAuthLoading(false); // Auth check is done
     }, (error) => {
       console.error("FirebaseProvider: onAuthStateChanged error:", error);
       setUser(null);
       setClaims(null);
       setUserError(error);
-      setIsUserLoading(false);
+      setIsAuthLoading(false);
+      setIsClaimsLoading(false);
     });
     return () => unsubscribe();
   }, [auth]);
 
-  // Effect 2: Force a token refresh when _tokenRefreshed is updated in Firestore
+  // Effect 2: Load/reload claims when user or refresh trigger changes
   useEffect(() => {
-    if (user && tokenRefreshTime) {
-      const forceRefresh = async () => {
-        setIsUserLoading(true); // Indicate loading during refresh
-        try {
-          const tokenResult = await getIdTokenResult(user, true); // Force refresh
+    if (user) {
+      setIsClaimsLoading(true); // Start loading claims
+      const forceRefresh = tokenRefreshTime !== null;
+      getIdTokenResult(user, forceRefresh)
+        .then((tokenResult) => {
           setClaims(tokenResult.claims);
-        } catch (e) {
-          console.error("FirebaseProvider: Error forcing token refresh:", e);
-        } finally {
-          setIsUserLoading(false);
-        }
-      };
-      forceRefresh();
+        })
+        .catch((e) => {
+          console.error("FirebaseProvider: Error fetching user claims:", e);
+          setUserError(e as Error);
+          setClaims(null);
+        })
+        .finally(() => {
+          setIsClaimsLoading(false); // Stop loading claims
+        });
+    } else {
+      // No user, no claims to load
+      setClaims(null);
+      setIsClaimsLoading(false);
     }
   }, [user, tokenRefreshTime]);
   
@@ -115,6 +105,7 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
         const userData = docSnapshot.data() as UserProfile | undefined;
         if (userData?._tokenRefreshed) {
            const serverRefreshTime = userData._tokenRefreshed.toDate().getTime();
+           // Only trigger if the server time is newer than our last refresh time
            if (serverRefreshTime > (tokenRefreshTime || 0)) {
               console.log("Detected role change from Firestore, triggering client token refresh.");
               setTokenRefreshTime(serverRefreshTime);
@@ -125,7 +116,7 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
       });
       return () => unsubscribe();
     }
-  }, [user, firestore]);
+  }, [user, firestore, tokenRefreshTime]); // Depend on tokenRefreshTime to re-subscribe if needed, although it's stable
 
 
   const contextValue = useMemo((): FirebaseContextState => ({

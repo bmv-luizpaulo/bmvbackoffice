@@ -4,7 +4,7 @@ import * as React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, ListChecks, Trash2, Edit, Eye, Archive, ArchiveRestore, MoreHorizontal, CheckSquare, ThumbsUp, Heading2 } from "lucide-react";
-import { useCollection, useFirestore, useMemoFirebase, useUser, useDoc } from '@/firebase';
+import { useCollection, useFirestore, useMemoFirebase, useUser, useDoc, usePermissions } from '@/firebase';
 import { collection, doc, orderBy, query, where, serverTimestamp } from 'firebase/firestore';
 import type { Checklist, Team, User as UserType, Role } from '@/lib/types';
 import { addDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
@@ -28,20 +28,16 @@ export default function ChecklistsPage() {
   const filterParam = searchParams.get('filter');
   const { toast } = useToast();
   const { user: authUser, isUserLoading } = useUser();
+  const { ready: permissionsReady, isManager } = usePermissions();
   
   const userProfileQuery = useMemoFirebase(() => firestore && authUser?.uid ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser?.uid]);
   const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserType>(userProfileQuery);
   
-  const roleQuery = useMemoFirebase(() => firestore && userProfile?.roleId ? doc(firestore, 'roles', userProfile.roleId) : null, [firestore, userProfile?.roleId]);
-  const { data: role, isLoading: isRoleLoading } = useDoc<Role>(roleQuery);
-
   const [activeTab, setActiveTab] = React.useState<'ativo' | 'arquivado'>('ativo');
   const [selectedChecklist, setSelectedChecklist] = React.useState<Checklist | null>(null);
   const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [checklistToEdit, setChecklistToEdit] = React.useState<Checklist | null>(null);
   const [checklistToDelete, setChecklistToDelete] = React.useState<Checklist | null>(null);
-
-  const isManager = role?.permissions?.isManager || role?.permissions?.isDev;
 
   const checklistsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
@@ -51,12 +47,11 @@ export default function ChecklistsPage() {
   const { data: allChecklists, isLoading: isLoadingChecklists } = useCollection<Checklist>(checklistsQuery);
 
   const filteredChecklists = React.useMemo(() => {
-    if (!allChecklists) return [];
+    if (!allChecklists || !permissionsReady) return [];
     if (isManager || !filterParam) {
       return allChecklists;
     }
     if (filterParam === 'me') {
-      // Ensure userProfile and teamIds are loaded before filtering
       if (!userProfile || !userProfile.teamIds) {
         return [];
       }
@@ -64,7 +59,7 @@ export default function ChecklistsPage() {
       return allChecklists.filter(c => userTeamIds.includes(c.teamId));
     }
     return allChecklists;
-  }, [allChecklists, isManager, filterParam, userProfile]);
+  }, [allChecklists, isManager, filterParam, userProfile, permissionsReady]);
 
   
   const teamsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'teams') : null, [firestore]);
@@ -114,7 +109,7 @@ export default function ChecklistsPage() {
     toast({ title: `Checklist ${newStatus === 'ativo' ? 'Restaurado' : 'Arquivado'}` });
   }, [firestore, toast]);
 
-  const isLoading = isLoadingChecklists || isUserLoading || isProfileLoading || isRoleLoading;
+  const isLoading = isLoadingChecklists || isUserLoading || isProfileLoading || !permissionsReady;
 
   return (
     <div className="space-y-6">
