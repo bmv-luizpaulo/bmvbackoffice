@@ -11,7 +11,7 @@ service cloud.firestore {
       // Admins (com a claim) podem ler qualquer perfil.
       allow read: if request.auth.token.canManageUsers == true || request.auth.token.isDev == true;
       // Criação de usuário é gerenciada por Cloud Function, não por regras diretas.
-      allow create: if request.auth != null;
+      allow create: if request.auth.token.canManageUsers == true || request.auth.token.isDev == true;
     }
 
     match /users/{userId}/activityLogs/{logId} {
@@ -48,26 +48,28 @@ service cloud.firestore {
     // ===== REGRAS OPERACIONAIS (PROJETOS E TAREFAS) =====
     match /projects/{projectId} {
       // Gestores/Devs podem ler/escrever. Membros e donos do projeto podem ler.
-      allow read: if request.auth.token.canViewAllProjects == true || request.auth.uid == resource.data.ownerId || request.auth.uid in resource.data.teamMembers;
+      allow read: if request.auth.token.canViewAllProjects == true || request.auth.token.isDev == true || request.auth.uid == resource.data.ownerId || request.auth.uid in resource.data.teamMembers;
       allow write: if request.auth.token.canManageProjects == true || request.auth.uid == resource.data.ownerId;
-      allow create: if request.auth.token.canManageProjects == true;
+      allow create: if request.auth.token.canManageProjects == true || request.auth.token.isDev == true;
     }
     
     match /projects/{projectId}/{subcollection}/{docId} {
        // Permite acesso às subcoleções do projeto se o usuário tem acesso ao projeto.
-      allow read, write: if get(/databases/$(database)/documents/projects/$(projectId)).data.ownerId == request.auth.uid || request.auth.uid in get(/databases/$(database)/documents/projects/$(projectId)).data.teamMembers || request.auth.token.canViewAllProjects == true;
+      allow read, write: if get(/databases/$(database)/documents/projects/$(projectId)).data.ownerId == request.auth.uid || request.auth.uid in get(/databases/$(database)/documents/projects/$(projectId)).data.teamMembers || request.auth.token.canViewAllProjects == true || request.auth.token.isDev == true;
     }
 
     match /tasks/{taskId} {
-      // Gestores/Devs podem ler/escrever. O responsável pela tarefa pode ler/escrever.
-      allow read, write: if request.auth.token.isManager == true || request.auth.token.isDev == true || request.auth.uid == resource.data.assigneeId;
+      // Gestores/Devs podem ler tudo. Usuário só lê tarefa atribuída a ele.
+      allow read: if request.auth.token.canViewAllProjects == true || request.auth.token.isDev == true || resource.data.assigneeId == request.auth.uid;
+      // Gestores/Devs e o responsável pela tarefa podem escrever.
+      allow write: if request.auth.token.canManageProjects == true || request.auth.token.isDev == true || request.auth.uid == resource.data.assigneeId;
       // Qualquer usuário logado pode criar tarefa.
       allow create: if request.auth != null;
     }
 
     match /meetings/{meetingId} {
        // Gestores/Devs e participantes podem ler/escrever.
-       allow read, write: if request.auth.token.isManager == true || request.auth.token.isDev == true || request.auth.uid in resource.data.participantIds;
+       allow read, write: if request.auth.token.canViewAllProjects == true || request.auth.token.isDev == true || request.auth.uid in resource.data.participantIds;
        allow create: if request.auth != null;
     }
 
@@ -94,7 +96,7 @@ service cloud.firestore {
     match /reimbursements/{reimbursementId} {
       // Usuário pode criar e ler/atualizar seu próprio reembolso. Gestores podem ler/atualizar qualquer um.
       allow create: if request.auth.uid == request.resource.data.requesterId;
-      allow read, update: if request.auth.uid == resource.data.requesterId || request.auth.token.canAccessFinancial == true;
+      allow read, update: if request.auth.uid == resource.data.requesterId || request.auth.token.canAccessFinancial == true || request.auth.token.isDev == true;
     }
     
     match /costCenters/{costCenterId} {
@@ -138,7 +140,7 @@ service cloud.firestore {
     match /tickets/{ticketId} {
       // Usuário pode criar e ler seu próprio ticket. Suporte pode ler/atualizar qualquer um.
       allow create: if request.auth.uid == request.resource.data.requesterId;
-      allow read, update: if request.auth.uid == resource.data.requesterId || request.auth.token.canManageSupport == true;
+      allow read, update: if request.auth.uid == resource.data.requesterId || request.auth.token.canManageSupport == true || request.auth.token.isDev == true;
     }
     match /errorLogs/{logId} {
       // Apenas desenvolvedores podem ler/escrever logs de erro.
