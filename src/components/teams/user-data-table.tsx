@@ -60,7 +60,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast"
-import { createUserAction } from "@/lib/actions";
+import { getFunctions, httpsCallable } from "firebase/functions";
 import { deleteDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase";
 import { ActivityLogger } from "@/lib/activity-logger";
 
@@ -132,12 +132,25 @@ export function UserDataTable() {
         toast({ title: "Usuário Atualizado", description: `As informações de ${userData.name} foram salvas.` });
     } else {
         // Create new user
-        const result = await createUserAction(userData);
-        if (result.success && result.data) {
-            toast({ title: "Usuário Criado com Sucesso", description: `As credenciais de acesso para ${userData.name} foram geradas.` });
-            setGeneratedCredentials(result.data);
-        } else {
-            toast({ variant: 'destructive', title: "Erro ao Criar Usuário", description: result.error || "Ocorreu um erro desconhecido." });
+        try {
+            const functions = getFunctions();
+            const createUser = httpsCallable(functions, 'createUser');
+            const result = await createUser(userData);
+            const data = result.data as any;
+
+            if (data.success && data.data) {
+                toast({ title: "Usuário Criado com Sucesso", description: `As credenciais de acesso para ${userData.name} foram geradas.` });
+                setGeneratedCredentials(data.data);
+            } else {
+                throw new Error(data.error || 'Ocorreu um erro desconhecido na Cloud Function.');
+            }
+        } catch (error: any) {
+            console.error("Erro ao chamar Cloud Function 'createUser':", error);
+            toast({ 
+                variant: 'destructive', 
+                title: "Erro ao Criar Usuário", 
+                description: error.message || "Não foi possível completar a operação. Verifique os logs da função." 
+            });
         }
     }
     setIsFormOpen(false);
