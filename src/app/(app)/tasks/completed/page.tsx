@@ -24,8 +24,8 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import type { Task, Project, User } from "@/lib/types";
-import { useFirestore, useCollection, useMemoFirebase, useUser as useAuthUser } from "@/firebase";
-import { collection, collectionGroup, query, where } from "firebase/firestore";
+import { useFirestore, useCollection, useMemoFirebase, useUser as useAuthUser, usePermissions } from "@/firebase";
+import { collection, collectionGroup, query, where, or } from "firebase/firestore";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CheckCircle2, Clock } from "lucide-react";
 import { format, formatDistanceStrict } from "date-fns";
@@ -36,6 +36,7 @@ import { cn } from "@/lib/utils";
 export default function CompletedTasksPage() {
   const firestore = useFirestore();
   const { user: authUser } = useAuthUser();
+  const { ready: permissionsReady, isManager } = usePermissions();
 
   const tasksQuery = useMemoFirebase(
     () => firestore ? query(
@@ -46,8 +47,23 @@ export default function CompletedTasksPage() {
   );
   
   const { data: tasksData, isLoading: isLoadingTasks } = useCollection<Task>(tasksQuery);
-  const projectsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'projects') : null, [firestore]);
+  
+  const projectsQuery = useMemoFirebase(() => {
+    if (!firestore || !authUser || !permissionsReady) return null;
+    const projectsCollection = collection(firestore, 'projects');
+    if (isManager) {
+        return projectsCollection;
+    }
+    return query(
+        projectsCollection,
+        or(
+            where('ownerId', '==', authUser.uid),
+            where('teamMembers', 'array-contains', authUser.uid)
+        )
+    );
+  }, [firestore, authUser, permissionsReady, isManager]);
   const { data: projectsData, isLoading: isLoadingProjects } = useCollection<Project>(projectsQuery);
+
   const usersQuery = useMemoFirebase(() => firestore ? collection(firestore, 'users') : null, [firestore]);
   const { data: usersData, isLoading: isLoadingUsers } = useCollection<User>(usersQuery);
 
@@ -87,7 +103,7 @@ export default function CompletedTasksPage() {
         cell: ({ row }) => {
             const task = row.original;
             if (!task.createdAt || !task.completedAt) return <span className="text-muted-foreground">N/D</span>;
-            const startTime = new Date(task.createdAt);
+            const startTime = new Date((task.createdAt as any).toDate());
             const endTime = new Date(task.completedAt.toDate());
             return <span className="font-medium">{formatDistanceStrict(endTime, startTime, { locale: ptBR, unit: 'day' })}</span>
         }
@@ -223,5 +239,3 @@ export default function CompletedTasksPage() {
     </div>
   )
 }
-
-    
