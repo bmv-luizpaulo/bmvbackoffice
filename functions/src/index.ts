@@ -103,9 +103,12 @@ export const onUserUpdate = functions.firestore
 // Cloud Function para criar um novo usuário
 export const createUser = functions.https.onRequest((req, res) => {
   corsHandler(req, res, async () => {
+    if (req.method === 'OPTIONS') {
+        res.status(204).send('');
+        return;
+    }
+
     if (req.method !== 'POST') {
-      // O cors-handler lida com a resposta OPTIONS.
-      // Retornamos um erro 405 para qualquer outro método que não seja POST.
       res.status(405).send({ success: false, error: 'Method not allowed' });
       return;
     }
