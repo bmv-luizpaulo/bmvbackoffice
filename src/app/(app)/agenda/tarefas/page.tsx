@@ -2,9 +2,9 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { useUser, useCollection, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
+import { useUser, useCollection, useDoc, useFirestore, useMemoFirebase, usePermissions } from '@/firebase';
 import { collection, query, where, doc } from 'firebase/firestore';
-import type { Task, User, Project, Role, Meeting } from '@/lib/types';
+import type { Task, User, Project, Meeting } from '@/lib/types';
 import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -23,18 +23,11 @@ export const dynamic = 'force-dynamic';
 export default function TaskAgendaPage() {
   const firestore = useFirestore();
   const { user: authUser, isUserLoading } = useUser();
+  const { ready: permissionsReady, isManager: isGestor } = usePermissions();
   const searchParams = useSearchParams();
   
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [selectedUserId, setSelectedUserId] = useState<string | 'all'>('all');
-
-  const userProfileQuery = useMemoFirebase(() => firestore && authUser?.uid ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser?.uid]);
-  const { data: userProfile, isLoading: isProfileLoading } = useDoc<User>(userProfileQuery);
-  
-  const roleQuery = useMemoFirebase(() => firestore && userProfile?.roleId ? doc(firestore, 'roles', userProfile.roleId) : null, [firestore, userProfile?.roleId]);
-  const { data: role, isLoading: isRoleLoading } = useDoc<Role>(roleQuery);
-
-  const isGestor = role?.permissions?.isManager || role?.permissions?.isDev;
 
   const allUsersQuery = useMemoFirebase(() => firestore && isGestor ? collection(firestore, 'users') : null, [firestore, isGestor]);
   const { data: allUsers } = useCollection<User>(allUsersQuery);
@@ -44,14 +37,14 @@ export default function TaskAgendaPage() {
   useEffect(() => {
     if (filterParam === 'me' && authUser?.uid) {
       setSelectedUserId(authUser.uid);
-    } else {
+    } else if (!filterParam) {
       setSelectedUserId('all');
     }
   }, [filterParam, authUser?.uid]);
 
 
   const tasksQuery = useMemoFirebase(() => {
-    if (!firestore || !authUser?.uid || isRoleLoading) return null;
+    if (!firestore || !authUser?.uid || !permissionsReady) return null;
     
     let q = query(collection(firestore, 'tasks'));
 
@@ -63,24 +56,24 @@ export default function TaskAgendaPage() {
       q = query(q, where('assigneeId', '==', authUser.uid));
     }
     return q;
-  }, [firestore, authUser?.uid, isGestor, isRoleLoading, selectedUserId]);
+  }, [firestore, authUser?.uid, isGestor, permissionsReady, selectedUserId]);
 
   const { data: tasksData, isLoading: isLoadingTasks } = useCollection<Task>(tasksQuery);
   
   const meetingsQuery = useMemoFirebase(() => {
-    if (!firestore || !authUser?.uid || isRoleLoading) return null;
+    if (!firestore || !authUser?.uid || !permissionsReady) return null;
 
     let q = query(collection(firestore, 'meetings'));
 
     if (isGestor) {
-      if (selectedUserId !== 'all') {
+      if (selectedUserId && selectedUserId !== 'all') {
          q = query(q, where('participantIds', 'array-contains', selectedUserId));
       }
     } else {
        q = query(q, where('participantIds', 'array-contains', authUser.uid));
     }
     return q;
-  }, [firestore, authUser?.uid, isGestor, isRoleLoading, selectedUserId]);
+  }, [firestore, authUser?.uid, isGestor, permissionsReady, selectedUserId]);
 
   const { data: meetingsData, isLoading: isLoadingMeetings } = useCollection<Meeting>(meetingsQuery);
 
@@ -109,7 +102,7 @@ export default function TaskAgendaPage() {
       .sort((a, b) => a.dueDateObj!.getTime() - b.dueDateObj!.getTime());
   }, [combinedAgendaItems, selectedDate]);
   
-  const isLoading = isUserLoading || isProfileLoading || isRoleLoading || isLoadingTasks || isLoadingMeetings;
+  const isLoading = isUserLoading || !permissionsReady || isLoadingTasks || isLoadingMeetings;
 
   if (isLoading) {
     return (
