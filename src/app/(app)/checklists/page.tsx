@@ -27,13 +27,13 @@ export default function ChecklistsPage() {
   const searchParams = useSearchParams();
   const filterParam = searchParams.get('filter');
   const { toast } = useToast();
-  const { user: authUser } = useUser();
+  const { user: authUser, isUserLoading } = useUser();
   
   const userProfileQuery = useMemoFirebase(() => firestore && authUser?.uid ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser?.uid]);
-  const { data: userProfile } = useDoc<UserType>(userProfileQuery);
+  const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserType>(userProfileQuery);
   
   const roleQuery = useMemoFirebase(() => firestore && userProfile?.roleId ? doc(firestore, 'roles', userProfile.roleId) : null, [firestore, userProfile?.roleId]);
-  const { data: role } = useDoc<Role>(roleQuery);
+  const { data: role, isLoading: isRoleLoading } = useDoc<Role>(roleQuery);
 
   const [activeTab, setActiveTab] = React.useState<'ativo' | 'arquivado'>('ativo');
   const [selectedChecklist, setSelectedChecklist] = React.useState<Checklist | null>(null);
@@ -56,7 +56,11 @@ export default function ChecklistsPage() {
       return allChecklists;
     }
     if (filterParam === 'me') {
-      const userTeamIds = userProfile?.teamIds || [];
+      // Ensure userProfile and teamIds are loaded before filtering
+      if (!userProfile || !userProfile.teamIds) {
+        return [];
+      }
+      const userTeamIds = userProfile.teamIds;
       return allChecklists.filter(c => userTeamIds.includes(c.teamId));
     }
     return allChecklists;
@@ -110,6 +114,7 @@ export default function ChecklistsPage() {
     toast({ title: `Checklist ${newStatus === 'ativo' ? 'Restaurado' : 'Arquivado'}` });
   }, [firestore, toast]);
 
+  const isLoading = isLoadingChecklists || isUserLoading || isProfileLoading || isRoleLoading;
 
   return (
     <div className="space-y-6">
@@ -145,7 +150,7 @@ export default function ChecklistsPage() {
     </header>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {isLoadingChecklists ? (
+        {isLoading ? (
           Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-40 w-full" />)
         ) : currentChecklistList.length > 0 ? (
           currentChecklistList.map(checklist => (
