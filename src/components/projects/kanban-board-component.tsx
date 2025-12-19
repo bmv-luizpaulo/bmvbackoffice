@@ -46,7 +46,7 @@ export function KanbanBoard({ openNewProjectDialog }: { openNewProjectDialog?: b
   const { data: userProfile } = useDoc<User>(userProfileQuery);
   const roleQuery = useMemoFirebase(() => (firestore && userProfile?.roleId ? doc(firestore, 'roles', userProfile.roleId) : null), [firestore, userProfile?.roleId]);
   const { data: role } = useDoc<Role>(roleQuery);
-  const isPrivilegedUser = role?.isManager || role?.isDev;
+  const isPrivilegedUser = role?.permissions?.isManager || role?.permissions?.isDev;
 
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
@@ -108,23 +108,21 @@ export function KanbanBoard({ openNewProjectDialog }: { openNewProjectDialog?: b
     if (stagesData) setStages(stagesData.sort((a, b) => a.order - b.order));
     if (tasksData) setTasks(tasksData);
 
-    // Só considere "carregando" enquanto ainda estamos buscando dados
-    // ou enquanto há projetos carregados e ainda não escolhemos um.
-    const waitingProjectsSelection = !selectedProjectId && !!projectsData && projectsData.length > 0;
     const anyLoading =
       isLoadingProjects ||
       isLoadingUsers ||
       isLoadingTeams ||
-      waitingProjectsSelection ||
       (selectedProjectId && (isLoadingStages || isLoadingTasks));
     setIsLoading(!!anyLoading);
 
   }, [projectsData, usersData, teamsData, stagesData, tasksData, isLoadingProjects, isLoadingUsers, isLoadingTeams, isLoadingStages, isLoadingTasks, selectedProjectId]);
 
-  useEffect(() => {
+   useEffect(() => {
     const projectIdFromUrl = searchParams.get('projectId');
-    if (projectIdFromUrl && projectsData?.some(p => p.id === projectIdFromUrl)) {
+    // Set project from URL if it's valid and not already set
+    if (projectIdFromUrl && projectsData?.some(p => p.id === projectIdFromUrl) && selectedProjectId !== projectIdFromUrl) {
       setSelectedProjectId(projectIdFromUrl);
+    // If no project is selected and data is available, select the first one
     } else if (!selectedProjectId && projectsData && projectsData.length > 0) {
       setSelectedProjectId(projectsData[0].id);
     }
