@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -105,7 +106,7 @@ function AssetReturnReportContent() {
       <main className="p-4 sm:p-8">
         <div ref={reportRef} className="mx-auto max-w-4xl bg-white p-12 shadow-lg print:shadow-none A4-container">
           <header className="flex items-start justify-between border-b border-gray-300 pb-6">
-            <Image src="/image/BMV.png" alt="SGI Logo" width={150} height={50} />
+            <Image src="/image/BMV.png" alt="SGI Logo" width={150} height={43} />
             <div className="text-right">
               <h1 className="font-headline text-3xl font-bold text-gray-800">Termo de Devolução de Ativo</h1>
               <p className="text-sm text-gray-500">Emitido em: {generationDate.toLocaleDateString('pt-BR')}</p>

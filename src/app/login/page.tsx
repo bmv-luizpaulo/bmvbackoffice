@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -51,7 +52,7 @@ export default function LoginPage() {
           transition={{ duration: 0.8 }}
         >
           <Image
-            src="/image/Tech_37.jpg"
+            src="https://picsum.photos/seed/tech/1920/1080"
             alt="Background"
             fill
             priority
@@ -84,7 +85,7 @@ export default function LoginPage() {
                   src="/image/BMV.png" 
                   alt="SGI Logo" 
                   width={100}
-                  height={100}
+                  height={28}
                   className="mb-4 animate-pulse"
                   priority
                 />
@@ -132,7 +133,7 @@ export default function LoginPage() {
                           src="/image/BMV.png" 
                           alt="BMV Logo" 
                           width={120}
-                          height={120}
+                          height={34}
                           className="mx-auto"
                           priority
                         />

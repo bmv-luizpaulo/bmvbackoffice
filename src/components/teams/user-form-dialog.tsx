@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from "react";
@@ -11,7 +12,8 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
-  DialogClose
+  DialogClose,
+  DialogDescription
 } from '@/components/ui/dialog';
 import {
   Form,
@@ -158,6 +160,7 @@ export function UserFormDialog({ isOpen, onOpenChange, onSave, user }: UserFormD
       <DialogContent className="max-w-3xl">
         <DialogHeader>
           <DialogTitle>{user ? 'Editar Usuário' : 'Adicionar Novo Usuário'}</DialogTitle>
+          <DialogDescription>Preencha os detalhes do usuário.</DialogDescription>
         </DialogHeader>
         <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 max-h-[80vh] overflow-y-auto p-1">

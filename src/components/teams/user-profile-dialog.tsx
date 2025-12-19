@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from "react";
@@ -6,6 +7,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from '@/components/ui/dialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -88,6 +90,7 @@ export function UserProfileDialog({ isOpen, onOpenChange, user }: UserProfileDia
               <p className="text-sm text-muted-foreground">{user.email}</p>
             </div>
           </DialogTitle>
+          <DialogDescription>Perfil detalhado e atividades do usuário.</DialogDescription>
         </DialogHeader>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -223,7 +226,7 @@ export function UserProfileDialog({ isOpen, onOpenChange, user }: UserProfileDia
                     <div className="flex items-center gap-2 mt-1">
                       <Calendar className="h-4 w-4 text-muted-foreground" />
                       <span className="text-sm">
-                        {format(new Date(user.createdAt), 'dd/MM/yyyy', { locale: ptBR })}
+                        {format(new Date(user.createdAt.toDate()), 'dd/MM/yyyy', { locale: ptBR })}
                       </span>
                     </div>
                   </div>
@@ -235,7 +238,7 @@ export function UserProfileDialog({ isOpen, onOpenChange, user }: UserProfileDia
                     <div className="flex items-center gap-2 mt-1">
                       <Calendar className="h-4 w-4 text-muted-foreground" />
                       <span className="text-sm">
-                        {format(new Date(user.lastLoginAt), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
+                        {format(new Date(user.lastLoginAt.toDate()), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
                       </span>
                     </div>
                   </div>
