@@ -34,7 +34,9 @@ export default function TaskAgendaPage() {
   const roleQuery = useMemoFirebase(() => firestore && userProfile?.roleId ? doc(firestore, 'roles', userProfile.roleId) : null, [firestore, userProfile?.roleId]);
   const { data: role, isLoading: isRoleLoading } = useDoc<Role>(roleQuery);
 
-  const allUsersQuery = useMemoFirebase(() => firestore ? collection(firestore, 'users') : null, [firestore]);
+  const isGestor = role?.permissions?.isManager || role?.permissions?.isDev;
+
+  const allUsersQuery = useMemoFirebase(() => firestore && isGestor ? collection(firestore, 'users') : null, [firestore, isGestor]);
   const { data: allUsers } = useCollection<User>(allUsersQuery);
 
   const filterParam = searchParams.get('filter');
@@ -47,26 +49,34 @@ export default function TaskAgendaPage() {
     }
   }, [filterParam, authUser?.uid]);
 
-  const isGestor = role?.permissions?.isManager || role?.permissions?.isDev;
 
   const tasksQuery = useMemoFirebase(() => {
-    if (!firestore || !role || !authUser?.uid) return null;
+    if (!firestore || !authUser?.uid) return null;
     
     let q = query(collection(firestore, 'tasks'));
+
+    // If role is still loading, we can't determine the correct query yet.
+    if (isRoleLoading) return null;
 
     if (isGestor) {
       if (selectedUserId !== 'all') {
         q = query(q, where('assigneeId', '==', selectedUserId));
       }
+      // Gestor can see all tasks if 'all' is selected, so no extra `where` clause.
     } else {
+      // Non-gestores can only see their own tasks.
       q = query(q, where('assigneeId', '==', authUser.uid));
     }
     return q;
-  }, [firestore, role, selectedUserId, authUser?.uid, isGestor]);
+  }, [firestore, authUser?.uid, isGestor, isRoleLoading, selectedUserId]);
+
   const { data: tasksData, isLoading: isLoadingTasks } = useCollection<Task>(tasksQuery);
   
   const meetingsQuery = useMemoFirebase(() => {
-    if (!firestore || !role || !authUser?.uid) return null;
+    if (!firestore || !authUser?.uid) return null;
+
+    // If role is still loading, we can't determine the correct query yet.
+    if (isRoleLoading) return null;
 
     let q = query(collection(firestore, 'meetings'));
 
@@ -78,7 +88,8 @@ export default function TaskAgendaPage() {
        q = query(q, where('participantIds', 'array-contains', authUser.uid));
     }
     return q;
-  }, [firestore, role, selectedUserId, authUser?.uid, isGestor]);
+  }, [firestore, authUser?.uid, isGestor, isRoleLoading, selectedUserId]);
+
   const { data: meetingsData, isLoading: isLoadingMeetings } = useCollection<Meeting>(meetingsQuery);
 
   const projectsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'projects') : null, [firestore]);
