@@ -41,6 +41,9 @@ import type { User, Role } from "@/lib/types";
 import dynamic from "next/dynamic";
 import { useAuth, useFirestore, useCollection, useUser as useAuthUser, useMemoFirebase } from "@/firebase";
 import { collection, doc, setDoc } from "firebase/firestore";
+import { createUserWithEmailAndPassword, sendPasswordResetEmail } from "firebase/auth";
+import { randomBytes } from "crypto";
+
 import {
   AlertDialog,
   AlertDialogAction,
@@ -62,7 +65,7 @@ import {
 import { useToast } from "@/hooks/use-toast"
 import { deleteDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase";
 import { ActivityLogger } from "@/lib/activity-logger";
-import { createUserAction, updateUserRoleAction, updateUserStatusAction } from "@/lib/actions";
+import { updateUserRoleAction, updateUserStatusAction } from "@/lib/actions";
 
 
 const UserFormDialog = dynamic(() => import('./user-form-dialog').then(m => m.UserFormDialog), { ssr: false });
@@ -117,34 +120,57 @@ export function UserDataTable() {
   }, []);
 
   const handleSaveUser = React.useCallback(async (userData: Omit<User, 'id' | 'avatarUrl'>) => {
-    if (!currentUser || !auth) {
+    if (!currentUser || !auth || !firestore) {
         toast({ variant: 'destructive', title: "Erro", description: "Serviços de autenticação não disponíveis." });
         return;
     }
     
     if (selectedUser) {
-        // Update existing user - Logic to update user details in Firestore
+        // Update existing user
         const userRef = doc(firestore, 'users', selectedUser.id);
-        const { email, ...updatableData } = userData; // Email is not editable
+        const { email, ...updatableData } = userData;
         await updateDocumentNonBlocking(userRef, updatableData);
         
         await ActivityLogger.profileUpdate(firestore, selectedUser.id, currentUser.uid);
         
         toast({ title: "Usuário Atualizado", description: `As informações de ${userData.name} foram salvas.` });
     } else {
-        // Create new user via Server Action
-        const result = await createUserAction(userData as any);
+        // Create new user
+        try {
+            // Use a temporary strong password
+            const tempPassword = `bmv-${randomBytes(8).toString('hex')}`;
+            
+            const userCredential = await createUserWithEmailAndPassword(auth, userData.email, tempPassword);
+            const newUser = userCredential.user;
 
-        if (result.success && result.data) {
-            toast({ title: "Usuário Criado com Sucesso", description: `A conta para ${userData.name} foi criada.` });
-            setGeneratedCredentials(result.data);
-        } else {
-            console.error("Erro ao criar usuário:", result.error);
-            toast({ 
-                variant: 'destructive', 
-                title: "Erro ao Criar Usuário", 
-                description: result.error || "Não foi possível completar a operação."
-            });
+            const { email, ...restOfData } = userData;
+
+            const userProfileData = {
+                ...restOfData,
+                name: userData.name,
+                email: userData.email,
+                avatarUrl: `https://picsum.photos/seed/${newUser.uid}/200`,
+                createdAt: new Date().toISOString(),
+            };
+            
+            await setDoc(doc(firestore, "users", newUser.uid), userProfileData);
+
+            await sendPasswordResetEmail(auth, userData.email);
+
+            toast({ title: "Usuário Criado e E-mail Enviado", description: `A conta para ${userData.name} foi criada e um e-mail para definição de senha foi enviado.` });
+            setGeneratedCredentials({ email: userData.email });
+
+        } catch (error: any) {
+            console.error("Erro ao criar usuário:", error);
+            let errorMessage = "Não foi possível completar a operação.";
+            if (error.code === 'auth/email-already-in-use') {
+                errorMessage = "Este e-mail já está em uso por outra conta.";
+            } else if (error.code === 'auth/invalid-email') {
+                errorMessage = "O formato do e-mail é inválido.";
+            } else if (error.code === 'auth/weak-password') {
+                errorMessage = "A senha temporária gerada é fraca (isso não deveria acontecer).";
+            }
+            toast({ variant: 'destructive', title: "Erro ao Criar Usuário", description: errorMessage });
         }
     }
     setIsFormOpen(false);
@@ -549,7 +575,7 @@ export function UserDataTable() {
           <DialogHeader>
             <DialogTitle>Usuário Criado com Sucesso</DialogTitle>
             <DialogDescription>
-              A conta para <strong>{generatedCredentials?.email}</strong> foi criada. O usuário receberá um e-mail para definir sua senha.
+              A conta para <strong>{generatedCredentials?.email}</strong> foi criada. Um e-mail para definição de senha foi enviado para o usuário.
             </DialogDescription>
           </DialogHeader>
            <DialogFooter>
@@ -575,3 +601,5 @@ export function UserDataTable() {
     </div>
   )
 }
+
+    

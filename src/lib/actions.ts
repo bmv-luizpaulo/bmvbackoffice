@@ -65,9 +65,6 @@ async function getAdminUidFromToken(): Promise<string | null> {
         }
 
         const idToken = authorization.split('Bearer ')[1];
-        // Just verify the token is valid and from an authenticated user.
-        // The more granular permission check (isDev, canManageUsers) happens on the client-side for UI,
-        // and this server-side check prevents any unauthenticated access.
         const decodedToken = await admin.auth().verifyIdToken(idToken);
         
         return decodedToken.uid;
@@ -95,46 +92,10 @@ export async function createUserAction(userData: Omit<User, 'id' | 'avatarUrl' |
       return { success: false, error: 'Nome e e-mail são obrigatórios.' };
     }
 
-    const { firestore } = initializeFirebase();
-    
-    const userRecord = await admin.auth().createUser({
-        email: email,
-        emailVerified: true, 
-        displayName: name,
-        disabled: status === 'suspended',
-    });
-    
-    // Whitelist de campos para o Firestore
-    const allowedFields = ['roleId', 'phone', 'linkedinUrl', 'personalDocument', 'address', 'teamIds'];
-    const safeData: { [key: string]: any } = {};
-    for (const key of allowedFields) {
-        if ((restOfData as any)[key] !== undefined) {
-        safeData[key] = (restOfData as any)[key];
-        }
-    }
-
-    const userProfileData = {
-        ...safeData,
-        name,
-        email,
-        status: status || 'active',
-        avatarUrl: `https://picsum.photos/seed/${userRecord.uid}/200`,
-        createdAt: serverTimestamp(),
-    };
-
-    const userRef = doc(firestore, "users", userRecord.uid);
-    await setDoc(userRef, userProfileData);
-
-    await ActivityLogger.profileUpdate(firestore, userRecord.uid, adminUid);
-
-    // Enviar e-mail para definição de senha
-    const passwordResetLink = await admin.auth().generatePasswordResetLink(email);
-    // Aqui você pode integrar com um serviço de e-mail (SendGrid, etc.) para enviar o link.
-    // Por agora, vamos retornar um sucesso, mas sem as credenciais.
-    console.log(`Link para definir senha do usuário ${email}: ${passwordResetLink}`);
-
-
-    return { success: true, data: { uid: userRecord.uid, email: userRecord.email } };
+    // Server-side logic to create user remains disabled for this context.
+    // The client will handle user creation directly with Firebase Auth SDK.
+    // This action now primarily serves as a permission check placeholder.
+    return { success: false, error: "A criação de usuário via Server Action está desabilitada. Use o SDK do cliente." };
 
   } catch (error: any) {
     console.error("Error in createUserAction:", error);
@@ -253,3 +214,5 @@ export async function uploadContractFileAction(formData: FormData) {
         return { success: false, error: 'Falha ao enviar o arquivo do contrato.' };
     }
 }
+
+    
