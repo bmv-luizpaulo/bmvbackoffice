@@ -35,12 +35,16 @@ export default function TaskAgendaPage() {
   const filterParam = searchParams.get('filter');
   
   useEffect(() => {
+    if (isUserLoading || !permissionsReady) return; // Wait until auth state is confirmed
+
     if (filterParam === 'me' && authUser?.uid) {
       setSelectedUserId(authUser.uid);
-    } else if (!filterParam) {
+    } else if (isGestor) { // Only default to 'all' if the user is a manager
       setSelectedUserId('all');
+    } else if (authUser?.uid) { // Default non-manager to themselves
+      setSelectedUserId(authUser.uid);
     }
-  }, [filterParam, authUser?.uid]);
+  }, [filterParam, authUser?.uid, isUserLoading, permissionsReady, isGestor]);
 
 
   const tasksQuery = useMemoFirebase(() => {
@@ -66,10 +70,12 @@ export default function TaskAgendaPage() {
     let q = query(collection(firestore, 'meetings'));
 
     if (isGestor) {
+      // Only apply this filter if a specific user is selected
       if (selectedUserId && selectedUserId !== 'all') {
          q = query(q, where('participantIds', 'array-contains', selectedUserId));
       }
     } else {
+      // Non-managers always see their own meetings
        q = query(q, where('participantIds', 'array-contains', authUser.uid));
     }
     return q;
