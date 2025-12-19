@@ -1,10 +1,12 @@
 
 'use client';
 
-import { useFirebase } from "@/firebase";
+import { useFirebase, useUser as useAuthUser, useDoc, useMemoFirebase } from "@/firebase";
 import { Skeleton } from '@/components/ui/skeleton';
 import React, { Suspense } from 'react';
 import dynamic from 'next/dynamic';
+import type { User as UserType } from '@/lib/types';
+import { doc } from "firebase/firestore";
 
 const ManagerDashboard = dynamic(() => import('@/components/dashboard/manager-dashboard'), {
   loading: () => <DashboardSkeleton />,
@@ -39,10 +41,10 @@ function DashboardSkeleton() {
 
 
 function DashboardPage() {
-  const { user: authUser, isUserLoading, claims } = useFirebase();
+  const { user: authUser, isUserLoading, claims, areClaimsReady } = useFirebase();
 
-  // Renderiza o esqueleto de carregamento enquanto o usuário ou suas permissões não estiverem prontos.
-  if (isUserLoading) {
+  // Show skeleton while auth state and claims are being resolved.
+  if (isUserLoading || !areClaimsReady) {
     return <DashboardSkeleton />;
   }
 

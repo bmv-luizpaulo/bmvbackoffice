@@ -72,7 +72,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { useUser, useAuth, FirebaseClientProvider, useDoc, useMemoFirebase } from '@/firebase';
+import { useUser, useAuth, FirebaseClientProvider, useFirebase } from '@/firebase';
 import { signOut } from 'firebase/auth';
 import {
   NotificationsProvider,
@@ -81,10 +81,6 @@ import { NotificationBell } from '@/components/notifications/notification-bell';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { cn } from '@/lib/utils';
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener';
-import { doc } from 'firebase/firestore';
-import type { User as UserType, Role } from '@/lib/types';
-import { useFirestore } from '@/firebase';
-import GlobalErrorBoundary from '@/components/global-error-boundary';
 
 const navSections = [
     {
@@ -96,6 +92,7 @@ const navSections = [
     },
     {
         name: 'Minha Área',
+        managerOnly: false, // Visível para todos
         items: [
             { href: '/projetos?filter=me', icon: FolderKanban, label: 'Meus Projetos' },
             { href: '/assets?owner=me', icon: UserSquare, label: 'Meus Ativos' },
@@ -105,6 +102,7 @@ const navSections = [
     },
     {
         name: 'Comercial',
+        managerOnly: true,
         items: [
             { href: '/contatos', icon: BookUser, label: 'Contatos' },
             { href: '/selos', icon: Award, label: 'Selos & Produtos' },
@@ -112,6 +110,7 @@ const navSections = [
     },
     {
         name: 'Operacional',
+        managerOnly: true,
         items: [
             { 
               href: '#', 
@@ -137,6 +136,7 @@ const navSections = [
     },
     {
         name: 'Gestão de Ativos',
+        managerOnly: true,
         items: [
             { href: '/assets', icon: ClipboardList, label: 'Todos os Ativos' },
             { href: '/maintenance', icon: Wrench, label: 'Manutenções' },
@@ -146,6 +146,7 @@ const navSections = [
     },
     {
         name: 'Financeiro',
+        managerOnly: true,
         items: [
             { href: '/financeiro', icon: BarChart2, label: 'Painel Financeiro' },
             { href: '/reembolsos', icon: HandCoins, label: 'Solicitações' },
@@ -155,6 +156,7 @@ const navSections = [
     },
     {
         name: 'Equipe',
+        managerOnly: true,
         items: [
             { 
               href: '#', 
@@ -290,26 +292,17 @@ function NavItem({ item, pathname, isManager, isDev }: { item: any, pathname: st
 function InnerLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const auth = useAuth();
-  const { user, isUserLoading } = useUser();
+  const { user, isUserLoading, claims } = useFirebase();
   const router = useRouter();
-  const firestore = useFirestore();
 
-  const userDocQuery = useMemoFirebase(() => (firestore && user?.uid) ? doc(firestore, 'users', user.uid) : null, [firestore, user?.uid]);
-  const { data: userProfile, isLoading: isLoadingProfile } = useDoc<UserType>(userDocQuery);
-
-  const roleDocQuery = useMemoFirebase(() => (firestore && userProfile?.roleId) ? doc(firestore, 'roles', userProfile.roleId) : null, [firestore, userProfile?.roleId]);
-  const { data: roleData, isLoading: isLoadingRole } = useDoc<Role>(roleDocQuery);
-  
-  const isManager = !!roleData?.permissions?.isManager;
-  const isDev = !!roleData?.permissions?.isDev;
-
-  const isLoadingPermissions = isUserLoading || isLoadingProfile || isLoadingRole;
+  const isManager = !!claims?.isManager;
+  const isDev = !!claims?.isDev;
 
   useEffect(() => {
-    if (!isLoadingPermissions && !user) {
+    if (!isUserLoading && !user) {
       router.replace('/login');
     }
-  }, [user, isLoadingPermissions, router]);
+  }, [user, isUserLoading, router]);
 
   const handleSignOut = async () => {
     try {
@@ -320,7 +313,7 @@ function InnerLayout({ children }: { children: React.ReactNode }) {
     }
   }
 
-  if (isLoadingPermissions || !user) {
+  if (isUserLoading || !user) {
       return (
         <div className="flex h-screen w-full items-center justify-center bg-background">
             <div className="flex flex-col items-center gap-4">
@@ -362,6 +355,13 @@ function InnerLayout({ children }: { children: React.ReactNode }) {
           <SidebarContent>
              <SidebarMenu>
                  {navSections.map((section, index) => {
+                    // Decide if the whole section should be visible
+                    const isSectionVisible = (section.managerOnly === false) || // Visible to all if explicitly false
+                                           (section.managerOnly && (isManager || isDev)) || // Visible to managers
+                                           (!section.hasOwnProperty('managerOnly')); // Visible if property doesn't exist
+
+                    if (!isSectionVisible) return null;
+
                     const visibleItems = section.items.filter((item: any) => 
                       (!item.managerOnly || isManager || isDev) && 
                       (!item.devOnly || process.env.NODE_ENV === 'development')
