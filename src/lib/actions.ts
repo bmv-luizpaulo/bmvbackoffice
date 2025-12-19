@@ -3,11 +3,12 @@
 import { getDocs, collection, addDoc, serverTimestamp, doc, setDoc } from 'firebase/firestore';
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
 import { initializeFirebase } from "@/firebase";
-import type { Project, Task, User, MeetingDetails } from "./types";
+import type { Project, Task, User, Role, MeetingDetails } from "./types";
 import { unstable_noStore as noStore } from 'next/cache';
 import * as admin from 'firebase-admin';
 import { headers } from 'next/headers';
 import { ActivityLogger } from './activity-logger';
+import { auth } from '@/auth';
 
 // This is a placeholder for a real chat log fetching mechanism
 const getChatLogForDay = async (): Promise<string> => {
@@ -40,28 +41,36 @@ export async function createUserAction(userData: Omit<User, 'id' | 'avatarUrl'>)
     noStore();
     try {
         const adminApp = getAdminApp();
-        const auth = admin.auth(adminApp);
+        const adminAuth = admin.auth(adminApp);
         const firestore = admin.firestore(adminApp);
 
-        // Verify the calling user is an admin/manager
-        const headersList = await headers();
-        const idToken = headersList.get('Authorization')?.split('Bearer ')[1];
-        if (!idToken) {
+        // Verify the calling user is an admin/manager using server-side auth
+        const session = await auth();
+        if (!session?.user?.id) {
             return { success: false, error: 'Usuário não autenticado.' };
         }
-        const decodedToken = await auth.verifyIdToken(idToken);
         
-        // Use the decoded token claims to check for role
-        const permissions = decodedToken.permissions as { canManageUsers?: boolean, isDev?: boolean } | undefined;
-        if (!permissions?.canManageUsers && !permissions?.isDev) {
+        const adminUserProfileRef = await firestore.collection('users').doc(session.user.id).get();
+        if (!adminUserProfileRef.exists) {
+            return { success: false, error: 'Perfil do administrador não encontrado.' };
+        }
+        const adminProfile = adminUserProfileRef.data() as User;
+        
+        let adminRole: Role | null = null;
+        if (adminProfile.roleId) {
+            const roleRef = await firestore.collection('roles').doc(adminProfile.roleId).get();
+            if (roleRef.exists) {
+                adminRole = roleRef.data() as Role;
+            }
+        }
+        
+        if (!adminRole?.permissions?.canManageUsers && !adminRole?.permissions?.isDev) {
             return { success: false, error: 'Permissão negada. Você não tem autorização para criar novos usuários.' };
         }
-
-        // Generate a more user-friendly temporary password
+        
         const tempPassword = `bmv-${Math.random().toString(36).slice(-6)}`;
 
-        // Create user in Firebase Auth
-        const userRecord = await auth.createUser({
+        const userRecord = await adminAuth.createUser({
             email: userData.email,
             emailVerified: true,
             password: tempPassword,
@@ -69,7 +78,6 @@ export async function createUserAction(userData: Omit<User, 'id' | 'avatarUrl'>)
             disabled: userData.status === 'suspended',
         });
 
-        // Create user profile in Firestore
         const newUserProfile: Omit<User, 'id'> = {
             ...userData,
             avatarUrl: `https://picsum.photos/seed/${userRecord.uid}/200`,
@@ -77,7 +85,7 @@ export async function createUserAction(userData: Omit<User, 'id' | 'avatarUrl'>)
         };
         await firestore.collection("users").doc(userRecord.uid).set(newUserProfile);
         
-        await ActivityLogger.profileUpdate(firestore, userRecord.uid, decodedToken.uid);
+        await ActivityLogger.profileUpdate(firestore, userRecord.uid, session.user.id);
 
         return { success: true, data: { uid: userRecord.uid, email: userData.email, tempPassword: tempPassword } };
     } catch (error: any) {
