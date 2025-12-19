@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from "react";
@@ -274,3 +275,5 @@ export function UserProfileDialog({ isOpen, onOpenChange, user }: UserProfileDia
     </Dialog>
   );
 }
+
+    

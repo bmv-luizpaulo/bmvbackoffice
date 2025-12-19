@@ -45,6 +45,25 @@ export async function getCepInfoAction(cep: string): Promise<{ success: boolean;
     }
 }
 
+export async function createUserAction(userData: Omit<User, 'id' | 'avatarUrl' | 'createdAt'>): Promise<{ success: boolean; error?: string }> {
+  noStore();
+  const { firestore } = initializeFirebase();
+  try {
+    // This is a simplified version for CSV import; it doesn't use the secure Cloud Function flow
+    // and assumes administrative context.
+    const userRef = doc(collection(firestore, "users"));
+    await setDoc(userRef, {
+      ...userData,
+      avatarUrl: `https://picsum.photos/seed/${userRef.id}/200`,
+      createdAt: serverTimestamp(),
+    });
+    return { success: true };
+  } catch (error: any) {
+    console.error("Error in createUserAction:", error);
+    return { success: false, error: error.message || 'Failed to create user.' };
+  }
+}
+
 export async function uploadProjectFileAction(formData: FormData) {
     noStore();
     const file = formData.get('file') as File;
@@ -132,3 +151,5 @@ export async function uploadContractFileAction(formData: FormData) {
         return { success: false, error: 'Falha ao enviar o arquivo do contrato.' };
     }
 }
+
+    

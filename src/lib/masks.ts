@@ -1,3 +1,4 @@
+
 'use client';
 
 export function formatCPF(value: string) {
@@ -35,3 +36,5 @@ export function formatPhone(value: string) {
 
   return value;
 }
+
+    
