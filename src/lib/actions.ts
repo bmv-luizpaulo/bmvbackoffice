@@ -9,47 +9,6 @@ import { unstable_noStore as noStore } from 'next/cache';
 import { getFunctions, httpsCallable } from "firebase/functions";
 import { ActivityLogger } from './activity-logger';
 
-// This is a placeholder for a real chat log fetching mechanism
-const getChatLogForDay = async (): Promise<string> => {
-    return `
-      Brenda Chen para Alex Thompson [10:05 AM]: Oi Alex, enviei a proposta para o Projeto Phoenix. Eles devem analisar até o final do dia de sexta-feira.
-      Alex Thompson para Brenda Chen [10:07 AM]: Ótimo, obrigado Brenda. Mantenha-me informado sobre o feedback deles.
-      Carlos Diaz para Alex Thompson [2:35 PM]: A negociação com a Global Solutions está esquentando. Eles estão pedindo um desconto de 15%. Acho que podemos chegar a 10%.
-      Alex Thompson para Carlos Diaz [2:40 PM]: 10% parece razoável. Vamos formalizar isso. Bom trabalho.
-      Diana Evans para Alex Thompson [11:05 AM]: Acabei de ter uma ótima ligação inicial com a MarketBoost. Eles estão muito interessados na plataforma de automação. Agendando uma demonstração para a próxima semana.
-      Alex Thompson para Diana Evans [11:10 AM]: Excelentes notícias, Diana! Me avise se precisar de apoio para a demonstração.
-    `.trim();
-};
-
-export async function createUserAction(userData: Omit<User, 'id' | 'avatarUrl'>) {
-    noStore();
-    try {
-        const { firebaseApp } = initializeFirebase();
-        const functions = getFunctions(firebaseApp, 'southamerica-east1');
-        const createUser = httpsCallable(functions, 'createUser');
-
-        const result = await createUser(userData);
-        
-        return { success: true, data: result.data };
-    } catch (error: any) {
-        console.error("Erro ao chamar a Cloud Function 'createUser':", error);
-        
-        let errorMessage = 'Ocorreu um erro ao criar o usuário.';
-        if (error.code === 'functions/already-exists') {
-            errorMessage = 'Este e-mail já está em uso por outra conta.';
-        } else if (error.code === 'functions/permission-denied') {
-            errorMessage = 'Você não tem permissão para executar esta ação.';
-        } else if (error.code === 'functions/invalid-argument') {
-             errorMessage = 'Dados inválidos foram enviados.';
-        } else if (error.message) {
-            errorMessage = error.message;
-        }
-
-        return { success: false, error: errorMessage };
-    }
-}
-
-
 type ViaCepResponse = {
   cep: string;
   logradouro: string;
