@@ -4,9 +4,9 @@
 import { getDocs, collection, addDoc, serverTimestamp, doc, setDoc } from 'firebase/firestore';
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
 import { initializeFirebase } from "@/firebase";
-import type { Project, Task, User, Role, MeetingDetails } from "./types";
+import type { User } from "./types";
 import { unstable_noStore as noStore } from 'next/cache';
-import * as admin from 'firebase-admin';
+import { getFunctions, httpsCallable } from "firebase/functions";
 import { ActivityLogger } from './activity-logger';
 
 // This is a placeholder for a real chat log fetching mechanism
@@ -21,66 +21,34 @@ const getChatLogForDay = async (): Promise<string> => {
     `.trim();
 };
 
-const getAdminApp = () => {
-    const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
-    if (!serviceAccount) {
-        throw new Error('A chave da conta de serviço do Firebase não está configurada no ambiente.');
-    }
-
-    if (admin.apps.length > 0) {
-        return admin.app();
-    }
-
-    try {
-      return admin.initializeApp({
-          credential: admin.credential.cert(JSON.parse(serviceAccount)),
-      });
-    } catch (error: any) {
-      // Se já foi inicializado com um nome padrão, pode dar erro.
-      if (error.code === 'app/duplicate-app') {
-        return admin.app();
-      }
-      throw error;
-    }
-};
-
 export async function createUserAction(userData: Omit<User, 'id' | 'avatarUrl'>) {
     noStore();
     try {
-        const adminApp = getAdminApp();
-        const adminAuth = admin.auth(adminApp);
-        const firestore = admin.firestore(adminApp);
+        const { firebaseApp } = initializeFirebase();
+        const functions = getFunctions(firebaseApp, 'southamerica-east1');
+        const createUser = httpsCallable(functions, 'createUser');
+
+        const result = await createUser(userData);
         
-        const tempPassword = `bmv-${Math.random().toString(36).slice(-6)}`;
-
-        const userRecord = await adminAuth.createUser({
-            email: userData.email,
-            emailVerified: true,
-            password: tempPassword,
-            displayName: userData.name,
-            disabled: userData.status === 'suspended',
-        });
-
-        const newUserProfile: Omit<User, 'id'> = {
-            ...userData,
-            avatarUrl: `https://picsum.photos/seed/${userRecord.uid}/200`,
-            createdAt: admin.firestore.FieldValue.serverTimestamp()
-        };
-        await firestore.collection("users").doc(userRecord.uid).set(newUserProfile);
-
-        return { success: true, data: { uid: userRecord.uid, email: userData.email, tempPassword: tempPassword } };
+        return { success: true, data: result.data };
     } catch (error: any) {
-        console.error("Erro ao criar usuário:", error);
+        console.error("Erro ao chamar a Cloud Function 'createUser':", error);
         
         let errorMessage = 'Ocorreu um erro ao criar o usuário.';
-        if (error.code === 'auth/email-already-exists') {
+        if (error.code === 'functions/already-exists') {
             errorMessage = 'Este e-mail já está em uso por outra conta.';
-        } else if (error.code === 'auth/invalid-email') {
-            errorMessage = 'O formato do e-mail é inválido.';
+        } else if (error.code === 'functions/permission-denied') {
+            errorMessage = 'Você não tem permissão para executar esta ação.';
+        } else if (error.code === 'functions/invalid-argument') {
+             errorMessage = 'Dados inválidos foram enviados.';
+        } else if (error.message) {
+            errorMessage = error.message;
         }
+
         return { success: false, error: errorMessage };
     }
 }
+
 
 type ViaCepResponse = {
   cep: string;
