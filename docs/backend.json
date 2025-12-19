@@ -67,6 +67,21 @@
         "email"
       ]
     },
+    "UserActivityLog": {
+        "title": "UserActivityLog",
+        "type": "object",
+        "description": "Represents a log of a user's activity for auditing.",
+        "properties": {
+            "userId": { "type": "string" },
+            "action": { "type": "string", "enum": ["login", "logout", "profile_update", "password_change", "status_change", "role_change"] },
+            "description": { "type": "string" },
+            "timestamp": { "type": "string", "format": "date-time" },
+            "ipAddress": { "type": "string" },
+            "userAgent": { "type": "string" },
+            "performedBy": { "type": "string" }
+        },
+        "required": ["userId", "action", "description", "timestamp"]
+    },
     "Project": {
       "title": "Project",
       "type": "object",

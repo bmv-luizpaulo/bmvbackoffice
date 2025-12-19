@@ -77,9 +77,9 @@ export function UserActivityLogComponent({ user }: UserActivityLogProps) {
   };
 
   const getRelativeTime = (timestamp: any) => {
-    if (!timestamp) return 'Data desconhecida';
+    if (!timestamp?.toDate) return 'Data desconhecida';
     
-    const date = new Date(timestamp);
+    const date = timestamp.toDate();
     const now = new Date();
     const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
     
@@ -143,7 +143,7 @@ export function UserActivityLogComponent({ user }: UserActivityLogProps) {
                         {activity.timestamp && (
                           <span className="flex items-center gap-1">
                             <Clock className="h-3 w-3" />
-                            {format(new Date(activity.timestamp), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
+                            {format(activity.timestamp.toDate(), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
                           </span>
                         )}
                         {activity.ipAddress && (
