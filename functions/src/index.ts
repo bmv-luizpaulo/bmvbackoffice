@@ -118,13 +118,18 @@ export const onUserUpdate = functions.firestore
 
     // Verifica se o roleId mudou
     if (beforeData.roleId === afterData.roleId) {
-      functions.logger.log(`Role for user ${userId} has not changed. No claim update needed.`);
       return null;
     }
 
     const roleId = afterData.roleId || null;
     functions.logger.log(`User ${userId} role changed to: ${roleId}. Updating claims...`);
     await setCustomClaimsForUser(userId, roleId);
+
+    // Force a token refresh on the client
+    await db.collection("users").doc(userId).update({
+        _tokenRefreshed: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
     return null;
   });
 
@@ -153,25 +158,33 @@ export const createUser = functions.https.onRequest((req, res) => {
         const decodedIdToken = await admin.auth().verifyIdToken(idToken);
         
         const adminUid = decodedIdToken.uid;
+        
+        let hasPermission = false;
+        const claims = decodedIdToken;
 
-        const canManageUsersFromClaims = decodedIdToken.isDev === true || decodedIdToken.canManageUsers === true;
-        if (!canManageUsersFromClaims) {
-          const adminUserDoc = await db.collection('users').doc(adminUid).get();
-          const adminUserData = adminUserDoc.data();
-          const adminRoleId = adminUserData?.roleId;
+        // Check 1: Permissions from claims in the token
+        if (claims.isDev === true || claims.canManageUsers === true) {
+            hasPermission = true;
+        }
 
-          if (!adminRoleId) {
-              res.status(403).send({ success: false, error: "Permission denied: Administrator does not have a defined role."});
-              return;
-          }
+        // Check 2: Fallback to Firestore if claims are not present/sufficient
+        if (!hasPermission) {
+            const adminUserDoc = await db.collection('users').doc(adminUid).get();
+            const adminUserData = adminUserDoc.data();
+            const adminRoleId = adminUserData?.roleId;
 
-          const adminRoleDoc = await db.collection('roles').doc(adminRoleId).get();
-          const adminRoleData = adminRoleDoc.data();
-
-          if (adminRoleData?.permissions?.isDev !== true && adminRoleData?.permissions?.canManageUsers !== true) {
-              res.status(403).send({ success: false, error: "Permission denied: You do not have permission to create users."});
-              return;
-          }
+            if (adminRoleId) {
+                const adminRoleDoc = await db.collection('roles').doc(adminRoleId).get();
+                const adminRoleData = adminRoleDoc.data();
+                if (adminRoleData?.permissions?.isDev === true || adminRoleData?.permissions?.canManageUsers === true) {
+                    hasPermission = true;
+                }
+            }
+        }
+        
+        if (!hasPermission) {
+             res.status(403).send({ success: false, error: "Permission denied: You do not have permission to create users."});
+             return;
         }
 
         // 2. Extração e validação dos dados de entrada
