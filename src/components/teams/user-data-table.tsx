@@ -60,7 +60,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast"
-import { getFunctions, httpsCallable } from "firebase/functions";
 import { deleteDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase";
 import { ActivityLogger } from "@/lib/activity-logger";
 
@@ -77,6 +76,7 @@ type GeneratedCredentials = {
 
 export function UserDataTable() {
   const firestore = useFirestore();
+  const auth = useAuth();
   const { user: currentUser, isUserLoading: isAuthUserLoading } = useAuthUser();
   const { toast } = useToast();
   
@@ -117,7 +117,7 @@ export function UserDataTable() {
   }, []);
 
   const handleSaveUser = React.useCallback(async (userData: Omit<User, 'id' | 'avatarUrl'>) => {
-    if (!firestore || !currentUser) {
+    if (!firestore || !currentUser || !auth) {
         toast({ variant: 'destructive', title: "Erro", description: "Serviços de autenticação não disponíveis." });
         return;
     }
@@ -133,16 +133,27 @@ export function UserDataTable() {
     } else {
         // Create new user
         try {
-            const functions = getFunctions();
-            const createUser = httpsCallable(functions, 'createUser');
-            const result = await createUser(userData);
-            const data = result.data as any;
+            const idToken = await auth.currentUser?.getIdToken();
+            if (!idToken) {
+                throw new Error("Não foi possível obter o token de autenticação.");
+            }
 
-            if (data.success && data.data) {
+            const response = await fetch('https://us-central1-studio-4461945520-252d9.cloudfunctions.net/createUser', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${idToken}`
+                },
+                body: JSON.stringify(userData)
+            });
+
+            const result = await response.json();
+
+            if (response.ok && result.success) {
                 toast({ title: "Usuário Criado com Sucesso", description: `As credenciais de acesso para ${userData.name} foram geradas.` });
-                setGeneratedCredentials(data.data);
+                setGeneratedCredentials(result.data);
             } else {
-                throw new Error(data.error || 'Ocorreu um erro desconhecido na Cloud Function.');
+                throw new Error(result.error || `Ocorreu um erro desconhecido (HTTP ${response.status})`);
             }
         } catch (error: any) {
             console.error("Erro ao chamar Cloud Function 'createUser':", error);
@@ -155,7 +166,7 @@ export function UserDataTable() {
     }
     setIsFormOpen(false);
 
-}, [firestore, selectedUser, currentUser, toast]);
+}, [firestore, selectedUser, currentUser, auth, toast]);
 
 
   const handleDeleteUser = React.useCallback(() => {
