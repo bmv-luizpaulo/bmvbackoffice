@@ -117,15 +117,16 @@ export function UserDataTable() {
   }, []);
 
   const handleSaveUser = React.useCallback(async (userData: Omit<User, 'id' | 'avatarUrl'>) => {
-    if (!firestore || !currentUser || !auth) {
+    if (!currentUser || !auth) {
         toast({ variant: 'destructive', title: "Erro", description: "Serviços de autenticação não disponíveis." });
         return;
     }
     
     if (selectedUser) {
-        // Update existing user
+        // Update existing user - Logic to update user details in Firestore
         const userRef = doc(firestore, 'users', selectedUser.id);
-        await updateDocumentNonBlocking(userRef, userData);
+        const { email, ...updatableData } = userData; // Email is not editable
+        await updateDocumentNonBlocking(userRef, updatableData);
         
         await ActivityLogger.profileUpdate(firestore, selectedUser.id, currentUser.uid);
         
@@ -161,7 +162,7 @@ export function UserDataTable() {
   }, [firestore, selectedUser, toast]);
 
   const handleRoleChange = React.useCallback(async (user: User, newRoleId: string) => {
-    if (!firestore) return;
+    if (!firestore || !currentUser) return;
     const result = await updateUserRoleAction(user.id, newRoleId);
     if (!result.success) {
         toast({ title: "Falha na Permissão", description: result.error, variant: 'destructive'});

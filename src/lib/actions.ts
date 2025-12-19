@@ -1,7 +1,7 @@
 
 'use server';
 
-import { getDocs, collection, addDoc, serverTimestamp, doc, setDoc } from 'firebase/firestore';
+import { getDocs, collection, addDoc, serverTimestamp, doc, setDoc, getDoc } from 'firebase/firestore';
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
 import { initializeFirebase } from "@/firebase";
 import type { User } from "./types";
@@ -56,35 +56,48 @@ async function getAdminUidFromToken(): Promise<string | null> {
     try {
         const authorization = headers().get('Authorization');
         if (!authorization?.startsWith('Bearer ')) {
-            return null; // No token, not authorized
+            console.error("getAdminUidFromToken: No authorization header found.");
+            return null;
         }
+
         const idToken = authorization.split('Bearer ')[1];
         const decodedToken = await admin.auth().verifyIdToken(idToken);
         
-        // As a fallback, we can also check the roles collection
+        // 1. Check claims first (most efficient)
         const hasAdminClaims = decodedToken.isDev === true || decodedToken.canManageUsers === true;
-        
         if (hasAdminClaims) {
             return decodedToken.uid;
         }
 
-        // Fallback check in Firestore if claims are not present (e.g. during first login)
+        // 2. Fallback to Firestore check if claims are not yet populated in the token
+        console.log("getAdminUidFromToken: Claims not found on token, attempting Firestore fallback.");
         const { firestore } = initializeFirebase();
-        const userDoc = await firestore.collection('users').doc(decodedToken.uid).get();
+        const userDocRef = doc(firestore, 'users', decodedToken.uid);
+        const userDoc = await getDoc(userDocRef);
+
+        if (!userDoc.exists()) {
+             throw new Error("Admin user document not found in Firestore.");
+        }
+
         const userData = userDoc.data();
         if (userData?.roleId) {
-            const roleDoc = await firestore.collection('roles').doc(userData.roleId).get();
-            const roleData = roleDoc.data();
-            if (roleData?.permissions?.isDev === true || roleData?.permissions?.canManageUsers === true) {
-                return decodedToken.uid;
+            const roleDocRef = doc(firestore, 'roles', userData.roleId);
+            const roleDoc = await getDoc(roleDocRef);
+
+            if (roleDoc.exists()) {
+                const roleData = roleDoc.data();
+                if (roleData?.permissions?.isDev === true || roleData?.permissions?.canManageUsers === true) {
+                    console.log("getAdminUidFromToken: Firestore fallback successful.");
+                    return decodedToken.uid;
+                }
             }
         }
         
-        throw new Error("Permissão negada: Apenas administradores podem criar usuários.");
+        throw new Error("Permissão negada. O usuário não tem as permissões de administrador necessárias no Firestore.");
 
-    } catch (error) {
-        console.error("Auth check failed:", error);
-        throw new Error("Não autorizado para realizar esta ação.");
+    } catch (error: any) {
+        console.error("getAdminUidFromToken: Auth check failed:", error.message);
+        throw new Error("Não autorizado.");
     }
 }
 
@@ -97,23 +110,52 @@ export async function createUserAction(userData: Omit<User, 'id' | 'avatarUrl' |
     if (!adminUid) {
         return { success: false, error: "Não autorizado." };
     }
+    
+    // Whitelist de campos para criação de usuário
+    const { name, email, status, ...restOfData } = userData;
+
+    if (!name || !email) {
+      return { success: false, error: 'Nome e e-mail são obrigatórios.' };
+    }
+
     const { firestore } = initializeFirebase();
     
     const userRecord = await admin.auth().createUser({
-        email: userData.email,
+        email: email,
         emailVerified: true, 
-        displayName: userData.name,
-        disabled: userData.status === 'suspended',
+        displayName: name,
+        disabled: status === 'suspended',
     });
     
+    // Whitelist de campos para o Firestore
+    const allowedFields = ['roleId', 'phone', 'linkedinUrl', 'personalDocument', 'address', 'teamIds'];
+    const safeData: { [key: string]: any } = {};
+    for (const key of allowedFields) {
+        if ((restOfData as any)[key] !== undefined) {
+        safeData[key] = (restOfData as any)[key];
+        }
+    }
+
+    const userProfileData = {
+        ...safeData,
+        name,
+        email,
+        status: status || 'active',
+        avatarUrl: `https://picsum.photos/seed/${userRecord.uid}/200`,
+        createdAt: serverTimestamp(),
+    };
+
     const userRef = doc(firestore, "users", userRecord.uid);
-    await setDoc(userRef, {
-      ...userData,
-      avatarUrl: `https://picsum.photos/seed/${userRecord.uid}/200`,
-      createdAt: serverTimestamp(),
-    });
+    await setDoc(userRef, userProfileData);
 
     await ActivityLogger.profileUpdate(firestore, userRecord.uid, adminUid);
+
+    // Enviar e-mail para definição de senha
+    const passwordResetLink = await admin.auth().generatePasswordResetLink(email);
+    // Aqui você pode integrar com um serviço de e-mail (SendGrid, etc.) para enviar o link.
+    // Por agora, vamos retornar um sucesso, mas sem as credenciais.
+    console.log(`Link para definir senha do usuário ${email}: ${passwordResetLink}`);
+
 
     return { success: true, data: { uid: userRecord.uid, email: userRecord.email } };
 
