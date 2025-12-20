@@ -3,7 +3,7 @@
 
 import { useEffect, useState } from 'react';
 import { useFirestore, useCollection, useMemoFirebase, useUser as useAuthUser, usePermissions } from "@/firebase";
-import { collection, query, where } from "firebase/firestore";
+import { collection, query, where, getDocs } from "firebase/firestore";
 import type { Project } from "@/lib/types";
 
 /**
@@ -19,9 +19,10 @@ export function useUserProjects() {
   const { user: authUser, isUserLoading: isAuthLoading } = useAuthUser();
   const { ready: permissionsReady, isManager } = usePermissions();
   
-  const [combinedProjects, setCombinedProjects] = useState<Project[] | null>(null);
+  const [projects, setProjects] = useState<Project[] | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Consultas estáveis para não-gestores
+  // Stable queries for non-managers. These run for everyone.
   const ownedProjectsQuery = useMemoFirebase(() => {
     if (!firestore || !authUser) return null;
     return query(collection(firestore, 'projects'), where('ownerId', '==', authUser.uid));
@@ -31,49 +32,53 @@ export function useUserProjects() {
     if (!firestore || !authUser) return null;
     return query(collection(firestore, 'projects'), where('teamMembers', 'array-contains', authUser.uid));
   }, [firestore, authUser]);
-  
-  // Consulta apenas para gestores, ativada somente quando isManager for true
-  const allProjectsQuery = useMemoFirebase(() => {
-    if (!firestore || !permissionsReady || !isManager) return null;
-    return query(collection(firestore, 'projects'));
-  }, [firestore, permissionsReady, isManager]);
 
   const { data: ownedProjects, isLoading: isLoadingOwned } = useCollection<Project>(ownedProjectsQuery);
   const { data: memberProjects, isLoading: isLoadingMember } = useCollection<Project>(memberProjectsQuery);
-  const { data: allProjects, isLoading: isLoadingAll } = useCollection<Project>(allProjectsQuery);
 
   useEffect(() => {
-    if (!permissionsReady) {
-        // Aguarda as permissões estarem prontas antes de decidir o que mostrar.
-        return;
+    // Start loading as soon as the hook is used and permissions are not ready.
+    setIsLoading(isAuthLoading || !permissionsReady);
+
+    if (isAuthLoading || !permissionsReady) {
+      return;
     }
-    
+
     if (isManager) {
-        // Se for gestor, usa a lista completa de projetos.
-        setCombinedProjects(allProjects);
+      // For managers, fetch all projects once permissions are confirmed.
+      const fetchAllProjects = async () => {
+        if (!firestore) return;
+        setIsLoading(true);
+        const allProjectsQuery = query(collection(firestore, 'projects'));
+        const querySnapshot = await getDocs(allProjectsQuery);
+        const allProjects = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Project));
+        setProjects(allProjects);
+        setIsLoading(false);
+      };
+      fetchAllProjects();
     } else {
-        // Se não for gestor, combina as duas listas (projetos como dono e como membro).
-        if (!isLoadingOwned && !isLoadingMember) {
-            const projectsMap = new Map<string, Project>();
-            (ownedProjects || []).forEach(p => projectsMap.set(p.id, p));
-            (memberProjects || []).forEach(p => projectsMap.set(p.id, p));
-            setCombinedProjects(Array.from(projectsMap.values()));
-        }
+      // For non-managers, combine the results of the already-running filtered queries.
+      if (!isLoadingOwned && !isLoadingMember) {
+        const projectsMap = new Map<string, Project>();
+        (ownedProjects || []).forEach(p => projectsMap.set(p.id, p));
+        (memberProjects || []).forEach(p => projectsMap.set(p.id, p));
+        setProjects(Array.from(projectsMap.values()));
+        setIsLoading(false);
+      }
     }
   }, [
     isManager, 
     permissionsReady, 
-    allProjects, 
+    isAuthLoading,
     ownedProjects, 
     memberProjects, 
     isLoadingOwned, 
-    isLoadingMember
+    isLoadingMember,
+    firestore
   ]);
 
-  const isLoading = isAuthLoading || !permissionsReady || (isManager ? isLoadingAll : (isLoadingOwned || isLoadingMember));
-
   return {
-    projects: combinedProjects,
+    projects,
     isLoading,
   };
 }
