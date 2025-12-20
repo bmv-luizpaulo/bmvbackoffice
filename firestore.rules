@@ -50,7 +50,7 @@ service cloud.firestore {
       // GET: Um usuário pode ler um projeto se for gestor, dono ou membro da equipe.
       allow get: if isManager() || request.auth.uid == resource.data.ownerId || request.auth.uid in resource.data.teamMembers;
       
-      // LIST: Gestores podem listar tudo. Usuários comuns só podem listar se a consulta for filtrada por seu UID em ownerId ou teamMembers.
+      // LIST: Gestores podem listar tudo. Usuários comuns só podem listar se a consulta for filtrada por seu UID.
       allow list: if isManager() || 
                     (request.auth.uid != null && request.query.where.field == "ownerId" && request.query.where.operator == "==" && request.query.where.value == request.auth.uid) ||
                     (request.auth.uid != null && request.query.where.field == "teamMembers" && request.query.where.operator == "array-contains" && request.query.where.value == request.auth.uid);

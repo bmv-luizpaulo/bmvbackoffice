@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useMemo, useState, useEffect } from 'react';
@@ -31,6 +30,22 @@ const RecentTasksCard = dynamic(() => import('@/components/dashboard/recent-task
   loading: () => <Skeleton className="h-[400px]" />,
 });
 const PipelineChart = dynamic(() => import("@/components/dashboard/pipeline-chart").then(m => m.PipelineChart), { ssr: false });
+
+function DashboardSkeleton() {
+    return (
+        <div className="space-y-6">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            {[1, 2, 3, 4].map((i) => (
+                <Skeleton key={i} className="h-36 rounded-xl" />
+            ))}
+            </div>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+            <Skeleton className="col-span-4 h-[400px] rounded-xl" />
+            <Skeleton className="col-span-3 h-[400px] rounded-xl" />
+            </div>
+        </div>
+    );
+}
 
 function QuickActionsCard() {
   const actions = [
@@ -144,20 +159,8 @@ function ManagerDashboard() {
     };
   }, [projects, tasks, permissionsReady, isManager]);
 
-  if (projectsLoading || tasksLoading || !permissionsReady) {
-    return (
-      <div className="space-y-6">
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {[1, 2, 3, 4].map((i) => (
-            <Skeleton key={i} className="h-36 rounded-xl" />
-          ))}
-        </div>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-          <Skeleton className="col-span-4 h-[400px] rounded-xl" />
-          <Skeleton className="col-span-3 h-[400px] rounded-xl" />
-        </div>
-      </div>
-    );
+  if (projectsLoading || tasksLoading || !permissionsReady || !isManager) {
+    return <DashboardSkeleton />;
   }
 
   return (
