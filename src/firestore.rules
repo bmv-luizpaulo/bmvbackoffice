@@ -48,7 +48,7 @@ service cloud.firestore {
     // ===== REGRAS OPERACIONAIS (PROJETOS E TAREFAS) =====
     match /projects/{projectId} {
       allow get: if isManager() || request.auth.uid == resource.data.ownerId || request.auth.uid in resource.data.teamMembers;
-      allow list: if isManager(); // Apenas gestores podem listar todos os projetos. Usuários comuns devem buscar por ID ou em consultas filtradas.
+      allow list: if isManager() || request.query.where != null;
       allow write: if isManager() || request.auth.uid == resource.data.ownerId;
       allow create: if isManager();
     }

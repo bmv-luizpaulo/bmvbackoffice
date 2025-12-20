@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { useUser, useCollection, useDoc, useFirestore, useMemoFirebase, usePermissions } from '@/firebase';
+import { useUser, useCollection, useFirestore, useMemoFirebase, usePermissions } from '@/firebase';
 import { collection, query, where, doc, or } from 'firebase/firestore';
 import type { Task, User, Project, Meeting } from '@/lib/types';
 import { Calendar } from '@/components/ui/calendar';
@@ -27,22 +27,23 @@ export default function TaskAgendaPage() {
   const searchParams = useSearchParams();
   
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
-  const [selectedUserId, setSelectedUserId] = useState<string | 'all'>('all');
+  const [selectedUserId, setSelectedUserId] = useState<string>('all');
 
-  const allUsersQuery = useMemoFirebase(() => firestore && isManager ? collection(firestore, 'users') : null, [firestore, isManager]);
+  const allUsersQuery = useMemoFirebase(() => (firestore && isManager) ? collection(firestore, 'users') : null, [firestore, isManager]);
   const { data: allUsers } = useCollection<User>(allUsersQuery);
 
   const filterParam = searchParams.get('filter');
   
   useEffect(() => {
-    if (!permissionsReady || isUserLoading) return; // Wait until auth state and permissions are confirmed
+    if (isUserLoading || !permissionsReady) return; 
 
-    if (filterParam === 'me' && authUser?.uid) {
-      setSelectedUserId(authUser.uid);
+    const userId = authUser?.uid;
+    if (filterParam === 'me' && userId) {
+      setSelectedUserId(userId);
     } else if (isManager) {
       setSelectedUserId('all');
-    } else if (authUser?.uid) {
-      setSelectedUserId(authUser.uid);
+    } else if (userId) {
+      setSelectedUserId(userId);
     }
   }, [filterParam, authUser?.uid, isUserLoading, permissionsReady, isManager]);
 
@@ -68,15 +69,12 @@ export default function TaskAgendaPage() {
     if (!firestore || !authUser?.uid || !permissionsReady) return null;
 
     let q = query(collection(firestore, 'meetings'));
-
+    
     if (isManager) {
-      // For managers, we can query all meetings if "all users" is selected.
-      // If a specific user is selected, we filter by that user.
       if (selectedUserId && selectedUserId !== 'all') {
          q = query(q, where('participantIds', 'array-contains', selectedUserId));
       }
     } else {
-       // For non-managers, always filter by their own UID.
        q = query(q, where('participantIds', 'array-contains', authUser.uid));
     }
     return q;
