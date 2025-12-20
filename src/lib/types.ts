@@ -170,8 +170,6 @@ export type Role = {
         min?: number;
         max?: number;
     };
-    isManager?: boolean;
-    isDev?: boolean;
     permissions?: {
       isDev?: boolean;
       isManager?: boolean;

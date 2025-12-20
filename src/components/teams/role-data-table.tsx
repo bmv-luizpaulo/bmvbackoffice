@@ -147,12 +147,12 @@ export function RoleDataTable() {
       cell: ({ row }) => <p className="text-muted-foreground max-w-xs truncate">{row.original.description}</p>
     },
     {
-        accessorKey: "isManager",
-        header: "Permissões",
+        id: "permissions",
+        header: "Permissões Chave",
         cell: ({ row }) => (
             <div className="flex gap-2">
-                {row.original.isManager && <Badge>Gestor</Badge>}
-                {row.original.isDev && <Badge variant="destructive">Dev</Badge>}
+                {row.original.permissions?.isManager && <Badge>Gestor</Badge>}
+                {row.original.permissions?.isDev && <Badge variant="destructive">Dev</Badge>}
             </div>
         )
     },
