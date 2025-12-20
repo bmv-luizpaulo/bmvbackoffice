@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useFirestore, useCollection, useMemoFirebase, useUser as useAuthUser, usePermissions } from "@/firebase";
-import { collection, query, where, or } from "firebase/firestore";
+import { collection, query, where } from "firebase/firestore";
 import type { Project } from "@/lib/types";
 
 /**
@@ -45,14 +45,14 @@ export function useUserProjects() {
     } else {
         if (!isLoadingOwned && !isLoadingMember) {
             const allProjects = new Map<string, Project>();
-            ownedProjects?.forEach(p => allProjects.set(p.id, p));
-            memberProjects?.forEach(p => allProjects.set(p.id, p));
+            (ownedProjects || []).forEach(p => allProjects.set(p.id, p));
+            (memberProjects || []).forEach(p => allProjects.set(p.id, p));
             setCombinedProjects(Array.from(allProjects.values()));
         }
     }
   }, [isManager, managerProjects, isLoadingOwned, isLoadingMember, ownedProjects, memberProjects]);
 
-  const isLoading = isAuthLoading || !permissionsReady || (isManager ? isLoadingManagerProjects : isLoadingOwned || isLoadingMember);
+  const isLoading = isAuthLoading || !permissionsReady || (isManager ? isLoadingManagerProjects : (isLoadingOwned || isLoadingMember));
 
   return {
     projects: combinedProjects,
