@@ -47,18 +47,17 @@ service cloud.firestore {
 
     // ===== REGRAS OPERACIONAIS (PROJETOS E TAREFAS) =====
     match /projects/{projectId} {
-      // Leitura de um único projeto permitida para gestores ou membros.
+      // GET: Um usuário pode ler um projeto se for gestor, dono ou membro da equipe.
       allow get: if isManager() || request.auth.uid == resource.data.ownerId || request.auth.uid in resource.data.teamMembers;
       
-      // Gestores podem listar todos os projetos. Usuários comuns podem listar apenas os projetos em que são donos ou membros.
-      allow list: if isManager() || 
-                    (request.query.get('where') == null || 
-                     (request.query.where.ownerId == request.auth.uid || request.auth.uid in request.query.where.teamMembers));
+      // LIST: Um gestor pode listar todos. Um usuário comum pode listar se a consulta for filtrada por seu ID.
+      allow list: if isManager() || (request.auth.uid != null && (
+          (request.query.where.field == "ownerId" && request.query.where.value == request.auth.uid) ||
+          (request.query.where.field == "teamMembers" && request.query.where.operator == "array-contains" && request.query.where.value == request.auth.uid)
+      ));
 
-      // Escrita permitida para gestores ou o dono do projeto.
-      allow write: if isManager() || request.auth.uid == resource.data.ownerId;
-      // Criação permitida apenas para gestores.
-      allow create: if isManager();
+      // WRITE: Escrita (create, update, delete) permitida para gestores ou o dono do projeto.
+      allow write: if isManager() || (request.resource.data.ownerId == request.auth.uid);
     }
     
     match /projects/{projectId}/{subcollection}/{docId} {
@@ -182,5 +181,3 @@ service cloud.firestore {
     }
   }
 }
-
-    

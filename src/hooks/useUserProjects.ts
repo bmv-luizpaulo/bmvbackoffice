@@ -1,8 +1,8 @@
 'use client';
 
-import { useMemo, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useFirestore, useCollection, useMemoFirebase, useUser as useAuthUser, usePermissions } from "@/firebase";
-import { collection, query, where } from "firebase/firestore";
+import { collection, query, where, or } from "firebase/firestore";
 import type { Project } from "@/lib/types";
 
 /**
