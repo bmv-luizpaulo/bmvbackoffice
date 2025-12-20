@@ -8,22 +8,27 @@ service cloud.firestore {
       return request.auth.uid == userId;
     }
 
-    function isManager() {
-      return request.auth.token.isManager == true || request.auth.token.isDev == true;
-    }
-
     function isDev() {
-        return request.auth.token.isDev == true;
+      return request.auth.token.isDev == true;
+    }
+    
+    function canManageUsers() {
+      return request.auth.token.canManageUsers == true || isDev();
+    }
+    
+    function canManageProjects() {
+      return request.auth.token.canManageProjects == true || request.auth.token.canViewAllProjects == true || isDev();
     }
 
     // ===== REGRAS DE USUÁRIOS E PERMISSÕES =====
     match /users/{userId} {
-      allow read, update: if isManager() || isOwner(userId);
-      allow create, delete: if isManager();
+      allow read, update: if canManageUsers() || isOwner(userId);
+      allow create, delete: if canManageUsers();
     }
 
     match /users/{userId}/activityLogs/{logId} {
-      allow read, create: if isManager() || isOwner(userId);
+      allow read: if canManageUsers() || isOwner(userId);
+      allow create: if request.auth != null; // Anyone can create their own logs
     }
 
     match /users/{userId}/notifications/{notificationId} {
@@ -32,53 +37,45 @@ service cloud.firestore {
 
     match /roles/{roleId} {
       allow read: if request.auth != null;
-      allow write: if isManager();
+      allow write: if canManageUsers();
     }
 
     match /teams/{teamId} {
       allow read: if request.auth != null;
-      allow write: if isManager();
+      allow write: if canManageUsers();
     }
     
     match /directorates/{directorateId} {
       allow read: if request.auth != null;
-      allow write: if isManager();
+      allow write: if canManageUsers();
     }
 
     // ===== REGRAS OPERACIONAIS (PROJETOS E TAREFAS) =====
     match /projects/{projectId} {
-      // GET: Um usuário pode ler um projeto se for gestor, dono ou membro da equipe.
-      allow get: if isManager() || request.auth.uid == resource.data.ownerId || request.auth.uid in resource.data.teamMembers;
-      
-      // LIST: Gestores podem listar tudo. Usuários comuns só podem listar se a consulta for filtrada pelo seu UID.
-      allow list: if isManager() || 
-                    (request.auth.uid != null && 'ownerId' in request.query.where && request.query.where.ownerId == request.auth.uid) ||
-                    (request.auth.uid != null && 'teamMembers' in request.query.where && request.query.where.teamMembers == request.auth.uid);
-
-      // WRITE: Escrita (create, update, delete) permitida para gestores ou o dono do projeto.
-      allow write: if isManager() || (request.resource.data.ownerId == request.auth.uid);
+      allow get: if canManageProjects() || request.auth.uid == resource.data.ownerId || request.auth.uid in resource.data.teamMembers;
+      allow list: if canManageProjects(); // Only managers/devs can list all projects
+      allow create, update, delete: if request.auth.token.canManageProjects == true || isDev();
     }
     
     match /projects/{projectId}/{subcollection}/{docId} {
-      allow read, write: if isManager() || get(/databases/$(database)/documents/projects/$(projectId)).data.ownerId == request.auth.uid || request.auth.uid in get(/databases/$(database)/documents/projects/$(projectId)).data.teamMembers;
+      allow read, write: if canManageProjects() || get(/databases/$(database)/documents/projects/$(projectId)).data.ownerId == request.auth.uid || request.auth.uid in get(/databases/$(database)/documents/projects/$(projectId)).data.teamMembers;
     }
 
     match /tasks/{taskId} {
-      allow get: if isManager() || resource.data.assigneeId == request.auth.uid || request.auth.uid in get(/databases/$(database)/documents/projects/$(resource.data.projectId)).data.teamMembers;
-      allow list: if isManager() || (request.query.where != null && request.query.where.assigneeId == request.auth.uid);
-      allow write: if isManager() || request.auth.uid == resource.data.assigneeId || (resource.data.assigneeId == null && request.auth.uid != null);
+      allow get: if canManageProjects() || resource.data.assigneeId == request.auth.uid || (resource.data.projectId != null && request.auth.uid in get(/databases/$(database)/documents/projects/$(resource.data.projectId)).data.teamMembers);
+      allow list: if canManageProjects() || (request.query.where != null && request.query.where.assigneeId == request.auth.uid);
+      allow write: if request.auth.uid == resource.data.assigneeId || (resource.data.assigneeId == null && request.auth.uid != null) || canManageProjects();
       allow create: if request.auth != null;
     }
 
     match /meetings/{meetingId} {
-       allow read, write: if isManager() || request.auth.uid in resource.data.participantIds;
+       allow read, write: if request.auth.uid in resource.data.participantIds || canManageProjects();
        allow create: if request.auth != null;
     }
 
     // ===== REGRAS COMERCIAIS =====
     match /contacts/{contactId} {
       allow read, write: if request.auth.token.canManageContacts == true || isDev();
-      allow create: if request.auth.token.canManageContacts == true || isDev();
     }
     
     match /products/{productId} {
@@ -98,6 +95,7 @@ service cloud.firestore {
     match /reimbursements/{reimbursementId} {
       allow create: if request.auth.uid == request.resource.data.requesterId;
       allow read, update: if request.auth.uid == resource.data.requesterId || request.auth.token.canAccessFinancial == true || isDev();
+      allow list: if request.auth.token.canAccessFinancial == true || isDev() || (request.query.where != null && request.query.where.requesterId == request.auth.uid);
     }
     
     match /costCenters/{costCenterId} {
@@ -134,7 +132,8 @@ service cloud.firestore {
       allow write: if request.auth.token.canManageChecklists == true || isDev();
     }
      match /checklists/{checklistId}/items/{itemId} {
-      allow read, write: if request.auth.token.canManageChecklists == true || isDev();
+      allow read: if request.auth != null;
+      allow write: if request.auth.token.canManageChecklists == true || isDev();
     }
     match /checklistExecutions/{executionId} {
        allow read, write: if request.auth != null; 
@@ -144,6 +143,7 @@ service cloud.firestore {
     match /tickets/{ticketId} {
       allow create: if request.auth.uid == request.resource.data.requesterId;
       allow read, update: if request.auth.uid == resource.data.requesterId || request.auth.token.canManageSupport == true || isDev();
+      allow list: if request.auth.token.canManageSupport == true || isDev() || (request.query.where != null && request.query.where.requesterId == request.auth.uid);
     }
     match /errorLogs/{logId} {
       allow create: if request.auth != null;
@@ -152,24 +152,14 @@ service cloud.firestore {
     
     // ===== REGRAS DE CONVERSAS (CHAT) =====
     match /conversations/{conversationId} {
-        // Leitura: Se o usuário faz parte da conversa OU a conversa é global
         allow get: if request.auth.uid in resource.data.userIds || resource.data.isGlobal == true;
-        
-        // Listagem: Se o usuário faz parte da conversa OU a conversa é global
         allow list: if request.auth.uid in resource.data.userIds || resource.data.isGlobal == true;
-
-        // Escrita (atualizar lastMessage, etc.): Apenas membros da conversa
         allow update: if request.auth.uid in resource.data.userIds;
-        
-        // Criação: Qualquer usuário autenticado pode criar uma conversa
         allow create: if request.auth.uid != null;
     }
 
     match /conversations/{conversationId}/messages/{messageId} {
-        // Leitura: Apenas membros da conversa pai
         allow read: if get(/databases/$(database)/documents/conversations/$(conversationId)).data.userIds.hasAny([request.auth.uid]);
-        
-        // Escrita (enviar mensagem): Apenas membros da conversa e o remetente deve ser o usuário autenticado
         allow create: if request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.userIds
                       && request.resource.data.senderId == request.auth.uid;
     }

@@ -22,7 +22,8 @@ export function useUserProjects() {
   const [projects, setProjects] = useState<Project[] | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Stable queries for non-managers. These run for everyone.
+  // These queries are now stable and run for all users.
+  // They will only return data if the security rules allow it.
   const ownedProjectsQuery = useMemoFirebase(() => {
     if (!firestore || !authUser) return null;
     return query(collection(firestore, 'projects'), where('ownerId', '==', authUser.uid));
@@ -33,38 +34,30 @@ export function useUserProjects() {
     return query(collection(firestore, 'projects'), where('teamMembers', 'array-contains', authUser.uid));
   }, [firestore, authUser]);
 
+  const allProjectsQuery = useMemoFirebase(() => {
+    if (!firestore || !isManager) return null; // Only create this query if the user is a manager
+    return query(collection(firestore, 'projects'));
+  }, [firestore, isManager]);
+
   const { data: ownedProjects, isLoading: isLoadingOwned } = useCollection<Project>(ownedProjectsQuery);
   const { data: memberProjects, isLoading: isLoadingMember } = useCollection<Project>(memberProjectsQuery);
+  const { data: allProjects, isLoading: isLoadingAll } = useCollection<Project>(allProjectsQuery);
 
   useEffect(() => {
-    // Start loading as soon as the hook is used and permissions are not ready.
-    setIsLoading(isAuthLoading || !permissionsReady);
+    const isInitialLoading = isAuthLoading || !permissionsReady || (isManager && isLoadingAll) || (!isManager && (isLoadingOwned || isLoadingMember));
+    setIsLoading(isInitialLoading);
 
-    if (isAuthLoading || !permissionsReady) {
+    if (isInitialLoading) {
       return;
     }
 
     if (isManager) {
-      // For managers, fetch all projects once permissions are confirmed.
-      const fetchAllProjects = async () => {
-        if (!firestore) return;
-        setIsLoading(true);
-        const allProjectsQuery = query(collection(firestore, 'projects'));
-        const querySnapshot = await getDocs(allProjectsQuery);
-        const allProjects = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Project));
-        setProjects(allProjects);
-        setIsLoading(false);
-      };
-      fetchAllProjects();
+      setProjects(allProjects);
     } else {
-      // For non-managers, combine the results of the already-running filtered queries.
-      if (!isLoadingOwned && !isLoadingMember) {
-        const projectsMap = new Map<string, Project>();
-        (ownedProjects || []).forEach(p => projectsMap.set(p.id, p));
-        (memberProjects || []).forEach(p => projectsMap.set(p.id, p));
-        setProjects(Array.from(projectsMap.values()));
-        setIsLoading(false);
-      }
+      const projectsMap = new Map<string, Project>();
+      (ownedProjects || []).forEach(p => projectsMap.set(p.id, p));
+      (memberProjects || []).forEach(p => projectsMap.set(p.id, p));
+      setProjects(Array.from(projectsMap.values()));
     }
   }, [
     isManager, 
@@ -72,9 +65,10 @@ export function useUserProjects() {
     isAuthLoading,
     ownedProjects, 
     memberProjects, 
+    allProjects,
     isLoadingOwned, 
     isLoadingMember,
-    firestore
+    isLoadingAll,
   ]);
 
   return {
