@@ -13,6 +13,7 @@ import {
   DocumentReference,
   SetOptions,
   DocumentData,
+  Query,
 } from 'firebase/firestore';
 import { DependencyList, useMemo } from 'react';
 import { errorEmitter } from '@/firebase/error-emitter';
@@ -59,12 +60,12 @@ export function initializeFirebase() {
  * infinite loops in `useCollection` or `useDoc`.
  * It now returns null if any dependency is null or undefined, preventing invalid queries.
  */
-export function useMemoFirebase<T>(factory: () => T | null, deps: DependencyList): T | null {
+export function useMemoFirebase<T extends DocumentReference | CollectionReference | Query | null>(factory: () => T, deps: DependencyList): T {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     return useMemo(() => {
         // If any dependency is null or undefined, don't execute the factory.
         if (deps.some(dep => dep === null || dep === undefined)) {
-            return null;
+            return null as T;
         }
         return factory();
     }, deps);
