@@ -364,7 +364,6 @@
           "description": "Granular permissions for the role.",
           "properties": {
             "isDev": { "type": "boolean", "description": "Full system access for developers." },
-            "isManager": { "type": "boolean", "description": "Legacy manager flag, grants broad read access." },
             "canViewAllProjects": { "type": "boolean", "description": "Can see all projects, not just their own." },
             "canManageProjects": { "type": "boolean", "description": "Can create, edit, and delete projects." },
             "canManageUsers": { "type": "boolean", "description": "Can create, edit, and delete users, teams, and roles." },
