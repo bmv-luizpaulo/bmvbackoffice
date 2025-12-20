@@ -22,7 +22,14 @@ export function useUserProjects() {
   const [projects, setProjects] = useState<Project[] | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Queries for non-managers
+  // Consulta para gestores - busca todos os projetos. Só é ativada se for manager.
+  const allProjectsQuery = useMemoFirebase(() => {
+    if (!firestore || !permissionsReady || !isManager) return null;
+    return query(collection(firestore, 'projects'));
+  }, [firestore, permissionsReady, isManager]);
+  const { data: allProjects, isLoading: isLoadingAll } = useCollection<Project>(allProjectsQuery);
+  
+  // Consultas para não-gestores
   const ownedProjectsQuery = useMemoFirebase(() => {
     if (!firestore || !authUser || isManager) return null;
     return query(collection(firestore, 'projects'), where('ownerId', '==', authUser.uid));
@@ -32,34 +39,29 @@ export function useUserProjects() {
     if (!firestore || !authUser || isManager) return null;
     return query(collection(firestore, 'projects'), where('teamMembers', 'array-contains', authUser.uid));
   }, [firestore, authUser, isManager]);
-  
-  const allProjectsQuery = useMemoFirebase(() => {
-      if (!firestore || !isManager) return null;
-      return query(collection(firestore, 'projects'));
-  }, [firestore, isManager]);
 
   const { data: ownedProjects, isLoading: isLoadingOwned } = useCollection<Project>(ownedProjectsQuery);
   const { data: memberProjects, isLoading: isLoadingMember } = useCollection<Project>(memberProjectsQuery);
-  const { data: allProjects, isLoading: isLoadingAll } = useCollection<Project>(allProjectsQuery);
   
   useEffect(() => {
-    if (!permissionsReady) {
+    if (isAuthLoading || !permissionsReady) {
       setIsLoading(true);
       return;
     }
 
     if (isManager) {
-      setProjects(allProjects);
-      setIsLoading(isLoadingAll);
+        setProjects(allProjects);
+        setIsLoading(isLoadingAll);
     } else {
-      const projectsMap = new Map<string, Project>();
-      (ownedProjects || []).forEach(p => projectsMap.set(p.id, p));
-      (memberProjects || []).forEach(p => projectsMap.set(p.id, p));
-      setProjects(Array.from(projectsMap.values()));
-      setIsLoading(isLoadingOwned || isLoadingMember);
+        const projectsMap = new Map<string, Project>();
+        (ownedProjects || []).forEach(p => projectsMap.set(p.id, p));
+        (memberProjects || []).forEach(p => projectsMap.set(p.id, p));
+        setProjects(Array.from(projectsMap.values()));
+        setIsLoading(isLoadingOwned || isLoadingMember);
     }
     
   }, [
+    isAuthLoading,
     isManager, 
     permissionsReady, 
     ownedProjects, 
@@ -72,6 +74,6 @@ export function useUserProjects() {
 
   return {
     projects,
-    isLoading: isLoading || isAuthLoading,
+    isLoading,
   };
 }
