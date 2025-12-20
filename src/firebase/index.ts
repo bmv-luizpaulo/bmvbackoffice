@@ -1,3 +1,4 @@
+
 'use client';
 import { firebaseConfig } from '@/firebase/config';
 import { initializeApp, getApps, getApp, type FirebaseApp } from 'firebase/app';
@@ -53,23 +54,53 @@ export function initializeFirebase() {
   return getFirebaseServices();
 }
 
+const getQueryPathFromDeps = (deps: DependencyList): string => {
+    // Creates a stable string key from dependencies. This includes primitive values
+    // and specific properties of Firestore objects.
+    return deps.map(dep => {
+        if (dep === null) return 'null';
+        if (dep === undefined) return 'undefined';
+        if (typeof dep === 'string' || typeof dep === 'boolean' || typeof dep === 'number') {
+            return dep.toString();
+        }
+        if (typeof dep === 'object' && dep !== null) {
+            // Firestore Query/Reference objects have a path property
+            if ('path' in dep && typeof (dep as any).path === 'string') {
+                return (dep as any).path;
+            }
+            // More complex queries might have it nested
+            if ('_query' in dep && (dep as any)._query?.path?.canonicalString) {
+                return (dep as any)._query.path.canonicalString();
+            }
+        }
+        // For other object types, return a generic placeholder.
+        // This is not perfect but covers the most common cases for Firestore queries.
+        return 'obj';
+    }).join('|');
+}
+
 /**
  * Custom hook to memoize Firebase queries.
  * This is a wrapper around `React.useMemo` that helps to ensure that
  * query objects are not re-created on every render, which can cause
  * infinite loops in `useCollection` or `useDoc`.
- * It now returns null if any dependency is null or undefined, preventing invalid queries.
+ * It now returns null if any dependency is null or undefined, and uses
+ * a generated key from dependencies to ensure stability.
  */
 export function useMemoFirebase<T extends DocumentReference | CollectionReference | Query | null>(factory: () => T, deps: DependencyList): T {
     // eslint-disable-next-line react-hooks/exhaustive-deps
+    const memoizedKey = useMemo(() => getQueryPathFromDeps(deps), deps);
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     return useMemo(() => {
-        // If any dependency is null or undefined, don't execute the factory.
-        if (deps.some(dep => dep === null || dep === undefined)) {
+        if (deps.some(dep => dep === undefined)) {
             return null as T;
         }
         return factory();
-    }, deps);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [memoizedKey]); // The key is now stable unless the actual query path/params change
 }
+
 
 /**
  * Initiates an addDoc operation for a collection reference.
