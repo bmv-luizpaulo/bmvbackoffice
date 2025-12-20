@@ -83,27 +83,17 @@ import { cn } from '@/lib/utils';
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener';
 import GlobalErrorBoundary from '@/components/global-error-boundary';
 
-const navSections = [
+// --- Menu para Gestores e Desenvolvedores ---
+const managerNavSections = [
     {
         name: 'Geral',
         items: [
-            { href: '/dashboard', icon: BarChart2, label: 'Painel' },
-            { href: '/agenda/tarefas', icon: Calendar, label: 'Agenda' },
-        ]
-    },
-    {
-        name: 'Minha Área',
-        managerOnly: false, // Visível para todos
-        items: [
-            { href: '/projetos?filter=me', icon: FolderKanban, label: 'Meus Projetos' },
-            { href: '/assets?owner=me', icon: UserSquare, label: 'Meus Ativos' },
-            { href: '/checklists?filter=me', icon: ListChecks, label: 'Meus Checklists' },
-            { href: '/meus-reembolsos', icon: HandCoins, label: 'Meus Reembolsos' },
+            { href: '/dashboard', icon: BarChart2, label: 'Painel de Gestão' },
+            { href: '/agenda/tarefas', icon: Calendar, label: 'Agenda Geral' },
         ]
     },
     {
         name: 'Comercial',
-        managerOnly: true,
         items: [
             { href: '/contatos', icon: BookUser, label: 'Contatos' },
             { href: '/selos', icon: Award, label: 'Selos & Produtos' },
@@ -111,7 +101,6 @@ const navSections = [
     },
     {
         name: 'Operacional',
-        managerOnly: true,
         items: [
             { 
               href: '#', 
@@ -129,25 +118,23 @@ const navSections = [
               icon: ListChecks, 
               label: 'Gestão de Checklists',
               subItems: [
-                { href: '/checklists', icon: ListPlus, label: 'Gerenciar Checklists' },
-                { href: '/executed-checklists', icon: History, label: 'Checklists Realizados' },
+                { href: '/checklists', icon: ListPlus, label: 'Modelos de Checklist' },
+                { href: '/executed-checklists', icon: History, label: 'Checklists Executados' },
               ]
             },
         ]
     },
     {
         name: 'Gestão de Ativos',
-        managerOnly: true,
         items: [
-            { href: '/assets', icon: ClipboardList, label: 'Todos os Ativos' },
+            { href: '/assets', icon: ClipboardList, label: 'Inventário de Ativos' },
             { href: '/maintenance', icon: Wrench, label: 'Manutenções' },
             { href: '/asset-contracts', icon: FileText, label: 'Contratos de Uso' },
-            { href: '/document-templates', icon: FileText, label: 'Modelos de Docs' },
+            { href: '/document-templates', icon: FileText, label: 'Modelos de Documentos' },
         ]
     },
     {
         name: 'Financeiro',
-        managerOnly: true,
         items: [
             { href: '/financeiro', icon: BarChart2, label: 'Painel Financeiro' },
             { href: '/reembolsos', icon: HandCoins, label: 'Solicitações' },
@@ -157,7 +144,6 @@ const navSections = [
     },
     {
         name: 'Equipe',
-        managerOnly: true,
         items: [
             { 
               href: '#', 
@@ -172,6 +158,30 @@ const navSections = [
             },
         ]
     },
+];
+
+// --- Menu para Usuários Comuns ---
+const userNavSections = [
+    {
+        name: 'Geral',
+        items: [
+            { href: '/dashboard', icon: BarChart2, label: 'Meu Painel' },
+            { href: '/agenda/tarefas', icon: Calendar, label: 'Minha Agenda' },
+        ]
+    },
+    {
+        name: 'Minha Área',
+        items: [
+            { href: '/projetos?filter=me', icon: FolderKanban, label: 'Meus Projetos' },
+            { href: '/assets?owner=me', icon: UserSquare, label: 'Meus Ativos' },
+            { href: '/checklists?filter=me', icon: ListChecks, label: 'Meus Checklists' },
+            { href: '/meus-reembolsos', icon: HandCoins, label: 'Meus Reembolsos' },
+        ]
+    },
+];
+
+// --- Seção Comum a Todos ---
+const commonSections = [
     {
       name: 'Suporte & Ferramentas',
       items: [
@@ -180,7 +190,6 @@ const navSections = [
       ]
     }
 ]
-
 
 function UserAvatar() {
     const { user } = useUser();
@@ -262,7 +271,7 @@ function NavItem({ item, pathname, isManager, isDev }: { item: any, pathname: st
   if (item.devOnly && process.env.NODE_ENV !== 'development') {
     return null;
   }
-
+  
   if (item.managerOnly && !isManager && !isDev) {
     return null;
   }
@@ -298,6 +307,8 @@ function InnerLayout({ children }: { children: React.ReactNode }) {
 
   const isManager = !!claims?.isManager;
   const isDev = !!claims?.isDev;
+
+  const navSections = isManager || isDev ? managerNavSections : userNavSections;
 
   useEffect(() => {
     if (!isUserLoading && !user) {
@@ -355,30 +366,15 @@ function InnerLayout({ children }: { children: React.ReactNode }) {
           </SidebarHeader>
           <SidebarContent>
              <SidebarMenu>
-                 {navSections.map((section, index) => {
-                    // Decide if the whole section should be visible
-                    const isSectionVisible = (section.managerOnly === false) || // Visible to all if explicitly false
-                                           (section.managerOnly && (isManager || isDev)) || // Visible to managers
-                                           (!section.hasOwnProperty('managerOnly')); // Visible if property doesn't exist
-
-                    if (!isSectionVisible) return null;
-
-                    const visibleItems = section.items.filter((item: any) => 
-                      (!item.managerOnly || isManager || isDev) && 
-                      (!item.devOnly || process.env.NODE_ENV === 'development')
-                    );
-                    if (!visibleItems.length) return null;
-                    
-                    return (
-                      <SidebarGroup key={section.name} className={cn(index === 0 && 'pt-0')}>
-                        <SidebarSeparator />
-                        <SidebarGroupLabel>{section.name}</SidebarGroupLabel>
-                        {visibleItems.map((item: any) => (
-                           <NavItem key={item.label} item={item} pathname={pathname} isManager={isManager} isDev={isDev} />
-                        ))}
-                      </SidebarGroup>
-                    );
-                 })}
+                 {[...navSections, ...commonSections].map((section, index) => (
+                    <SidebarGroup key={section.name} className={cn(index === 0 && 'pt-0')}>
+                    <SidebarSeparator />
+                    <SidebarGroupLabel>{section.name}</SidebarGroupLabel>
+                    {section.items.map((item: any) => (
+                        <NavItem key={item.label} item={item} pathname={pathname} isManager={isManager} isDev={isDev} />
+                    ))}
+                    </SidebarGroup>
+                 ))}
             </SidebarMenu>
           </SidebarContent>
           <SidebarFooter>
@@ -439,5 +435,3 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     </FirebaseClientProvider>
   );
 }
-
-    
