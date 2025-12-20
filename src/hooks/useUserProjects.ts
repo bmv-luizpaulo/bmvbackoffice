@@ -1,8 +1,9 @@
+
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
 import { useFirestore, useCollection, useMemoFirebase, useUser as useAuthUser, usePermissions } from "@/firebase";
-import { collection, query, where } from "firebase/firestore";
+import { collection, query, where, or } from "firebase/firestore";
 import type { Project } from "@/lib/types";
 
 /**
@@ -18,26 +19,23 @@ export function useUserProjects() {
   const { user: authUser, isUserLoading: isAuthLoading } = useAuthUser();
   const { ready: permissionsReady, isManager } = usePermissions();
 
+  // Consulta para projetos onde o usuário é o dono.
   const ownedProjectsQuery = useMemoFirebase(() => {
     if (!firestore || !authUser || !permissionsReady) return null;
-    // For managers, this query runs but its result is eventually superseded
-    // For non-managers, this is one half of their data.
     return query(collection(firestore, 'projects'), where('ownerId', '==', authUser.uid));
   }, [firestore, authUser, permissionsReady]);
 
+  // Consulta para projetos onde o usuário é membro da equipe.
   const memberProjectsQuery = useMemoFirebase(() => {
     if (!firestore || !authUser || !permissionsReady) return null;
-    // For managers, this query runs but its result is eventually superseded
-    // For non-managers, this is the other half of their data.
     return query(collection(firestore, 'projects'), where('teamMembers', 'array-contains', authUser.uid));
   }, [firestore, authUser, permissionsReady]);
 
-  // A single query for all projects, ONLY for managers.
+  // Consulta que busca TODOS os projetos, executada APENAS se o usuário for um gestor.
   const allProjectsQuery = useMemoFirebase(() => {
       if (!firestore || !permissionsReady || !isManager) return null;
       return query(collection(firestore, 'projects'));
   }, [firestore, permissionsReady, isManager]);
-
 
   const { data: ownedProjects, isLoading: isLoadingOwned } = useCollection<Project>(ownedProjectsQuery);
   const { data: memberProjects, isLoading: isLoadingMember } = useCollection<Project>(memberProjectsQuery);
@@ -46,16 +44,16 @@ export function useUserProjects() {
   const [projects, setProjects] = useState<Project[] | null>(null);
 
   useEffect(() => {
-    if (!permissionsReady) {
-        // Wait for permissions to be resolved
+    // Aguarda até que as permissões e o usuário estejam carregados.
+    if (!permissionsReady || isAuthLoading) {
         return;
     }
 
     if (isManager) {
-        // If manager, use the result of the "all projects" query
+        // Se for gestor, usa a lista completa de projetos.
         setProjects(allProjectsData);
     } else {
-        // If not a manager, combine owned and member projects
+        // Se não for gestor, combina as duas listas (projetos como dono e como membro).
         if (!isLoadingOwned && !isLoadingMember) {
             const combined = new Map<string, Project>();
             (ownedProjects || []).forEach(p => combined.set(p.id, p));
@@ -66,6 +64,7 @@ export function useUserProjects() {
   }, [
     isManager, 
     permissionsReady, 
+    isAuthLoading,
     allProjectsData, 
     ownedProjects, 
     memberProjects, 
@@ -73,7 +72,8 @@ export function useUserProjects() {
     isLoadingMember
   ]);
 
-  const isLoading = isAuthLoading || !permissionsReady || (isManager ? isLoadingAll : isLoadingOwned || isLoadingMember);
+  // O estado de carregamento geral depende do status do usuário.
+  const isLoading = isAuthLoading || !permissionsReady || (isManager ? isLoadingAll : (isLoadingOwned || isLoadingMember));
 
   return {
     projects,
