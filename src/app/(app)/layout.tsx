@@ -103,18 +103,18 @@ const managerNavSections = [
         name: 'Operacional',
         items: [
             { 
-              href: '#', 
+              href: '/projetos', 
               icon: FolderKanban, 
               label: 'Projetos',
               subItems: [
-                 { href: '/projetos', icon: FolderKanban, label: 'Lista de Projetos' },
+                 { href: '/projetos', icon: List, label: 'Lista de Projetos' },
                  { href: '/projects', icon: KanbanSquare, label: 'Quadro Kanban' },
               ]
             },
             { href: '/reunioes', icon: Video, label: 'Reuniões' },
             { href: '/tasks/completed', icon: CheckCircle2, label: 'Tarefas Concluídas' },
             { 
-              href: '#', 
+              href: '/checklists', 
               icon: ListChecks, 
               label: 'Gestão de Checklists',
               subItems: [
@@ -146,12 +146,12 @@ const managerNavSections = [
         name: 'Equipe',
         items: [
             { 
-              href: '#', 
+              href: '/users', 
               icon: Users, 
               label: 'Usuários & Grupos',
               subItems: [
                 { href: '/users', icon: User, label: 'Usuários' },
-                { href: '/teams', icon: Users, label: 'Equipes' },
+                { href: '/teams', icon: Group, label: 'Equipes' },
                 { href: '/directorates', icon: Building, label: 'Diretorias' },
                 { href: '/perfis', icon: Shield, label: 'Perfis de Acesso' },
               ]
@@ -314,7 +314,11 @@ function InnerLayout({ children }: { children: React.ReactNode }) {
     if (!isUserLoading && !user) {
       router.replace('/login');
     }
-  }, [user, isUserLoading, router]);
+    // Redirect from root to dashboard
+    if (pathname === '/') {
+      router.replace('/dashboard');
+    }
+  }, [user, isUserLoading, router, pathname]);
 
   const handleSignOut = async () => {
     try {
@@ -325,7 +329,7 @@ function InnerLayout({ children }: { children: React.ReactNode }) {
     }
   }
 
-  if (isUserLoading || !user) {
+  if (isUserLoading || !user || pathname === '/') {
       return (
         <div className="flex h-screen w-full items-center justify-center bg-background">
             <div className="flex flex-col items-center gap-4">

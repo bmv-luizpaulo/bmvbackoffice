@@ -1,5 +1,5 @@
-import { redirect } from 'next/navigation';
-
+// This file is intentionally left blank. 
+// The root layout now handles redirection to the dashboard.
 export default function RootPage() {
-  redirect('/dashboard');
+  return null;
 }
