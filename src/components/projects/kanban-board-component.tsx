@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -13,15 +14,16 @@ import {
 import {
   useFirestore,
   useCollection,
-  useDoc,
+  useAuth,
   useUser as useAuthUser,
+  usePermissions,
   useMemoFirebase,
   updateDocumentNonBlocking,
   addDocumentNonBlocking,
   deleteDocumentNonBlocking,
 } from '@/firebase';
 import { collection, doc, query, where, writeBatch, serverTimestamp, or, and } from 'firebase/firestore';
-import type { Project, Stage, Task, User, Role, Team } from '@/lib/types';
+import type { Project, Stage, Task, User, Team } from '@/lib/types';
 import { KanbanColumn } from './kanban-column';
 import { AddProjectDialog } from './add-project-dialog';
 import { Button } from '../ui/button';
@@ -38,37 +40,26 @@ import { FolderOpen } from 'lucide-react';
 export function KanbanBoard({ openNewProjectDialog }: { openNewProjectDialog?: boolean }) {
   const firestore = useFirestore();
   const { user: authUser } = useAuthUser();
+  const { ready: permissionsReady, isManager } = usePermissions();
   const { toast } = useToast();
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const userProfileQuery = useMemoFirebase(() => (firestore && authUser?.uid ? doc(firestore, 'users', authUser.uid) : null), [firestore, authUser?.uid]);
-  const { data: userProfile } = useDoc<User>(userProfileQuery);
-  const roleQuery = useMemoFirebase(() => (firestore && userProfile?.roleId ? doc(firestore, 'roles', userProfile.roleId) : null), [firestore, userProfile?.roleId]);
-  const { data: role } = useDoc<Role>(roleQuery as any);
-  const isPrivilegedUser = role?.permissions?.isManager || role?.permissions?.isDev;
-
-  const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
-  const [stages, setStages] = useState<Stage[]>([]);
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [users, setUsers] = useState<User[]>([]);
-  const [teams, setTeams] = useState<Team[]>([]);
   const [activeTask, setActiveTask] = useState<Task | null>(null);
   const [isProjectModalOpen, setProjectModalOpen] = useState(!!openNewProjectDialog);
   const [isTaskModalOpen, setTaskModalOpen] = useState(false);
   const [taskToEdit, setTaskToEdit] = useState<Task | null>(null);
   const [dependencyId, setDependencyId] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
   const [isProjectFilesOpen, setIsProjectFilesOpen] = useState(false);
 
-
+  // --- Data Fetching ---
   const projectsQuery = useMemoFirebase(() => {
-    if (!firestore || !authUser || !role) return null;
+    if (!firestore || !authUser || !permissionsReady) return null;
     
     const projectsCollection = collection(firestore, 'projects');
     
-    if (isPrivilegedUser) {
+    if (isManager) {
         return query(projectsCollection, where('status', '==', 'Em execução'));
     }
     
@@ -82,61 +73,49 @@ export function KanbanBoard({ openNewProjectDialog }: { openNewProjectDialog?: b
           )
         )
     );
-  }, [firestore, authUser, role, isPrivilegedUser]);
+  }, [firestore, authUser, permissionsReady, isManager]);
 
   const { data: projectsData, isLoading: isLoadingProjects } = useCollection<Project>(projectsQuery);
   
   const usersQuery = useMemoFirebase(() => firestore ? collection(firestore, 'users') : null, [firestore]);
-  const { data: usersData, isLoading: isLoadingUsers } = useCollection<User>(usersQuery);
+  const { data: users, isLoading: isLoadingUsers } = useCollection<User>(usersQuery);
   
   const teamsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'teams') : null, [firestore]);
-  const { data: teamsData, isLoading: isLoadingTeams } = useCollection<Team>(teamsQuery);
+  const { data: teams, isLoading: isLoadingTeams } = useCollection<Team>(teamsQuery);
   
-  const selectedProject = useMemo(() => projects.find(p => p.id === selectedProjectId), [projects, selectedProjectId]);
-
-  const stagesQuery = useMemoFirebase(() => selectedProjectId ? query(collection(firestore, 'projects', selectedProjectId, 'stages')) : null, [selectedProjectId]);
+  const stagesQuery = useMemoFirebase(() => selectedProjectId ? query(collection(firestore, 'projects', selectedProjectId, 'stages'), orderBy('order')) : null, [selectedProjectId]);
   const { data: stagesData, isLoading: isLoadingStages } = useCollection<Stage>(stagesQuery);
 
-  const tasksQuery = useMemoFirebase(() => selectedProjectId ? query(collection(firestore, 'projects', selectedProjectId, 'tasks')) : null, [selectedProjectId]);
+  const tasksQuery = useMemoFirebase(() => selectedProjectId ? query(collection(firestore, `projects/${selectedProjectId}/tasks`)) : null, [selectedProjectId]);
   const { data: tasksData, isLoading: isLoadingTasks } = useCollection<Task>(tasksQuery);
   
+  const isLoading = isLoadingProjects || isLoadingUsers || isLoadingTeams || (selectedProjectId && (isLoadingStages || isLoadingTasks));
 
-  useEffect(() => {
-    if (projectsData) setProjects(projectsData);
-    if (usersData) setUsers(usersData);
-    if (teamsData) setTeams(teamsData);
-    if (stagesData) setStages(stagesData.sort((a, b) => a.order - b.order));
-    if (tasksData) setTasks(tasksData);
-
-    const anyLoading =
-      isLoadingProjects ||
-      isLoadingUsers ||
-      isLoadingTeams ||
-      (selectedProjectId && (isLoadingStages || isLoadingTasks));
-    setIsLoading(!!anyLoading);
-
-  }, [projectsData, usersData, teamsData, stagesData, tasksData, isLoadingProjects, isLoadingUsers, isLoadingTeams, isLoadingStages, isLoadingTasks, selectedProjectId]);
-
-   useEffect(() => {
-    const projectIdFromUrl = searchParams.get('projectId');
-    // Set project from URL if it's valid and not already set
-    if (projectIdFromUrl && projectsData?.some(p => p.id === projectIdFromUrl) && selectedProjectId !== projectIdFromUrl) {
-      setSelectedProjectId(projectIdFromUrl);
-    // If no project is selected and data is available, select the first one
-    } else if (!selectedProjectId && projectsData && projectsData.length > 0) {
-      setSelectedProjectId(projectsData[0].id);
-    }
-  }, [searchParams, projectsData, selectedProjectId]);
+  // --- Memos and Effects ---
+  const usersMap = useMemo(() => new Map(users?.map(u => [u.id, u])), [users]);
+  const teamsMap = useMemo(() => new Map(teams?.map(t => [t.id, t])), [teams]);
+  const selectedProject = useMemo(() => projectsData?.find(p => p.id === selectedProjectId), [projectsData, selectedProjectId]);
   
-  const usersMap = useMemo(() => new Map(users.map(u => [u.id, u])), [users]);
-  const teamsMap = useMemo(() => new Map(teams.map(t => [t.id, t])), [teams]);
-
+  useEffect(() => {
+    const projectIdFromUrl = searchParams.get('projectId');
+    if (projectsData && projectsData.length > 0) {
+      if (projectIdFromUrl && projectsData.some(p => p.id === projectIdFromUrl)) {
+        if(selectedProjectId !== projectIdFromUrl) setSelectedProjectId(projectIdFromUrl);
+      } else if (!selectedProjectId) {
+        setSelectedProjectId(projectsData[0].id);
+      }
+    } else if (!isLoadingProjects) {
+        setSelectedProjectId(null);
+    }
+  }, [searchParams, projectsData, selectedProjectId, isLoadingProjects]);
+  
 
   const tasksWithDetails = useMemo(() => {
-    const allDependentIds = new Set(tasks.flatMap(t => t.dependentTaskIds || []));
-    return tasks.map(task => {
+    if (!tasksData) return [];
+    const allDependentIds = new Set(tasksData.flatMap(t => t.dependentTaskIds || []));
+    return tasksData.map(task => {
         const isLocked = !task.isCompleted && (task.dependentTaskIds || []).some(depId => {
-            const dependentTask = tasks.find(t => t.id === depId);
+            const dependentTask = tasksData.find(t => t.id === depId);
             return dependentTask && !dependentTask.isCompleted;
         });
         const hasDependents = allDependentIds.has(task.id);
@@ -144,13 +123,13 @@ export function KanbanBoard({ openNewProjectDialog }: { openNewProjectDialog?: b
         const team = task.teamId ? teamsMap.get(task.teamId) : undefined;
         return { ...task, isLocked, hasDependents, assignee, team };
     });
-  }, [tasks, usersMap, teamsMap]);
+  }, [tasksData, usersMap, teamsMap]);
   
+  // --- Handlers ---
   const handleAddProject = useCallback(async (newProjectData: Omit<Project, 'id'>) => {
     if (!firestore) return;
     const docRef = await addDocumentNonBlocking(collection(firestore, 'projects'), newProjectData);
     
-    // Create default stages for the new project
     const stagesBatch = writeBatch(firestore);
     const stagesCollection = collection(firestore, 'projects', docRef.id, 'stages');
     const defaultStages = [
@@ -196,14 +175,14 @@ export function KanbanBoard({ openNewProjectDialog }: { openNewProjectDialog?: b
   }, [selectedProjectId, firestore, toast]);
 
   const handleDeleteProject = useCallback(() => {
-    if (!selectedProjectId || !firestore) return;
+    if (!selectedProjectId || !firestore || !projectsData) return;
     deleteDocumentNonBlocking(doc(firestore, 'projects', selectedProjectId));
     toast({ title: "Projeto Excluído", variant: "destructive" });
-    setSelectedProjectId(projects.length > 1 ? projects.find(p => p.id !== selectedProjectId)!.id : null);
-  }, [selectedProjectId, firestore, toast, projects]);
+    setSelectedProjectId(projectsData.length > 1 ? projectsData.find(p => p.id !== selectedProjectId)!.id : null);
+  }, [selectedProjectId, firestore, toast, projectsData]);
 
   const handleDragStart = (event: DragStartEvent) => {
-    setActiveTask(tasks.find(t => t.id === event.active.id) ?? null);
+    setActiveTask(tasksData?.find(t => t.id === event.active.id) ?? null);
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -212,13 +191,13 @@ export function KanbanBoard({ openNewProjectDialog }: { openNewProjectDialog?: b
   
   const handleDragOver = (event: DragOverEvent) => {
     const { active, over } = event;
-    if (!over || active.id === over.id) return;
+    if (!over || active.id === over.id || !tasksData || !stagesData) return;
     
-    const isActiveATask = tasks.some(t => t.id === active.id);
-    const isOverAStage = stages.some(s => s.id === over.id);
+    const isActiveATask = tasksData.some(t => t.id === active.id);
+    const isOverAStage = stagesData.some(s => s.id === over.id);
 
     if (isActiveATask && isOverAStage) {
-        const task = tasks.find(t => t.id === active.id);
+        const task = tasksData.find(t => t.id === active.id);
         if (task && task.stageId !== over.id) {
            handleUpdateTask(task.id, { stageId: over.id as string });
         }
@@ -244,20 +223,20 @@ export function KanbanBoard({ openNewProjectDialog }: { openNewProjectDialog?: b
     })
   );
 
-  if (isLoading) {
+  if (isLoading || !permissionsReady) {
     return <KanbanBoardSkeleton />;
   }
 
   return (
     <>
       <div className='mb-4 flex flex-wrap justify-between items-center gap-4'>
-        {projects.length > 0 ? (
+        {projectsData && projectsData.length > 0 ? (
           <Select value={selectedProjectId || ''} onValueChange={setSelectedProjectId}>
             <SelectTrigger className="w-full md:w-auto md:min-w-64">
               <SelectValue placeholder="Selecione um projeto..." />
             </SelectTrigger>
             <SelectContent>
-              {projects.map(project => (
+              {projectsData.map(project => (
                 <SelectItem key={project.id} value={project.id}>{project.name}</SelectItem>
               ))}
             </SelectContent>
@@ -266,7 +245,7 @@ export function KanbanBoard({ openNewProjectDialog }: { openNewProjectDialog?: b
           <p className="text-muted-foreground">Nenhum projeto encontrado.</p>
         )}
         <div className='flex items-center gap-2'>
-          {isPrivilegedUser && (
+          {isManager && (
             <Button onClick={() => setProjectModalOpen(true)}>
               <Plus className='h-4 w-4 mr-2' /> Criar Projeto
             </Button>
@@ -276,12 +255,12 @@ export function KanbanBoard({ openNewProjectDialog }: { openNewProjectDialog?: b
                 <FolderOpen className='h-4 w-4' />
               </Button>
            )}
-           {selectedProject && isPrivilegedUser && (
+           {selectedProject && isManager && (
               <Button variant="outline" size="icon" disabled>
                   <SlidersHorizontal className='h-4 w-4' />
               </Button>
            )}
-          {selectedProject && isPrivilegedUser && (
+          {selectedProject && isManager && (
             <Button variant="destructive" size="icon" onClick={handleDeleteProject}>
               <Trash2 className='h-4 w-4' />
             </Button>
@@ -298,7 +277,7 @@ export function KanbanBoard({ openNewProjectDialog }: { openNewProjectDialog?: b
 
       <DndContext onDragStart={handleDragStart} onDragEnd={handleDragEnd} onDragOver={handleDragOver} sensors={sensors}>
         <div className="flex h-full min-w-max gap-4 pb-4 overflow-x-auto">
-          {stages.map(stage => (
+          {stagesData?.map(stage => (
             <KanbanColumn
               key={stage.id}
               stage={stage}
@@ -325,8 +304,8 @@ export function KanbanBoard({ openNewProjectDialog }: { openNewProjectDialog?: b
           isOpen={isTaskModalOpen}
           onOpenChange={setTaskModalOpen}
           onSaveTask={handleSaveTask}
-          stages={stages}
-          tasks={tasks}
+          stages={stagesData || []}
+          tasks={tasksData || []}
           projectId={selectedProjectId!}
           taskToEdit={taskToEdit}
           dependencyId={dependencyId}
