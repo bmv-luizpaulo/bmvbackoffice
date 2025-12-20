@@ -1,6 +1,4 @@
 'use client';
-import { Suspense } from "react";
-import { KanbanBoardSkeleton } from "@/components/projects/kanban-board-skeleton";
 import ClientKanbanBoard from "@/components/projects/client-kanban-board";
 import { useSearchParams } from "next/navigation";
 

@@ -33,8 +33,6 @@ import { Calendar } from "../ui/calendar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import type { Project, User as UserType, Team } from "@/lib/types";
 import { MultiSelect } from "../ui/multi-select";
-import { useCollection, useFirestore } from "@/firebase";
-import { collection, getDocs, query, where } from "firebase/firestore";
 import React from "react";
 import { formatPhone } from "@/lib/masks";
 
@@ -43,6 +41,8 @@ type AddProjectDialogProps = {
   onOpenChange: (isOpen: boolean) => void;
   onAddProject: (project: Omit<Project, 'id'>) => void;
   projectToEdit?: Project | null;
+  usersData: UserType[] | null;
+  teamsData: Team[] | null;
 };
 
 const formSchema = z.object({
@@ -64,13 +64,8 @@ const formSchema = z.object({
 });
 
 
-export function AddProjectDialog({ isOpen, onOpenChange, onAddProject, projectToEdit }: AddProjectDialogProps) {
-  const firestore = useFirestore();
-  const usersQuery = React.useMemo(() => firestore ? collection(firestore, 'users') : null, [firestore]);
-  const { data: usersData } = useCollection<UserType>(usersQuery);
-  const teamsQuery = React.useMemo(() => firestore ? collection(firestore, 'teams') : null, [firestore]);
-  const { data: teamsData } = useCollection<Team>(teamsQuery);
-
+export function AddProjectDialog({ isOpen, onOpenChange, onAddProject, projectToEdit, usersData, teamsData }: AddProjectDialogProps) {
+  
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     mode: 'onChange',
@@ -123,15 +118,14 @@ export function AddProjectDialog({ isOpen, onOpenChange, onAddProject, projectTo
   }, [isOpen, projectToEdit, form]);
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    // Denormaliza membros de equipes selecionadas
     let mergedMembers = new Set<string>(values.teamMembers || []);
-    if (firestore && values.teamIds && values.teamIds.length) {
-      const usersByTeamsQuery = query(collection(firestore, 'users'), where('teamIds', 'array-contains-any', values.teamIds.slice(0, 10)));
-      const snap = await getDocs(usersByTeamsQuery);
-      snap.forEach(doc => {
-        const uid = doc.id;
-        mergedMembers.add(uid);
-      });
+    if (values.teamIds && values.teamIds.length && usersData) {
+        const teamIdSet = new Set(values.teamIds);
+        usersData.forEach(user => {
+            if (user.teamIds?.some(tid => teamIdSet.has(tid))) {
+                mergedMembers.add(user.id);
+            }
+        });
     }
 
     const projectData = {
@@ -155,24 +149,7 @@ export function AddProjectDialog({ isOpen, onOpenChange, onAddProject, projectTo
   const teamOptions = teamsData?.map(team => ({ value: team.id, label: team.name })) || [];
 
   const selectedTeamIds = form.watch('teamIds') || [];
-  const filteredUserOptions = React.useMemo(() => {
-    if (showAllUsersPicker) {
-      // Team-first sort when showing all users
-      const teamIdSet = new Set(selectedTeamIds);
-      return (usersData || [])
-        .map(u => ({ value: u.id, label: u.name, fromTeam: (u.teamIds || []).some(tid => teamIdSet.has(tid)) }))
-        .sort((a,b) => (a.fromTeam === b.fromTeam ? a.label.localeCompare(b.label) : (a.fromTeam ? -1 : 1)))
-        .map(({value,label}) => ({ value, label }));
-    }
-    if (!selectedTeamIds?.length) return [];
-    const setIds = new Set(selectedTeamIds);
-    return (usersData || [])
-      .filter(u => (u.teamIds || []).some(tid => setIds.has(tid)))
-      .map(u => ({ value: u.id, label: u.name }))
-      .sort((a,b) => a.label.localeCompare(b.label));
-  }, [showAllUsersPicker, selectedTeamIds, usersData, userOptions]);
-
-  // Helpers based on selected teams
+  
   const teamMembersFromTeams = React.useMemo(() => {
     if (!selectedTeamIds?.length) return [] as { value: string; label: string }[];
     const setIds = new Set(selectedTeamIds);
@@ -180,6 +157,14 @@ export function AddProjectDialog({ isOpen, onOpenChange, onAddProject, projectTo
       .filter(u => (u.teamIds || []).some(tid => setIds.has(tid)))
       .map(u => ({ value: u.id, label: u.name }));
   }, [selectedTeamIds, usersData]);
+
+  const filteredUserOptions = React.useMemo(() => {
+    if (showAllUsersPicker || !selectedTeamIds.length) {
+      return userOptions;
+    }
+    return teamMembersFromTeams;
+  }, [showAllUsersPicker, selectedTeamIds, usersData, userOptions, teamMembersFromTeams]);
+
 
   const addAllTeamMembers = () => {
     const current = new Set(form.getValues('teamMembers') || []);
@@ -342,13 +327,9 @@ export function AddProjectDialog({ isOpen, onOpenChange, onAddProject, projectTo
                                 <div className="flex items-center justify-between">
                                   <FormLabel className="flex items-center gap-2"><Users className="h-4 w-4" />Equipe Empenhada</FormLabel>
                                   <div className="space-x-2 text-xs">
-                                    {!showAllUsersPicker ? (
-                                      <Button type="button" variant="outline" size="sm" onClick={() => setShowAllUsersPicker(true)}>
-                                        Adicionar usuário avulso ({Math.max((usersData?.length || 0) - (form.getValues('teamMembers')?.length || 0), 0)})
-                                      </Button>
-                                    ) : (
-                                      <Button type="button" variant="secondary" size="sm" onClick={() => setShowAllUsersPicker(false)}>Voltar p/ equipes</Button>
-                                    )}
+                                    <Button type="button" variant={showAllUsersPicker ? 'secondary' : 'outline'} size="sm" onClick={() => setShowAllUsersPicker(!showAllUsersPicker)}>
+                                      {showAllUsersPicker ? 'Filtrar por equipe' : 'Adicionar usuário avulso'}
+                                    </Button>
                                   </div>
                                 </div>
                                   <MultiSelect

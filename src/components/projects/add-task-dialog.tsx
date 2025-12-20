@@ -30,8 +30,7 @@ import { Textarea } from "../ui/textarea";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import type { Stage, Task, User as UserType, Team } from "@/lib/types";
 import { MultiSelect } from "../ui/multi-select";
-import { useCollection, useFirestore } from "@/firebase";
-import { collection, serverTimestamp } from "firebase/firestore";
+import { serverTimestamp } from "firebase/firestore";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { Calendar } from "../ui/calendar";
 import { cn } from "@/lib/utils";
@@ -45,6 +44,8 @@ type AddTaskDialogProps = {
   onSaveTask: (task: Omit<Task, 'id' | 'isCompleted'>, taskId?: string) => void;
   stages: Stage[];
   tasks: Task[];
+  usersData: UserType[] | null;
+  teamsData: Team[] | null;
   projectId?: string;
   taskToEdit?: Task | null;
   dependencyId?: string | null;
@@ -74,13 +75,8 @@ const formSchema = z.object({
 });
 
 
-export function AddTaskDialog({ isOpen, onOpenChange, onSaveTask, stages, tasks, projectId, taskToEdit, dependencyId }: AddTaskDialogProps) {
-  const firestore = useFirestore();
-  const usersQuery = React.useMemo(() => firestore ? collection(firestore, 'users') : null, [firestore]);
-  const { data: usersData } = useCollection<UserType>(usersQuery);
-  const teamsQuery = React.useMemo(() => firestore ? collection(firestore, 'teams') : null, [firestore]);
-  const { data: teamsData } = useCollection<Team>(teamsQuery);
-
+export function AddTaskDialog({ isOpen, onOpenChange, onSaveTask, stages, tasks, usersData, teamsData, projectId, taskToEdit, dependencyId }: AddTaskDialogProps) {
+  
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {

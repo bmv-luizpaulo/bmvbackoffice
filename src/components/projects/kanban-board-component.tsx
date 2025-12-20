@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -296,6 +295,8 @@ export default function KanbanBoard({ openNewProjectDialog }: { openNewProjectDi
           isOpen={isProjectModalOpen}
           onOpenChange={setProjectModalOpen}
           onAddProject={handleAddProject}
+          usersData={users}
+          teamsData={teams}
         />
       )}
 
@@ -306,6 +307,8 @@ export default function KanbanBoard({ openNewProjectDialog }: { openNewProjectDi
           onSaveTask={handleSaveTask}
           stages={stagesData || []}
           tasks={tasksData || []}
+          usersData={users}
+          teamsData={teams}
           projectId={selectedProjectId!}
           taskToEdit={taskToEdit}
           dependencyId={dependencyId}
