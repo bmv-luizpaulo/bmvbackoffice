@@ -8,7 +8,7 @@ import { useFirestore, useCollection, useMemoFirebase, useAuthUser, usePermissio
 import { collection, query } from "firebase/firestore";
 import type { Project, User, Task } from "@/lib/types";
 
-import { FolderKanban, Plus, SlidersHorizontal, User as UserIcon } from 'lucide-react';
+import { FolderKanban, Plus, SlidersHorizontal, User as UserIcon, List, KanbanSquare } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from '@/components/ui/input';
@@ -16,6 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { AddProjectDialog } from '@/components/projects/add-project-dialog';
 import { Card } from '@/components/ui/card';
 import { useUserProjects } from '@/hooks/useUserProjects';
+import Link from 'next/link';
 
 const ProjectCard = dynamic(() => import("@/components/projects/project-card").then(m => m.ProjectCard), { 
     ssr: false,
@@ -88,7 +89,7 @@ export default function ProjectsListPage() {
   return (
     <div className="space-y-6">
       <header className="space-y-4">
-        <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+        <div className="flex flex-col sm:flex-row justify-between sm:items-start gap-4">
             <div>
                 <h1 className="font-headline text-3xl font-bold tracking-tight flex items-center gap-2">
                     <FolderKanban className="h-8 w-8 text-primary" />
@@ -101,10 +102,18 @@ export default function ProjectsListPage() {
                 }
                 </p>
             </div>
-            <Button onClick={() => { setProjectToEdit(null); setIsFormOpen(true); }} size="lg">
-                <Plus className="mr-2 h-4 w-4" />
-                Novo Projeto
-            </Button>
+            <div className="flex items-center gap-2">
+                 <Button asChild variant="outline">
+                    <Link href="/projects">
+                       <KanbanSquare className="mr-2 h-4 w-4" />
+                        Quadro Kanban
+                    </Link>
+                </Button>
+                <Button onClick={() => { setProjectToEdit(null); setIsFormOpen(true); }}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Novo Projeto
+                </Button>
+            </div>
         </div>
 
         <Card className="p-4">
