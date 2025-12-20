@@ -34,7 +34,7 @@ import { Input } from "@/components/ui/input"
 import type { Reimbursement, User, Project } from "@/lib/types";
 import dynamic from "next/dynamic";
 import { useFirestore, useCollection, useMemoFirebase, useUser as useAuthUser, usePermissions } from "@/firebase";
-import { collection, doc, query, where, serverTimestamp, or } from "firebase/firestore";
+import { collection, doc, query, where, serverTimestamp } from "firebase/firestore";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -51,6 +51,7 @@ import { Badge } from "../ui/badge";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { uploadReimbursementReceiptAction } from "@/lib/actions";
+import { useUserProjects } from "@/hooks/useUserProjects";
 
 const ReembolsoFormDialog = dynamic(() => import('./reembolso-form-dialog').then(m => m.ReembolsoFormDialog), { ssr: false });
 
@@ -75,26 +76,12 @@ export function ReembolsoDataTable({ filterUserId }: { filterUserId?: string }) 
     return q;
   }, [firestore, authUser, isManager, filterUserId, permissionsReady]);
 
-  const { data: reembolsosData, isLoading } = useCollection<Reimbursement>(reembolsosQuery);
+  const { data: reembolsosData, isLoading: isLoadingReimbursements } = useCollection<Reimbursement>(reembolsosQuery);
   
   const usersQuery = useMemoFirebase(() => firestore ? collection(firestore, 'users') : null, [firestore]);
-  const { data: usersData } = useCollection<User>(usersQuery);
+  const { data: usersData, isLoading: isLoadingUsers } = useCollection<User>(usersQuery);
 
-  const projectsQuery = useMemoFirebase(() => {
-    if (!firestore || !authUser || !permissionsReady) return null;
-    const projectsCollection = collection(firestore, 'projects');
-    if (isManager) {
-        return projectsCollection;
-    }
-    return query(
-        projectsCollection,
-        or(
-            where('ownerId', '==', authUser.uid),
-            where('teamMembers', 'array-contains', authUser.uid)
-        )
-    );
-  }, [firestore, authUser, permissionsReady, isManager]);
-  const { data: projectsData } = useCollection<Project>(projectsQuery);
+  const { projects: projectsData, isLoading: isLoadingProjects } = useUserProjects();
   
   const usersMap = React.useMemo(() => new Map(usersData?.map(u => [u.id, u.name])), [usersData]);
   const [statusFilter, setStatusFilter] = React.useState<'Todos' | 'Pendente' | 'Aprovado' | 'Recusado'>('Todos');
@@ -170,6 +157,8 @@ export function ReembolsoDataTable({ filterUserId }: { filterUserId?: string }) 
       await updateDocumentNonBlocking(doc(firestore, 'reimbursements', reimbursement.id), dataToUpdate);
       toast({ title: "Status Alterado", description: `A solicitação foi marcada como ${newStatus.toLowerCase()}.` });
   }
+
+  const isLoading = isLoadingReimbursements || isLoadingUsers || isLoadingProjects;
 
   const columns: ColumnDef<Reimbursement>[] = React.useMemo(() => [
     {

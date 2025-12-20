@@ -13,15 +13,14 @@ import {
 import {
   useFirestore,
   useCollection,
-  useAuth,
-  useUser as useAuthUser,
+  useAuthUser,
   usePermissions,
   useMemoFirebase,
   updateDocumentNonBlocking,
   addDocumentNonBlocking,
   deleteDocumentNonBlocking,
 } from '@/firebase';
-import { collection, doc, query, where, writeBatch, serverTimestamp, or, and, orderBy } from 'firebase/firestore';
+import { collection, doc, query, writeBatch, serverTimestamp, orderBy } from 'firebase/firestore';
 import type { Project, Stage, Task, User, Team } from '@/lib/types';
 import { KanbanColumn } from './kanban-column';
 import { AddProjectDialog } from './add-project-dialog';
@@ -31,17 +30,16 @@ import { AddTaskDialog } from './add-task-dialog';
 import { KanbanBoardSkeleton } from './kanban-board-skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { useSearchParams, useRouter } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { AiFollowUpSuggestions } from './ai-follow-up-suggestions';
 import { ProjectFilesDialog } from './project-files-dialog';
 import { FolderOpen } from 'lucide-react';
+import { useUserProjects } from '@/hooks/useUserProjects';
 
 export default function KanbanBoard({ openNewProjectDialog }: { openNewProjectDialog?: boolean }) {
   const firestore = useFirestore();
-  const { user: authUser } = useAuthUser();
-  const { ready: permissionsReady, isManager } = usePermissions();
+  const { isManager } = usePermissions();
   const { toast } = useToast();
-  const router = useRouter();
   const searchParams = useSearchParams();
 
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
@@ -52,29 +50,8 @@ export default function KanbanBoard({ openNewProjectDialog }: { openNewProjectDi
   const [dependencyId, setDependencyId] = useState<string | null>(null);
   const [isProjectFilesOpen, setIsProjectFilesOpen] = useState(false);
 
-  // --- Data Fetching ---
-  const projectsQuery = useMemoFirebase(() => {
-    if (!firestore || !authUser || !permissionsReady) return null;
-    
-    const projectsCollection = collection(firestore, 'projects');
-    
-    if (isManager) {
-        return query(projectsCollection, where('status', '==', 'Em execução'));
-    }
-    
-    return query(
-        projectsCollection,
-        and(
-          where('status', '==', 'Em execução'),
-          or(
-              where('ownerId', '==', authUser.uid),
-              where('teamMembers', 'array-contains', authUser.uid)
-          )
-        )
-    );
-  }, [firestore, authUser, permissionsReady, isManager]);
-
-  const { data: projectsData, isLoading: isLoadingProjects } = useCollection<Project>(projectsQuery);
+  // --- Centralized Data Fetching ---
+  const { projects: projectsData, isLoading: isLoadingProjects } = useUserProjects();
   
   const usersQuery = useMemoFirebase(() => firestore ? collection(firestore, 'users') : null, [firestore]);
   const { data: users, isLoading: isLoadingUsers } = useCollection<User>(usersQuery);
@@ -88,7 +65,7 @@ export default function KanbanBoard({ openNewProjectDialog }: { openNewProjectDi
   const tasksQuery = useMemoFirebase(() => selectedProjectId ? query(collection(firestore, 'projects', selectedProjectId, 'tasks')) : null, [selectedProjectId, firestore]);
   const { data: tasksData, isLoading: isLoadingTasks } = useCollection<Task>(tasksQuery);
   
-  const isLoading = !permissionsReady || isLoadingProjects || isLoadingUsers || isLoadingTeams || (selectedProjectId && (isLoadingStages || isLoadingTasks));
+  const isLoading = isLoadingProjects || isLoadingUsers || isLoadingTeams || (selectedProjectId && (isLoadingStages || isLoadingTasks));
 
   // --- Memos and Effects ---
   const usersMap = useMemo(() => new Map(users?.map(u => [u.id, u])), [users]);
@@ -290,30 +267,26 @@ export default function KanbanBoard({ openNewProjectDialog }: { openNewProjectDi
         </div>
       </DndContext>
       
-      {isProjectModalOpen && (
-        <AddProjectDialog
-          isOpen={isProjectModalOpen}
-          onOpenChange={setProjectModalOpen}
-          onAddProject={handleAddProject}
-          usersData={users}
-          teamsData={teams}
-        />
-      )}
+      <AddProjectDialog
+        isOpen={isProjectModalOpen}
+        onOpenChange={setProjectModalOpen}
+        onAddProject={handleAddProject}
+        usersData={users}
+        teamsData={teams}
+      />
 
-      {isTaskModalOpen && (
-        <AddTaskDialog
-          isOpen={isTaskModalOpen}
-          onOpenChange={setTaskModalOpen}
-          onSaveTask={handleSaveTask}
-          stages={stagesData || []}
-          tasks={tasksData || []}
-          usersData={users}
-          teamsData={teams}
-          projectId={selectedProjectId!}
-          taskToEdit={taskToEdit}
-          dependencyId={dependencyId}
-        />
-      )}
+      <AddTaskDialog
+        isOpen={isTaskModalOpen}
+        onOpenChange={setTaskModalOpen}
+        onSaveTask={handleSaveTask}
+        stages={stagesData || []}
+        tasks={tasksData || []}
+        usersData={users}
+        teamsData={teams}
+        projectId={selectedProjectId!}
+        taskToEdit={taskToEdit}
+        dependencyId={dependencyId}
+      />
 
       {isProjectFilesOpen && selectedProject && (
         <ProjectFilesDialog

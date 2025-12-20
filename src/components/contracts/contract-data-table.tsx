@@ -34,8 +34,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import type { Contract, Asset, Project } from "@/lib/types";
 import dynamic from "next/dynamic";
-import { useFirestore, useCollection, useMemoFirebase, useUser, usePermissions } from "@/firebase";
-import { collection, doc, serverTimestamp, query, where, or } from "firebase/firestore";
+import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
+import { collection, doc, serverTimestamp } from "firebase/firestore";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -52,36 +52,21 @@ import { uploadContractFileAction } from "@/lib/actions";
 import { format } from 'date-fns';
 import { Badge } from "../ui/badge";
 import { ContractFormDialog } from './contract-form-dialog';
+import { useUserProjects } from "@/hooks/useUserProjects";
 
 
 export const ContractDataTable = React.memo(function ContractDataTable() {
   const firestore = useFirestore();
   const { toast } = useToast();
-  const { user: authUser } = useUser();
-  const { ready: permissionsReady, isManager } = usePermissions();
   
   const contractsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'contracts') : null, [firestore]);
-  const { data: contractsData, isLoading } = useCollection<Contract>(contractsQuery);
+  const { data: contractsData, isLoading: isLoadingContracts } = useCollection<Contract>(contractsQuery);
 
   const assetsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'assets') : null, [firestore]);
-  const { data: assetsData } = useCollection<Asset>(assetsQuery);
-
-  const projectsQuery = useMemoFirebase(() => {
-    if (!firestore || !authUser || !permissionsReady) return null;
-    const projectsCollection = collection(firestore, 'projects');
-    if (isManager) {
-        return projectsCollection;
-    }
-    return query(
-        projectsCollection,
-        or(
-            where('ownerId', '==', authUser.uid),
-            where('teamMembers', 'array-contains', authUser.uid)
-        )
-    );
-  }, [firestore, authUser, permissionsReady, isManager]);
-  const { data: projectsData } = useCollection<Project>(projectsQuery);
-
+  const { data: assetsData, isLoading: isLoadingAssets } = useCollection<Asset>(assetsQuery);
+  
+  const { projects: projectsData, isLoading: isLoadingProjects } = useUserProjects();
+  
   const assetsMap = React.useMemo(() => new Map(assetsData?.map(a => [a.id, a.name])), [assetsData]);
   const projectsMap = React.useMemo(() => new Map(projectsData?.map(p => [p.id, p.name])), [projectsData]);
   
@@ -105,7 +90,7 @@ export const ContractDataTable = React.memo(function ContractDataTable() {
   }, []);
 
   const handleSaveContract = React.useCallback(async (contractData: Omit<Contract, 'id' | 'fileUrl' | 'uploaderId' | 'uploadedAt'>, file?: File, contractId?: string) => {
-    if (!firestore || !authUser) return;
+    if (!firestore) return;
 
     let fileUrl = selectedContract?.fileUrl;
 
@@ -126,7 +111,7 @@ export const ContractDataTable = React.memo(function ContractDataTable() {
       return;
     }
 
-    const finalData: Partial<Contract> = { 
+    const { uploaderId, ...finalData }: Partial<Contract> = { 
       ...contractData,
     };
     if (fileUrl) {
@@ -138,11 +123,11 @@ export const ContractDataTable = React.memo(function ContractDataTable() {
         await updateDocumentNonBlocking(contractRef, finalData);
         toast({ title: "Contrato Atualizado", description: `O contrato "${finalData.title}" foi atualizado.` });
     } else {
-        await addDocumentNonBlocking(collection(firestore, 'contracts'), { ...finalData, uploaderId: authUser.uid, uploadedAt: serverTimestamp() });
+        await addDocumentNonBlocking(collection(firestore, 'contracts'), { ...finalData, uploaderId: 'temp-id', uploadedAt: serverTimestamp() });
         toast({ title: "Contrato Criado", description: `O contrato "${finalData.title}" foi adicionado.` });
     }
     setIsFormOpen(false);
-  }, [firestore, authUser, toast, selectedContract]);
+  }, [firestore, toast, selectedContract]);
 
 
   const handleDeleteContract = React.useCallback(async () => {
@@ -154,6 +139,8 @@ export const ContractDataTable = React.memo(function ContractDataTable() {
     setIsAlertOpen(false);
     setSelectedContract(null);
   }, [firestore, selectedContract, toast]);
+
+  const isLoading = isLoadingContracts || isLoadingAssets || isLoadingProjects;
 
   const columns: ColumnDef<Contract>[] = React.useMemo(() => [
     {

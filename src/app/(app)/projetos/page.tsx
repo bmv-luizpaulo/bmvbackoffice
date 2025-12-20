@@ -4,8 +4,8 @@
 import * as React from 'react';
 import dynamic from 'next/dynamic';
 import { useSearchParams } from "next/navigation";
-import { useFirestore, useCollection, useMemoFirebase, useUser as useAuthUser, usePermissions } from "@/firebase";
-import { collection, query, where, or } from "firebase/firestore";
+import { useFirestore, useCollection, useMemoFirebase, useAuthUser, usePermissions } from "@/firebase";
+import { collection, query } from "firebase/firestore";
 import type { Project, User, Task } from "@/lib/types";
 
 import { FolderKanban, Plus, SlidersHorizontal, User as UserIcon } from 'lucide-react';
@@ -15,6 +15,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AddProjectDialog } from '@/components/projects/add-project-dialog';
 import { Card } from '@/components/ui/card';
+import { useUserProjects } from '@/hooks/useUserProjects';
 
 const ProjectCard = dynamic(() => import("@/components/projects/project-card").then(m => m.ProjectCard), { 
     ssr: false,
@@ -24,7 +25,7 @@ const ProjectCard = dynamic(() => import("@/components/projects/project-card").t
 export default function ProjectsListPage() {
   const firestore = useFirestore();
   const { user: authUser } = useAuthUser();
-  const { ready: permissionsReady, isManager } = usePermissions();
+  const { isManager } = usePermissions();
   const searchParams = useSearchParams();
   const filter = searchParams.get('filter');
   
@@ -34,20 +35,8 @@ export default function ProjectsListPage() {
   const [projectToEdit, setProjectToEdit] = React.useState<Project | null>(null);
 
   // --- Data Fetching ---
-  const projectsQuery = useMemoFirebase(() => {
-    if (!firestore || !authUser || !permissionsReady) return null;
-    let q = query(collection(firestore, 'projects'), where('status', '==', 'Em execução'));
-    
-    if (!isManager) {
-        if (!authUser.uid) return null; // Guard to ensure authUser.uid is available
-        q = query(q, or(where('ownerId', '==', authUser.uid), where('teamMembers', 'array-contains', authUser.uid)));
-    }
-    
-    return q;
-  }, [firestore, authUser, permissionsReady, isManager]);
-
-  const { data: projectsData, isLoading: isLoadingProjects } = useCollection<Project>(projectsQuery);
-
+  const { projects: projectsData, isLoading: isLoadingProjects } = useUserProjects();
+  
   const usersQuery = useMemoFirebase(() => firestore ? collection(firestore, 'users') : null, [firestore]);
   const { data: usersData, isLoading: isLoadingUsers } = useCollection<User>(usersQuery);
   const usersMap = React.useMemo(() => new Map(usersData?.map(u => [u.id, u])), [usersData]);
@@ -66,7 +55,7 @@ export default function ProjectsListPage() {
     }, new Map<string, Task[]>());
   }, [allTasks]);
 
-  const isLoading = isLoadingProjects || isLoadingUsers || isLoadingTasks || !permissionsReady;
+  const isLoading = isLoadingProjects || isLoadingUsers || isLoadingTasks;
 
   // --- Filtering Logic ---
   const myProjects = React.useMemo(() => {

@@ -23,19 +23,19 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import type { Task, Project, User } from "@/lib/types";
-import { useFirestore, useCollection, useMemoFirebase, useUser as useAuthUser, usePermissions } from "@/firebase";
-import { collection, collectionGroup, query, where, or } from "firebase/firestore";
+import { useFirestore, useCollection, useMemoFirebase, useAuthUser, usePermissions } from "@/firebase";
+import { collection, query, where } from "firebase/firestore";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { CheckCircle2, Clock } from "lucide-react";
+import { CheckCircle2 } from "lucide-react";
 import { format, formatDistanceStrict } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
+import { useUserProjects } from "@/hooks/useUserProjects";
 
 export default function CompletedTasksPage() {
   const firestore = useFirestore();
   const { user: authUser } = useAuthUser();
-  const { ready: permissionsReady, isManager } = usePermissions();
+  const { ready: permissionsReady } = usePermissions();
 
   const tasksQuery = useMemoFirebase(
     () => firestore ? query(
@@ -47,21 +47,7 @@ export default function CompletedTasksPage() {
   
   const { data: tasksData, isLoading: isLoadingTasks } = useCollection<Task>(tasksQuery);
   
-  const projectsQuery = useMemoFirebase(() => {
-    if (!firestore || !authUser || !permissionsReady) return null;
-    const projectsCollection = collection(firestore, 'projects');
-    if (isManager) {
-        return projectsCollection;
-    }
-    return query(
-        projectsCollection,
-        or(
-            where('ownerId', '==', authUser.uid),
-            where('teamMembers', 'array-contains', authUser.uid)
-        )
-    );
-  }, [firestore, authUser, permissionsReady, isManager]);
-  const { data: projectsData, isLoading: isLoadingProjects } = useCollection<Project>(projectsQuery);
+  const { projects: projectsData, isLoading: isLoadingProjects } = useUserProjects();
 
   const usersQuery = useMemoFirebase(() => firestore ? collection(firestore, 'users') : null, [firestore]);
   const { data: usersData, isLoading: isLoadingUsers } = useCollection<User>(usersQuery);
@@ -74,7 +60,7 @@ export default function CompletedTasksPage() {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
 
-  const isLoading = isLoadingTasks || isLoadingProjects || isLoadingUsers;
+  const isLoading = isLoadingTasks || isLoadingProjects || isLoadingUsers || !permissionsReady;
 
   const columns: ColumnDef<Task>[] = React.useMemo(() => [
     {

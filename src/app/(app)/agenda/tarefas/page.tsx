@@ -3,7 +3,7 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { useUser, useCollection, useFirestore, useMemoFirebase, usePermissions } from '@/firebase';
-import { collection, query, where, doc, or } from 'firebase/firestore';
+import { collection, query, where } from 'firebase/firestore';
 import type { Task, User, Project, Meeting } from '@/lib/types';
 import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -17,6 +17,7 @@ import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
 import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useUserProjects } from '@/hooks/useUserProjects';
 
 export const dynamic = 'force-dynamic';
 
@@ -82,21 +83,7 @@ export default function TaskAgendaPage() {
 
   const { data: meetingsData, isLoading: isLoadingMeetings } = useCollection<Meeting>(meetingsQuery);
 
-  const projectsQuery = useMemoFirebase(() => {
-    if (!firestore || !authUser || !permissionsReady) return null;
-    const projectsCollection = collection(firestore, 'projects');
-    if (isManager) {
-        return projectsCollection;
-    }
-    return query(
-        projectsCollection,
-        or(
-            where('ownerId', '==', authUser.uid),
-            where('teamMembers', 'array-contains', authUser.uid)
-        )
-    );
-  }, [firestore, authUser, permissionsReady, isManager]);
-  const { data: projectsData } = useCollection<Project>(projectsQuery);
+  const { projects: projectsData, isLoading: isLoadingProjects } = useUserProjects();
 
   const projectsMap = useMemo(() => new Map(projectsData?.map(p => [p.id, p])), [projectsData]);
   const usersMap = useMemo(() => new Map(allUsers?.map(u => [u.id, u])), [allUsers]);
@@ -120,7 +107,7 @@ export default function TaskAgendaPage() {
       .sort((a, b) => a.dueDateObj!.getTime() - b.dueDateObj!.getTime());
   }, [combinedAgendaItems, selectedDate]);
   
-  const isLoading = isUserLoading || !permissionsReady || isLoadingTasks || isLoadingMeetings;
+  const isLoading = isUserLoading || !permissionsReady || isLoadingTasks || isLoadingMeetings || isLoadingProjects;
 
   if (isLoading) {
     return (

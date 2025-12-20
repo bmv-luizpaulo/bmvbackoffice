@@ -6,15 +6,16 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
-import { useFirestore, useCollection, useUser, useMemoFirebase, addDocumentNonBlocking, usePermissions } from '@/firebase';
-import type { Task, Project, User as UserType, Stage, Meeting } from '@/lib/types';
-import { collection, query, serverTimestamp, where, or } from 'firebase/firestore';
+import { useFirestore, useCollection, useUser, useMemoFirebase, addDocumentNonBlocking } from '@/firebase';
+import type { Task, User as UserType, Meeting } from '@/lib/types';
+import { collection, serverTimestamp } from 'firebase/firestore';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form } from '@/components/ui/form';
 import { Button } from '@/components/ui/button';
 import { Loader2, ListPlus } from 'lucide-react';
 import { useNotifications } from '@/components/notifications/notifications-provider';
 import { TaskFormFields } from '@/components/tasks/task-form-fields';
+import { useUserProjects } from '@/hooks/useUserProjects';
 
 const formSchema = z.object({
   taskType: z.enum(['task', 'meeting']).default('task'),
@@ -33,30 +34,13 @@ const formSchema = z.object({
 export default function NewTaskPage() {
   const firestore = useFirestore();
   const { user: authUser, isUserLoading: isAuthLoading } = useUser();
-  const { ready: permissionsReady, isManager } = usePermissions();
   const router = useRouter();
   const { toast } = useToast();
   const { createNotification } = useNotifications();
   const searchParams = useSearchParams();
 
-  const projectsQuery = useMemoFirebase(() => {
-    if (!firestore || !authUser || !permissionsReady) return null;
-    const projectsCollection = collection(firestore, 'projects');
-    if (isManager) {
-        return query(projectsCollection, where('status', '==', 'Em execução'));
-    }
-    return query(
-        projectsCollection,
-        where('status', '==', 'Em execução'),
-        or(
-            where('ownerId', '==', authUser.uid),
-            where('teamMembers', 'array-contains', authUser.uid)
-        )
-    );
-  }, [firestore, authUser, permissionsReady, isManager]);
-
-  const { data: projectsData, isLoading: isLoadingProjects } = useCollection<Project>(projectsQuery);
-
+  const { projects: projectsData, isLoading: isLoadingProjects } = useUserProjects();
+  
   const usersQuery = useMemoFirebase(() => firestore ? collection(firestore, 'users') : null, [firestore]);
   const { data: usersData, isLoading: isLoadingUsers } = useCollection<UserType>(usersQuery);
 
@@ -138,7 +122,7 @@ export default function NewTaskPage() {
     }
   }
 
-  const isLoading = isAuthLoading || !permissionsReady || isLoadingProjects || isLoadingUsers;
+  const isLoading = isAuthLoading || isLoadingProjects || isLoadingUsers;
   const pageTitle = itemType === 'meeting' ? 'Nova Reunião' : 'Nova Tarefa';
   const pageDescription = itemType === 'meeting' 
     ? 'Preencha os detalhes abaixo para agendar uma nova reunião.'
