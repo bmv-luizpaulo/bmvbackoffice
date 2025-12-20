@@ -23,9 +23,5 @@ function KanbanPageContent() {
 
 
 export default function KanbanPage() {
-  return (
-    <Suspense fallback={<KanbanBoardSkeleton />}>
-      <KanbanPageContent />
-    </Suspense>
-  )
+  return <KanbanPageContent />;
 }

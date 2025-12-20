@@ -22,7 +22,7 @@ import {
   addDocumentNonBlocking,
   deleteDocumentNonBlocking,
 } from '@/firebase';
-import { collection, doc, query, where, writeBatch, serverTimestamp, or, and } from 'firebase/firestore';
+import { collection, doc, query, where, writeBatch, serverTimestamp, or, and, orderBy } from 'firebase/firestore';
 import type { Project, Stage, Task, User, Team } from '@/lib/types';
 import { KanbanColumn } from './kanban-column';
 import { AddProjectDialog } from './add-project-dialog';
@@ -37,7 +37,7 @@ import { AiFollowUpSuggestions } from './ai-follow-up-suggestions';
 import { ProjectFilesDialog } from './project-files-dialog';
 import { FolderOpen } from 'lucide-react';
 
-export function KanbanBoard({ openNewProjectDialog }: { openNewProjectDialog?: boolean }) {
+export default function KanbanBoard({ openNewProjectDialog }: { openNewProjectDialog?: boolean }) {
   const firestore = useFirestore();
   const { user: authUser } = useAuthUser();
   const { ready: permissionsReady, isManager } = usePermissions();
@@ -83,13 +83,13 @@ export function KanbanBoard({ openNewProjectDialog }: { openNewProjectDialog?: b
   const teamsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'teams') : null, [firestore]);
   const { data: teams, isLoading: isLoadingTeams } = useCollection<Team>(teamsQuery);
   
-  const stagesQuery = useMemoFirebase(() => selectedProjectId ? query(collection(firestore, 'projects', selectedProjectId, 'stages'), orderBy('order')) : null, [selectedProjectId]);
+  const stagesQuery = useMemoFirebase(() => selectedProjectId ? query(collection(firestore, 'projects', selectedProjectId, 'stages'), orderBy('order')) : null, [selectedProjectId, firestore]);
   const { data: stagesData, isLoading: isLoadingStages } = useCollection<Stage>(stagesQuery);
 
-  const tasksQuery = useMemoFirebase(() => selectedProjectId ? query(collection(firestore, `projects/${selectedProjectId}/tasks`)) : null, [selectedProjectId]);
+  const tasksQuery = useMemoFirebase(() => selectedProjectId ? query(collection(firestore, 'projects', selectedProjectId, 'tasks')) : null, [selectedProjectId, firestore]);
   const { data: tasksData, isLoading: isLoadingTasks } = useCollection<Task>(tasksQuery);
   
-  const isLoading = isLoadingProjects || isLoadingUsers || isLoadingTeams || (selectedProjectId && (isLoadingStages || isLoadingTasks));
+  const isLoading = !permissionsReady || isLoadingProjects || isLoadingUsers || isLoadingTeams || (selectedProjectId && (isLoadingStages || isLoadingTasks));
 
   // --- Memos and Effects ---
   const usersMap = useMemo(() => new Map(users?.map(u => [u.id, u])), [users]);
@@ -223,7 +223,7 @@ export function KanbanBoard({ openNewProjectDialog }: { openNewProjectDialog?: b
     })
   );
 
-  if (isLoading || !permissionsReady) {
+  if (isLoading) {
     return <KanbanBoardSkeleton />;
   }
 
