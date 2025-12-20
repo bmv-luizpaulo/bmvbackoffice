@@ -3,7 +3,7 @@
 
 import { useEffect, useState } from 'react';
 import { useFirestore, useCollection, useMemoFirebase, useUser as useAuthUser, usePermissions } from "@/firebase";
-import { collection, query, where, getDocs } from "firebase/firestore";
+import { collection, query, where } from "firebase/firestore";
 import type { Project } from "@/lib/types";
 
 /**
@@ -22,47 +22,47 @@ export function useUserProjects() {
   const [projects, setProjects] = useState<Project[] | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // These queries are now stable and run for all users.
-  // They will only return data if the security rules allow it.
+  // Queries para usuários não-gestores. São sempre criadas.
   const ownedProjectsQuery = useMemoFirebase(() => {
-    if (!firestore || !authUser) return null;
+    if (!firestore || !authUser || isManager) return null; // Só executa se NÃO for gestor
     return query(collection(firestore, 'projects'), where('ownerId', '==', authUser.uid));
-  }, [firestore, authUser]);
+  }, [firestore, authUser, isManager]);
 
   const memberProjectsQuery = useMemoFirebase(() => {
-    if (!firestore || !authUser) return null;
+    if (!firestore || !authUser || isManager) return null; // Só executa se NÃO for gestor
     return query(collection(firestore, 'projects'), where('teamMembers', 'array-contains', authUser.uid));
-  }, [firestore, authUser]);
+  }, [firestore, authUser, isManager]);
 
+  // Query separada que SÓ é ativada para gestores.
   const allProjectsQuery = useMemoFirebase(() => {
-    if (!firestore || !isManager) return null; // Only create this query if the user is a manager
+    if (!firestore || !isManager) return null;
     return query(collection(firestore, 'projects'));
   }, [firestore, isManager]);
 
   const { data: ownedProjects, isLoading: isLoadingOwned } = useCollection<Project>(ownedProjectsQuery);
   const { data: memberProjects, isLoading: isLoadingMember } = useCollection<Project>(memberProjectsQuery);
   const { data: allProjects, isLoading: isLoadingAll } = useCollection<Project>(allProjectsQuery);
-
+  
   useEffect(() => {
-    const isInitialLoading = isAuthLoading || !permissionsReady || (isManager && isLoadingAll) || (!isManager && (isLoadingOwned || isLoadingMember));
-    setIsLoading(isInitialLoading);
-
-    if (isInitialLoading) {
+    if (!permissionsReady) {
+      setIsLoading(true);
       return;
     }
 
     if (isManager) {
       setProjects(allProjects);
+      setIsLoading(isLoadingAll);
     } else {
       const projectsMap = new Map<string, Project>();
       (ownedProjects || []).forEach(p => projectsMap.set(p.id, p));
       (memberProjects || []).forEach(p => projectsMap.set(p.id, p));
       setProjects(Array.from(projectsMap.values()));
+      setIsLoading(isLoadingOwned || isLoadingMember);
     }
+    
   }, [
     isManager, 
     permissionsReady, 
-    isAuthLoading,
     ownedProjects, 
     memberProjects, 
     allProjects,
@@ -73,6 +73,6 @@ export function useUserProjects() {
 
   return {
     projects,
-    isLoading,
+    isLoading: isLoading || isAuthLoading,
   };
 }
