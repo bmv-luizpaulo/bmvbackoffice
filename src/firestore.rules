@@ -47,10 +47,10 @@ service cloud.firestore {
 
     // ===== REGRAS OPERACIONAIS (PROJETOS E TAREFAS) =====
     match /projects/{projectId} {
-      // Leitura permitida para gestores ou membros do projeto.
+      // Leitura de um único projeto permitida para gestores ou membros.
       allow get: if isManager() || request.auth.uid == resource.data.ownerId || request.auth.uid in resource.data.teamMembers;
-      // Listagem permitida apenas para gestores (para evitar consultas amplas e inseguras de não-gestores)
-      // O frontend agora é responsável por construir a lista de projetos de um usuário com consultas diretas.
+      // Listagem da coleção inteira é permitida apenas para gestores. 
+      // Usuários comuns devem usar consultas filtradas ('where') que são validadas pela regra de 'get'.
       allow list: if isManager();
       // Escrita permitida para gestores ou o dono do projeto.
       allow write: if isManager() || request.auth.uid == resource.data.ownerId;
