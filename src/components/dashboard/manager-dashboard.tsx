@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useMemo, useState, useEffect } from 'react';
@@ -7,14 +8,13 @@ import { motion } from 'framer-motion';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useFirestore, useCollection, useMemoFirebase, usePermissions } from "@/firebase";
 import { collection, query } from "firebase/firestore";
-import type { Task } from '@/lib/types';
+import type { Task, Project } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { isPast } from 'date-fns';
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import dynamic from 'next/dynamic';
-import { useUserProjects } from '@/hooks/useUserProjects';
 
 interface KpiData {
   totalProjects: number;
@@ -114,7 +114,13 @@ function ManagerDashboard() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const firestore = useFirestore();
   const { ready: permissionsReady, isManager } = usePermissions();
-  const { projects, isLoading: projectsLoading } = useUserProjects();
+
+  // Securely fetch all projects only if user is a manager
+  const projectsQuery = useMemoFirebase(
+    () => (firestore && permissionsReady && isManager) ? collection(firestore, 'projects') : null,
+    [firestore, permissionsReady, isManager]
+  );
+  const { data: projects, isLoading: projectsLoading } = useCollection<Project>(projectsQuery);
 
   const tasksQuery = useMemoFirebase(
     () => (firestore && permissionsReady && isManager) ? collection(firestore, 'tasks') : null, 
@@ -159,7 +165,13 @@ function ManagerDashboard() {
     };
   }, [projects, tasks, permissionsReady, isManager]);
 
-  if (projectsLoading || tasksLoading || !permissionsReady || !isManager) {
+  if (projectsLoading || tasksLoading || !permissionsReady) {
+    return <DashboardSkeleton />;
+  }
+  
+  if (!isManager) {
+    // This is an extra safeguard. If for some reason this component renders
+    // for a non-manager, show skeleton to prevent any data fetching.
     return <DashboardSkeleton />;
   }
 
