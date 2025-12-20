@@ -18,12 +18,12 @@ service cloud.firestore {
 
     // ===== REGRAS DE USUÁRIOS E PERMISSÕES =====
     match /users/{userId} {
-      allow get, update: if isManager() || isOwner(userId);
-      allow list, create: if isManager();
+      allow read, update: if isManager() || isOwner(userId);
+      allow create, delete: if isManager();
     }
 
     match /users/{userId}/activityLogs/{logId} {
-      allow read: if isManager() || isOwner(userId);
+      allow read, create: if isManager() || isOwner(userId);
     }
 
     match /users/{userId}/notifications/{notificationId} {
@@ -47,15 +47,16 @@ service cloud.firestore {
 
     // ===== REGRAS OPERACIONAIS (PROJETOS E TAREFAS) =====
     match /projects/{projectId} {
-      // Leitura de um único projeto permitida para gestores ou membros.
+      // GET: Um usuário pode ler um projeto se for gestor, dono ou membro da equipe.
       allow get: if isManager() || request.auth.uid == resource.data.ownerId || request.auth.uid in resource.data.teamMembers;
-      // Listagem da coleção inteira é permitida apenas para gestores. 
-      // Usuários comuns devem usar consultas filtradas ('where') que são validadas pela regra de 'get'.
-      allow list: if isManager();
-      // Escrita permitida para gestores ou o dono do projeto.
-      allow write: if isManager() || request.auth.uid == resource.data.ownerId;
-      // Criação permitida apenas para gestores.
-      allow create: if isManager();
+      
+      // LIST: Gestores podem listar tudo. Usuários comuns só podem listar se a consulta for filtrada pelo seu UID.
+      allow list: if isManager() || 
+                    (request.auth.uid != null && 'ownerId' in request.query.where && request.query.where.ownerId == request.auth.uid) ||
+                    (request.auth.uid != null && 'teamMembers' in request.query.where && request.query.where.teamMembers == request.auth.uid);
+
+      // WRITE: Escrita (create, update, delete) permitida para gestores ou o dono do projeto.
+      allow write: if isManager() || (request.resource.data.ownerId == request.auth.uid);
     }
     
     match /projects/{projectId}/{subcollection}/{docId} {
@@ -63,8 +64,8 @@ service cloud.firestore {
     }
 
     match /tasks/{taskId} {
-      allow get: if isManager() || resource.data.assigneeId == request.auth.uid;
-      allow list: if isManager() || (request.query.where != null && request.query.where.size() > 0 && request.query.where[0][0] == 'assigneeId' && request.query.where[0][2] == request.auth.uid);
+      allow get: if isManager() || resource.data.assigneeId == request.auth.uid || request.auth.uid in get(/databases/$(database)/documents/projects/$(resource.data.projectId)).data.teamMembers;
+      allow list: if isManager() || (request.query.where != null && request.query.where.assigneeId == request.auth.uid);
       allow write: if isManager() || request.auth.uid == resource.data.assigneeId || (resource.data.assigneeId == null && request.auth.uid != null);
       allow create: if request.auth != null;
     }
@@ -76,7 +77,8 @@ service cloud.firestore {
 
     // ===== REGRAS COMERCIAIS =====
     match /contacts/{contactId} {
-      allow read, write, create: if request.auth.token.canManageContacts == true || isDev();
+      allow read, write: if request.auth.token.canManageContacts == true || isDev();
+      allow create: if request.auth.token.canManageContacts == true || isDev();
     }
     
     match /products/{productId} {
@@ -119,6 +121,9 @@ service cloud.firestore {
      match /assetUsageContracts/{contractId} {
        allow read, write: if request.auth.token.canManageAssets == true || isDev();
     }
+     match /assetUsageContracts/{contractId}/annexes/{annexId} {
+      allow read, write: if request.auth.token.canManageAssets == true || isDev();
+    }
     match /documentTemplates/{templateId} {
        allow read, write: if request.auth.token.canManageAssets == true || isDev();
     }
@@ -145,6 +150,30 @@ service cloud.firestore {
       allow read, update, delete: if isDev();
     }
     
+    // ===== REGRAS DE CONVERSAS (CHAT) =====
+    match /conversations/{conversationId} {
+        // Leitura: Se o usuário faz parte da conversa OU a conversa é global
+        allow get: if request.auth.uid in resource.data.userIds || resource.data.isGlobal == true;
+        
+        // Listagem: Se o usuário faz parte da conversa OU a conversa é global
+        allow list: if request.auth.uid in resource.data.userIds || resource.data.isGlobal == true;
+
+        // Escrita (atualizar lastMessage, etc.): Apenas membros da conversa
+        allow update: if request.auth.uid in resource.data.userIds;
+        
+        // Criação: Qualquer usuário autenticado pode criar uma conversa
+        allow create: if request.auth.uid != null;
+    }
+
+    match /conversations/{conversationId}/messages/{messageId} {
+        // Leitura: Apenas membros da conversa pai
+        allow read: if get(/databases/$(database)/documents/conversations/$(conversationId)).data.userIds.hasAny([request.auth.uid]);
+        
+        // Escrita (enviar mensagem): Apenas membros da conversa e o remetente deve ser o usuário autenticado
+        allow create: if request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.userIds
+                      && request.resource.data.senderId == request.auth.uid;
+    }
+
     // Regra de fallback: nega tudo que não foi permitido explicitamente.
     match /{document=**} {
       allow read, write: if false;

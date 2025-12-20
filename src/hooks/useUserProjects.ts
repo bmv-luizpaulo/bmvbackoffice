@@ -18,14 +18,12 @@ export function useUserProjects() {
   const { user: authUser, isUserLoading: isAuthLoading } = useAuthUser();
   const { ready: permissionsReady, isManager } = usePermissions();
 
-  // --- Para Gestores ---
   const managerProjectsQuery = useMemoFirebase(() => {
     if (!firestore || !permissionsReady || !isManager) return null;
     return query(collection(firestore, 'projects'));
   }, [firestore, permissionsReady, isManager]);
   const { data: managerProjects, isLoading: isLoadingManagerProjects } = useCollection<Project>(managerProjectsQuery);
-
-  // --- Para Não-Gestores ---
+  
   const ownedProjectsQuery = useMemoFirebase(() => {
     if (!firestore || !authUser || !permissionsReady || isManager) return null;
     return query(collection(firestore, 'projects'), where('ownerId', '==', authUser.uid));
@@ -39,38 +37,25 @@ export function useUserProjects() {
   const { data: ownedProjects, isLoading: isLoadingOwned } = useCollection<Project>(ownedProjectsQuery);
   const { data: memberProjects, isLoading: isLoadingMember } = useCollection<Project>(memberProjectsQuery);
 
-  // --- Lógica de Combinação ---
   const [combinedProjects, setCombinedProjects] = useState<Project[] | null>(null);
-  const [isCombining, setIsCombining] = useState(true);
 
   useEffect(() => {
     if (isManager) {
         setCombinedProjects(managerProjects);
-        setIsCombining(isLoadingManagerProjects);
-    } else if (permissionsReady) {
-        if (isLoadingOwned || isLoadingMember) {
-            setIsCombining(true);
-        } else {
+    } else {
+        if (!isLoadingOwned && !isLoadingMember) {
             const allProjects = new Map<string, Project>();
             ownedProjects?.forEach(p => allProjects.set(p.id, p));
             memberProjects?.forEach(p => allProjects.set(p.id, p));
             setCombinedProjects(Array.from(allProjects.values()));
-            setIsCombining(false);
         }
     }
-  }, [
-    isManager, 
-    managerProjects, 
-    isLoadingManagerProjects, 
-    permissionsReady, 
-    isLoadingOwned, 
-    isLoadingMember, 
-    ownedProjects, 
-    memberProjects
-  ]);
+  }, [isManager, managerProjects, isLoadingOwned, isLoadingMember, ownedProjects, memberProjects]);
+
+  const isLoading = isAuthLoading || !permissionsReady || (isManager ? isLoadingManagerProjects : isLoadingOwned || isLoadingMember);
 
   return {
     projects: combinedProjects,
-    isLoading: isAuthLoading || !permissionsReady || isCombining,
+    isLoading: isLoading,
   };
 }

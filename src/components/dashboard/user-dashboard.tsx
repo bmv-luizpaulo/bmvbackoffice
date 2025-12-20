@@ -6,10 +6,11 @@ import { KpiCard } from "@/components/dashboard/kpi-card";
 import { Target, FolderKanban } from "lucide-react";
 import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { collection, query, where, or } from "firebase/firestore";
-import type { Project, Task, User } from '@/lib/types';
+import type { Task, User } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import React from 'react';
 import dynamic from 'next/dynamic';
+import { useUserProjects } from '@/hooks/useUserProjects';
 
 const RecentTasksCard = dynamic(() => import('@/components/dashboard/recent-tasks-card'), {
   loading: () => <Skeleton className="h-[400px]" />,
@@ -21,6 +22,7 @@ interface UserDashboardProps {
 
 function UserDashboard({ user }: UserDashboardProps) {
   const firestore = useFirestore();
+  const { projects: projectsData, isLoading: isLoadingProjects } = useUserProjects();
 
   const userTasksQuery = useMemoFirebase(() => 
     firestore && user?.id
@@ -32,18 +34,6 @@ function UserDashboard({ user }: UserDashboardProps) {
   [firestore, user?.id]);
   const { data: tasksData, isLoading: isLoadingTasks } = useCollection<Task>(userTasksQuery);
   
-  const userProjectsQuery = useMemoFirebase(() => 
-    firestore && user?.id
-    ? query(
-        collection(firestore, 'projects'),
-        or(
-            where('ownerId', '==', user.id),
-            where('teamMembers', 'array-contains', user.id)
-        )
-    )
-    : null,
-  [firestore, user?.id]);
-  const { data: projectsData, isLoading: isLoadingProjects } = useCollection<Project>(userProjectsQuery);
 
   const { openTasks, activeProjects } = useMemo(() => {
     const openTasksCount = tasksData?.filter(task => !task.isCompleted).length || 0;

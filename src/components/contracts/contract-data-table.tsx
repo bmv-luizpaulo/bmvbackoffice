@@ -32,7 +32,7 @@ import {
 } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import type { Contract, Asset, Project } from "@/lib/types";
+import type { Contract, Asset } from "@/lib/types";
 import dynamic from "next/dynamic";
 import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { collection, doc, serverTimestamp } from "firebase/firestore";
