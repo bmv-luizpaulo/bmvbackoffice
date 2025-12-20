@@ -17,7 +17,11 @@ service cloud.firestore {
     }
     
     function canManageProjects() {
-      return request.auth.token.canManageProjects == true || request.auth.token.canViewAllProjects == true || isDev();
+      return request.auth.token.canManageProjects == true || isDev();
+    }
+
+    function canViewAllProjects() {
+        return request.auth.token.canViewAllProjects == true || isDev();
     }
 
     // ===== REGRAS DE USUÁRIOS E PERMISSÕES =====
@@ -52,18 +56,18 @@ service cloud.firestore {
 
     // ===== REGRAS OPERACIONAIS (PROJETOS E TAREFAS) =====
     match /projects/{projectId} {
-      allow get: if canManageProjects() || request.auth.uid == resource.data.ownerId || request.auth.uid in resource.data.teamMembers;
-      allow list: if canManageProjects();
-      allow create, update, delete: if request.auth.token.canManageProjects == true || isDev();
+      allow get: if canViewAllProjects() || request.auth.uid == resource.data.ownerId || request.auth.uid in resource.data.teamMembers;
+      allow list: if canViewAllProjects();
+      allow create, update, delete: if canManageProjects();
     }
     
     match /projects/{projectId}/{subcollection}/{docId} {
-      allow read, write: if canManageProjects() || get(/databases/$(database)/documents/projects/$(projectId)).data.ownerId == request.auth.uid || request.auth.uid in get(/databases/$(database)/documents/projects/$(projectId)).data.teamMembers;
+      allow read, write: if canViewAllProjects() || get(/databases/$(database)/documents/projects/$(projectId)).data.ownerId == request.auth.uid || request.auth.uid in get(/databases/$(database)/documents/projects/$(projectId)).data.teamMembers;
     }
 
     match /tasks/{taskId} {
-      allow get: if canManageProjects() || resource.data.assigneeId == request.auth.uid || (resource.data.projectId != null && request.auth.uid in get(/databases/$(database)/documents/projects/$(resource.data.projectId)).data.teamMembers);
-      allow list: if canManageProjects() || (request.query.where != null && request.query.where.assigneeId == request.auth.uid);
+      allow get: if canViewAllProjects() || resource.data.assigneeId == request.auth.uid || (resource.data.projectId != null && request.auth.uid in get(/databases/$(database)/documents/projects/$(resource.data.projectId)).data.teamMembers);
+      allow list: if canViewAllProjects() || (request.query.where != null && request.query.where.assigneeId == request.auth.uid);
       allow write: if request.auth.uid == resource.data.assigneeId || (resource.data.assigneeId == null && request.auth.uid != null) || canManageProjects();
       allow create: if request.auth != null;
     }
