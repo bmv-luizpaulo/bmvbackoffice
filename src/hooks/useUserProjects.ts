@@ -22,21 +22,20 @@ export function useUserProjects() {
   const [projects, setProjects] = useState<Project[] | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Queries para usuários não-gestores. São sempre criadas.
+  // Queries for non-managers
   const ownedProjectsQuery = useMemoFirebase(() => {
-    if (!firestore || !authUser || isManager) return null; // Só executa se NÃO for gestor
+    if (!firestore || !authUser || isManager) return null;
     return query(collection(firestore, 'projects'), where('ownerId', '==', authUser.uid));
   }, [firestore, authUser, isManager]);
 
   const memberProjectsQuery = useMemoFirebase(() => {
-    if (!firestore || !authUser || isManager) return null; // Só executa se NÃO for gestor
+    if (!firestore || !authUser || isManager) return null;
     return query(collection(firestore, 'projects'), where('teamMembers', 'array-contains', authUser.uid));
   }, [firestore, authUser, isManager]);
-
-  // Query separada que SÓ é ativada para gestores.
+  
   const allProjectsQuery = useMemoFirebase(() => {
-    if (!firestore || !isManager) return null;
-    return query(collection(firestore, 'projects'));
+      if (!firestore || !isManager) return null;
+      return query(collection(firestore, 'projects'));
   }, [firestore, isManager]);
 
   const { data: ownedProjects, isLoading: isLoadingOwned } = useCollection<Project>(ownedProjectsQuery);

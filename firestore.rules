@@ -53,7 +53,7 @@ service cloud.firestore {
     // ===== REGRAS OPERACIONAIS (PROJETOS E TAREFAS) =====
     match /projects/{projectId} {
       allow get: if canManageProjects() || request.auth.uid == resource.data.ownerId || request.auth.uid in resource.data.teamMembers;
-      allow list: if canManageProjects() || (request.query.where.field == "ownerId" && request.query.where.operator == "==" && request.query.where.value == request.auth.uid) || (request.query.where.field == "teamMembers" && request.query.where.operator == "array-contains" && request.query.where.value == request.auth.uid);
+      allow list: if canManageProjects() || request.auth.uid != null;
       allow create, update, delete: if request.auth.token.canManageProjects == true || isDev();
     }
     
