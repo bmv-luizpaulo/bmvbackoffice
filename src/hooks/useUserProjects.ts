@@ -9,7 +9,7 @@ import type { Project } from "@/lib/types";
 export function useUserProjects() {
   const firestore = useFirestore();
   const { user: authUser, isUserLoading: isAuthLoading } = useAuthUser();
-  const { ready: permissionsReady, canViewAllProjects } = usePermissions();
+  const { ready: permissionsReady, has } = usePermissions();
   
   const [projects, setProjects] = useState<Project[] | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -27,9 +27,9 @@ export function useUserProjects() {
   
   // This query is ONLY active when the user is a manager.
   const allProjectsQuery = useMemoFirebase(() => {
-    if (!firestore || !permissionsReady || !canViewAllProjects) return null;
+    if (!firestore || !permissionsReady || !has('canViewAllProjects')) return null;
     return collection(firestore, 'projects');
-  }, [firestore, permissionsReady, canViewAllProjects]);
+  }, [firestore, permissionsReady, has]);
 
   const { data: ownedProjects, isLoading: isLoadingOwned } = useCollection<Project>(ownedProjectsQuery);
   const { data: memberProjects, isLoading: isLoadingMember } = useCollection<Project>(memberProjectsQuery);
@@ -37,14 +37,14 @@ export function useUserProjects() {
 
   useEffect(() => {
     // Determine overall loading state.
-    const loading = isAuthLoading || !permissionsReady || isLoadingOwned || isLoadingMember || (canViewAllProjects && isLoadingAll);
+    const loading = isAuthLoading || !permissionsReady || isLoadingOwned || isLoadingMember || (has('canViewAllProjects') && isLoadingAll);
     setIsLoading(loading);
 
     if (loading) {
       return; // Wait for all data to be loaded
     }
 
-    if (canViewAllProjects) {
+    if (has('canViewAllProjects')) {
       setProjects(allProjects);
     } else {
       const projectsMap = new Map<string, Project>();
@@ -56,7 +56,7 @@ export function useUserProjects() {
   }, [
     isAuthLoading,
     permissionsReady,
-    canViewAllProjects,
+    has,
     ownedProjects,
     memberProjects,
     allProjects,

@@ -23,7 +23,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import type { Task, Project, User } from "@/lib/types";
-import { useFirestore, useCollection, useMemoFirebase, useAuthUser, usePermissions } from "@/firebase";
+import { useFirestore, useCollection, useMemoFirebase, useUser, usePermissions } from "@/firebase";
 import { collection, query, where } from "firebase/firestore";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CheckCircle2 } from "lucide-react";
@@ -34,7 +34,7 @@ import { useUserProjects } from "@/hooks/useUserProjects";
 
 export default function CompletedTasksPage() {
   const firestore = useFirestore();
-  const { user: authUser } = useAuthUser();
+  const { user: authUser } = useUser();
   const { ready: permissionsReady } = usePermissions();
 
   const tasksQuery = useMemoFirebase(

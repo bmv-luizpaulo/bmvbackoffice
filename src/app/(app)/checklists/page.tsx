@@ -5,7 +5,7 @@ import * as React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, ListChecks, Trash2, Edit, Eye, Archive, ArchiveRestore, MoreHorizontal, CheckSquare, ThumbsUp, Heading2 } from "lucide-react";
-import { useCollection, useFirestore, useMemoFirebase, useUser, usePermissions } from '@/firebase';
+import { useCollection, useDoc, useFirestore, useMemoFirebase, useUser, usePermissions } from '@/firebase';
 import { collection, doc, orderBy, query, serverTimestamp } from 'firebase/firestore';
 import type { Checklist, Team, User as UserType } from '@/lib/types';
 import { addDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';

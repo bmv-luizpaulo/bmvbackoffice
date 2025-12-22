@@ -13,7 +13,7 @@ import {
 import {
   useFirestore,
   useCollection,
-  useAuthUser,
+  useUser,
   usePermissions,
   useMemoFirebase,
   updateDocumentNonBlocking,

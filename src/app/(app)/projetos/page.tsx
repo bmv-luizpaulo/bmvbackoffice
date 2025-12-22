@@ -4,9 +4,9 @@
 import * as React from 'react';
 import dynamic from 'next/dynamic';
 import { useSearchParams } from "next/navigation";
-import { useFirestore, useCollection, useMemoFirebase, useAuthUser, usePermissions } from "@/firebase";
+import { useFirestore, useCollection, useMemoFirebase, useUser, usePermissions } from "@/firebase";
 import { collection, query } from "firebase/firestore";
-import type { Project, User, Task } from "@/lib/types";
+import type { Project, User, Task, Team } from "@/lib/types";
 
 import { FolderKanban, Plus, SlidersHorizontal, User as UserIcon, KanbanSquare } from 'lucide-react';
 import { Button } from "@/components/ui/button";
@@ -25,7 +25,7 @@ const ProjectCard = dynamic(() => import("@/components/projects/project-card").t
 
 export default function ProjectsListPage() {
   const firestore = useFirestore();
-  const { user: authUser } = useAuthUser();
+  const { user: authUser } = useUser();
   const { isManager } = usePermissions();
   const searchParams = useSearchParams();
   const filter = searchParams.get('filter');
@@ -42,6 +42,9 @@ export default function ProjectsListPage() {
   const { data: usersData, isLoading: isLoadingUsers } = useCollection<User>(usersQuery);
   const usersMap = React.useMemo(() => new Map(usersData?.map(u => [u.id, u])), [usersData]);
 
+  const teamsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'teams') : null, [firestore]);
+  const { data: teamsData, isLoading: isLoadingTeams } = useCollection<Team>(teamsQuery);
+
   const tasksQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'tasks')) : null, [firestore]);
   const { data: allTasks, isLoading: isLoadingTasks } = useCollection<Task>(tasksQuery);
   
@@ -56,7 +59,7 @@ export default function ProjectsListPage() {
     }, new Map<string, Task[]>());
   }, [allTasks]);
 
-  const isLoading = isLoadingProjects || isLoadingUsers || isLoadingTasks;
+  const isLoading = isLoadingProjects || isLoadingUsers || isLoadingTasks || isLoadingTeams;
 
   // --- Filtering Logic ---
   const myProjects = React.useMemo(() => {
@@ -176,6 +179,8 @@ export default function ProjectsListPage() {
           onOpenChange={setIsFormOpen}
           onAddProject={handleSaveProject}
           projectToEdit={projectToEdit}
+          usersData={usersData}
+          teamsData={teamsData}
         />
       )}
     </div>

@@ -64,7 +64,7 @@ export const TicketDataTable = React.memo(function TicketDataTable() {
   const { data: userProfile } = useDoc<User>(userProfileQuery);
   const roleQuery = useMemoFirebase(() => firestore && userProfile?.roleId ? doc(firestore, 'roles', userProfile.roleId) : null, [firestore, userProfile?.roleId]);
   const { data: role } = useDoc<Role>(roleQuery);
-  const isManager = role?.isManager || role?.isDev;
+  const isManager = role?.permissions?.isManager || role?.permissions?.isDev;
 
   const ticketsQuery = useMemoFirebase(() => {
     if (!firestore || !authUser) return null;
@@ -113,7 +113,7 @@ export const TicketDataTable = React.memo(function TicketDataTable() {
 
           // Notify managers if priority is high
           if (ticketData.priority === 'Alta') {
-            const managerUsers = usersData?.filter(u => rolesMap.get(u.roleId || '')?.isManager);
+            const managerUsers = usersData?.filter(u => rolesMap.get(u.roleId || '')?.permissions?.isManager);
             if (managerUsers) {
               managerUsers.forEach(manager => {
                 if (manager.id !== authUser.uid) { // Don't notify the user who created the ticket

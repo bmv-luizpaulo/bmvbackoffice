@@ -361,7 +361,7 @@ function InnerLayout({ children }: { children: React.ReactNode }) {
           <SidebarContent>
              <SidebarMenu>
                  {navSections.map((section, index) => {
-                     const hasVisibleItems = section.items.some(item => {
+                     const hasVisibleItems = section.items.some((item: any) => {
                          if(item.devOnly && process.env.NODE_ENV !== 'development') return false;
                          return !item.permission || item.permission(permissions);
                      });

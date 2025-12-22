@@ -13,6 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useUserProjects } from "@/hooks/useUserProjects";
 import { useUserTasks } from "@/hooks/useUserTasks";
 import { isPast } from 'date-fns';
+import type { Task } from "@/lib/types";
 
 const RecentTasksCard = dynamic(() => import('@/components/dashboard/recent-tasks-card'), {
   loading: () => <Skeleton className="h-[400px]" />,
@@ -122,13 +123,13 @@ function DashboardPage() {
     const managerKpis = {
       totalProjects: projectsData?.length || 0,
       completedProjects: projectsData?.filter(p => p.status === 'Arquivado').length || 0,
-      inProgressTasks: tasksData?.filter(t => !t.isCompleted).length || 0,
-      completedTasks: tasksData?.filter(t => t.isCompleted).length || 0,
-      overdueTasks: tasksData?.filter(t => !t.isCompleted && t.dueDate && isPast(new Date(t.dueDate))).length || 0,
+      inProgressTasks: tasksData?.filter((t: Task) => !t.isCompleted).length || 0,
+      completedTasks: tasksData?.filter((t: Task) => t.isCompleted).length || 0,
+      overdueTasks: tasksData?.filter((t: Task) => !t.isCompleted && t.dueDate && isPast(new Date(t.dueDate))).length || 0,
     };
-    
+
     const userKpis = {
-      openTasks: tasksData?.filter(t => !t.isCompleted).length || 0,
+      openTasks: tasksData?.filter((t: Task) => !t.isCompleted).length || 0,
       activeProjects: projectsData?.filter(p => p.status === 'Em execução').length || 0,
     };
     return { managerKpis, userKpis };
@@ -211,7 +212,7 @@ function DashboardPage() {
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div className="lg:col-span-2 space-y-6">
-                    {authUser && <RecentTasksCard userId={authUser.id} />}
+                    {authUser && <RecentTasksCard userId={authUser.uid} />}
                 </div>
             </div>
         </>
