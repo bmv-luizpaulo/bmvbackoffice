@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -142,7 +143,7 @@ export function ProjectCard({ project, tasks, owner, teamMembers, onEdit }: Proj
             )}
         </div>
          <Button asChild className="w-full">
-            <Link href={`/projects?projectId=${project.id}`}>
+            <Link href={`/projetos/quadro?projectId=${project.id}`}>
                 <FolderKanban className="mr-2 h-4 w-4" />
                 Ver Kanban
             </Link>

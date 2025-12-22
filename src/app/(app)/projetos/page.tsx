@@ -8,7 +8,7 @@ import { useFirestore, useCollection, useMemoFirebase, useAuthUser, usePermissio
 import { collection, query } from "firebase/firestore";
 import type { Project, User, Task } from "@/lib/types";
 
-import { FolderKanban, Plus, SlidersHorizontal, User as UserIcon, List, KanbanSquare } from 'lucide-react';
+import { FolderKanban, Plus, SlidersHorizontal, User as UserIcon, KanbanSquare } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from '@/components/ui/input';
@@ -104,7 +104,7 @@ export default function ProjectsListPage() {
             </div>
             <div className="flex items-center gap-2">
                  <Button asChild variant="outline">
-                    <Link href="/projects">
+                    <Link href="/projetos/quadro">
                        <KanbanSquare className="mr-2 h-4 w-4" />
                         Quadro Kanban
                     </Link>

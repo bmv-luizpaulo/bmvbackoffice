@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -114,7 +115,7 @@ const navSections = [
               permission: () => true,
               subItems: [
                  { href: '/projetos', icon: List, label: 'Lista de Projetos', permission: () => true },
-                 { href: '/projects', icon: KanbanSquare, label: 'Quadro Kanban', permission: () => true },
+                 { href: '/projetos/quadro', icon: KanbanSquare, label: 'Quadro Kanban', permission: () => true },
               ]
             },
             { href: '/reunioes', icon: Video, label: 'Reuniões', permission: (p: any) => p.isManager },
@@ -147,7 +148,7 @@ const navSections = [
         name: 'Financeiro',
         permission: (p: any) => p.canAccessFinancial,
         items: [
-            { href: '/financeiro', icon: BarChart2, label: 'Painel Financeiro', permission: (p: any) => p.canAccessFinancial },
+            { href: '/financeiro', icon: BarChart2, label: 'Painel Financeiro', permission: (p_any) => p.canAccessFinancial },
             { href: '/reembolsos', icon: HandCoins, label: 'Solicitações', permission: (p: any) => p.canAccessFinancial },
             { href: '/cost-centers', icon: Wallet, label: 'Centro de Custos', permission: (p: any) => p.canAccessFinancial },
             { href: '/contracts', icon: Archive, label: 'Contratos Gerais', permission: (p: any) => p.canAccessFinancial },
@@ -304,7 +305,6 @@ function InnerLayout({ children }: { children: React.ReactNode }) {
   }, [user, isUserLoading, router]);
 
   useEffect(() => {
-    // Redirect from root to dashboard
     if (pathname === '/') {
       router.replace('/dashboard');
     }
