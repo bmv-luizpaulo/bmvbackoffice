@@ -92,12 +92,14 @@ const navSections = [
         items: [
             { href: '/dashboard', icon: BarChart2, label: 'Painel', permission: () => true },
             { href: '/agenda/tarefas', icon: Calendar, label: 'Agenda', permission: () => true },
+            { href: '/chat', icon: MessagesSquare, label: 'Chat', permission: () => true },
+            { href: '/reports', icon: BarChart2, label: 'Relatórios', permission: (p: any) => p.level > 2 || p.isManager },
         ]
     },
     // --- SEÇÃO COMERCIAL ---
     {
         name: 'Comercial',
-        permission: (p: any) => p.canManageContacts || p.canManageProductsAndSeals,
+        permission: (p: any) => true,
         items: [
             { href: '/contatos', icon: BookUser, label: 'Contatos', permission: (p: any) => p.canManageContacts },
             { href: '/selos', icon: Award, label: 'Selos & Produtos', permission: (p: any) => p.canManageProductsAndSeals },
@@ -135,7 +137,7 @@ const navSections = [
     // --- SEÇÃO GESTÃO DE ATIVOS ---
     {
         name: 'Gestão de Ativos',
-        permission: (p: any) => p.canManageAssets,
+        permission: (p: any) => true,
         items: [
             { href: '/assets', icon: ClipboardList, label: 'Inventário', permission: (p: any) => p.canManageAssets },
             { href: '/maintenance', icon: Wrench, label: 'Manutenções', permission: (p: any) => p.canManageAssets },
@@ -146,10 +148,11 @@ const navSections = [
     // --- SEÇÃO FINANCEIRO ---
     {
         name: 'Financeiro',
-        permission: (p: any) => p.canAccessFinancial,
+        permission: (p: any) => true,
         items: [
             { href: '/financeiro', icon: BarChart2, label: 'Painel Financeiro', permission: (p: any) => p.canAccessFinancial },
             { href: '/reembolsos', icon: HandCoins, label: 'Solicitações', permission: (p: any) => p.canAccessFinancial },
+            { href: '/meus-reembolsos', icon: HandCoins, label: 'Meus Reembolsos', permission: () => true },
             { href: '/cost-centers', icon: Wallet, label: 'Centro de Custos', permission: (p: any) => p.canAccessFinancial },
             { href: '/contracts', icon: Archive, label: 'Contratos Gerais', permission: (p: any) => p.canAccessFinancial },
         ]
@@ -157,7 +160,7 @@ const navSections = [
     // --- SEÇÃO EQUIPE ---
     {
         name: 'Equipe',
-        permission: (p: any) => p.canManageUsers,
+        permission: (p: any) => true,
         items: [
             { 
               href: '/users', 
@@ -179,6 +182,7 @@ const navSections = [
       permission: () => true,
       items: [
         { href: '/suporte', icon: LifeBuoy, label: 'Suporte', permission: () => true },
+        { href: '/settings', icon: Settings, label: 'Configurações', permission: (p: any) => p.level > 3 || p.isManager },
         { href: '/dev-tools', icon: Bug, label: 'Ferramentas de Dev', permission: (p: any) => p.isDev, devOnly: true },
       ]
     }

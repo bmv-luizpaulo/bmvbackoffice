@@ -186,11 +186,31 @@ export const usePermissions = () => {
 
   const has = (key: string) => !!(ready && claims && (claims as any)[key] === true);
 
-  return {
+  return useMemo(() => ({
     ready,
     claims: claims || {},
+    // Role-based permissions (legacy RBAC)
     isManager: has('isManager'),
     isDev: has('isDev'),
+    canManageContacts: has('canManageContacts'),
+    canManageProductsAndSeals: has('canManageProductsAndSeals'),
+    canAccessFinancial: has('canAccessFinancial'),
+    canManageAssets: has('canManageAssets'),
+    canManageUsers: has('canManageUsers'),
+    // Attribute-based attributes
+    department: (claims as any)?.department || '',
+    level: (claims as any)?.level || 0,
+    teamIds: (claims as any)?.teamIds || [],
+    status: (claims as any)?.status || 'inactive',
+    // ABAC helper functions
+    canAccess: (resource: string, action: string) => {
+      // Example ABAC logic: based on attributes
+      if (action === 'read') return true; // Everyone can read
+      if (action === 'write' && (claims as any)?.level > 2) return true;
+      if (resource === 'contacts' && (claims as any)?.department === 'sales') return true;
+      if (resource === 'financial' && (claims as any)?.department === 'finance') return true;
+      return has('isManager'); // Fallback to manager
+    },
     has,
-  } as const;
+  }), [claims, isUserLoading]);
 };
