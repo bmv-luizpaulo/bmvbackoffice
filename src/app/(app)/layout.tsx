@@ -1,4 +1,3 @@
-
 'use client';
 
 import Link from 'next/link';
@@ -73,7 +72,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { useUser, useAuth, FirebaseClientProvider, useFirebase } from '@/firebase';
+import { useUser, useAuth, FirebaseClientProvider, useFirebase, usePermissions } from '@/firebase';
 import { signOut } from 'firebase/auth';
 import {
   NotificationsProvider,
@@ -84,113 +83,105 @@ import { cn } from '@/lib/utils';
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener';
 import GlobalErrorBoundary from '@/components/global-error-boundary';
 
-// --- Menu para Gestores e Desenvolvedores ---
-const managerNavSections = [
+// --- Menu Único para Todos os Usuários ---
+const navSections = [
+    // --- SEÇÃO GERAL ---
     {
         name: 'Geral',
         items: [
-            { href: '/dashboard', icon: BarChart2, label: 'Painel de Gestão' },
-            { href: '/agenda/tarefas', icon: Calendar, label: 'Agenda Geral' },
+            { href: '/dashboard', icon: BarChart2, label: 'Painel', permission: () => true },
+            { href: '/agenda/tarefas', icon: Calendar, label: 'Agenda', permission: () => true },
         ]
     },
+    // --- SEÇÃO COMERCIAL ---
     {
         name: 'Comercial',
+        permission: (p: any) => p.canManageContacts || p.canManageProductsAndSeals,
         items: [
-            { href: '/contatos', icon: BookUser, label: 'Contatos' },
-            { href: '/selos', icon: Award, label: 'Selos & Produtos' },
+            { href: '/contatos', icon: BookUser, label: 'Contatos', permission: (p: any) => p.canManageContacts },
+            { href: '/selos', icon: Award, label: 'Selos & Produtos', permission: (p: any) => p.canManageProductsAndSeals },
         ]
     },
+    // --- SEÇÃO OPERACIONAL ---
     {
         name: 'Operacional',
+        permission: () => true,
         items: [
             { 
               href: '/projetos', 
               icon: FolderKanban, 
               label: 'Projetos',
+              permission: () => true,
               subItems: [
-                 { href: '/projetos', icon: List, label: 'Lista de Projetos' },
-                 { href: '/projects', icon: KanbanSquare, label: 'Quadro Kanban' },
+                 { href: '/projetos', icon: List, label: 'Lista de Projetos', permission: () => true },
+                 { href: '/projects', icon: KanbanSquare, label: 'Quadro Kanban', permission: () => true },
               ]
             },
-            { href: '/reunioes', icon: Video, label: 'Reuniões' },
-            { href: '/tasks/completed', icon: CheckCircle2, label: 'Tarefas Concluídas' },
+            { href: '/reunioes', icon: Video, label: 'Reuniões', permission: (p: any) => p.isManager },
+            { href: '/tasks/completed', icon: CheckCircle2, label: 'Tarefas Concluídas', permission: (p: any) => p.isManager },
             { 
               href: '/checklists', 
               icon: ListChecks, 
-              label: 'Gestão de Checklists',
+              label: 'Checklists',
+              permission: () => true,
               subItems: [
-                { href: '/checklists', icon: ListPlus, label: 'Modelos de Checklist' },
-                { href: '/executed-checklists', icon: History, label: 'Checklists Executados' },
+                { href: '/checklists', icon: ListPlus, label: 'Modelos', permission: (p: any) => p.isManager },
+                { href: '/executed-checklists', icon: History, label: 'Executados', permission: () => true },
               ]
             },
         ]
     },
+    // --- SEÇÃO GESTÃO DE ATIVOS ---
     {
         name: 'Gestão de Ativos',
+        permission: (p: any) => p.canManageAssets,
         items: [
-            { href: '/assets', icon: ClipboardList, label: 'Inventário de Ativos' },
-            { href: '/maintenance', icon: Wrench, label: 'Manutenções' },
-            { href: '/asset-contracts', icon: FileText, label: 'Contratos de Uso' },
-            { href: '/document-templates', icon: FileText, label: 'Modelos de Documentos' },
+            { href: '/assets', icon: ClipboardList, label: 'Inventário', permission: (p: any) => p.canManageAssets },
+            { href: '/maintenance', icon: Wrench, label: 'Manutenções', permission: (p: any) => p.canManageAssets },
+            { href: '/asset-contracts', icon: FileText, label: 'Contratos de Uso', permission: (p: any) => p.canManageAssets },
+            { href: '/document-templates', icon: FileText, label: 'Modelos de Doc', permission: (p: any) => p.canManageAssets },
         ]
     },
+    // --- SEÇÃO FINANCEIRO ---
     {
         name: 'Financeiro',
+        permission: (p: any) => p.canAccessFinancial,
         items: [
-            { href: '/financeiro', icon: BarChart2, label: 'Painel Financeiro' },
-            { href: '/reembolsos', icon: HandCoins, label: 'Solicitações' },
-            { href: '/cost-centers', icon: Wallet, label: 'Centro de Custos' },
-            { href: '/contracts', icon: Archive, label: 'Contratos Gerais' },
+            { href: '/financeiro', icon: BarChart2, label: 'Painel Financeiro', permission: (p: any) => p.canAccessFinancial },
+            { href: '/reembolsos', icon: HandCoins, label: 'Solicitações', permission: (p: any) => p.canAccessFinancial },
+            { href: '/cost-centers', icon: Wallet, label: 'Centro de Custos', permission: (p: any) => p.canAccessFinancial },
+            { href: '/contracts', icon: Archive, label: 'Contratos Gerais', permission: (p: any) => p.canAccessFinancial },
         ]
     },
+    // --- SEÇÃO EQUIPE ---
     {
         name: 'Equipe',
+        permission: (p: any) => p.canManageUsers,
         items: [
             { 
               href: '/users', 
               icon: Users, 
               label: 'Usuários & Grupos',
+              permission: (p: any) => p.canManageUsers,
               subItems: [
-                { href: '/users', icon: User, label: 'Usuários' },
-                { href: '/teams', icon: Group, label: 'Equipes' },
-                { href: '/directorates', icon: Building, label: 'Diretorias' },
-                { href: '/perfis', icon: Shield, label: 'Perfis de Acesso' },
+                { href: '/users', icon: User, label: 'Usuários', permission: (p: any) => p.canManageUsers },
+                { href: '/teams', icon: Group, label: 'Equipes', permission: (p: any) => p.canManageUsers },
+                { href: '/directorates', icon: Building, label: 'Diretorias', permission: (p: any) => p.canManageUsers },
+                { href: '/perfis', icon: Shield, label: 'Perfis de Acesso', permission: (p: any) => p.canManageUsers },
               ]
             },
         ]
     },
-];
-
-// --- Menu para Usuários Comuns ---
-const userNavSections = [
-    {
-        name: 'Geral',
-        items: [
-            { href: '/dashboard', icon: BarChart2, label: 'Meu Painel' },
-            { href: '/agenda/tarefas', icon: Calendar, label: 'Minha Agenda' },
-        ]
-    },
-    {
-        name: 'Minha Área',
-        items: [
-            { href: '/projetos?filter=me', icon: FolderKanban, label: 'Meus Projetos' },
-            { href: '/assets?owner=me', icon: UserSquare, label: 'Meus Ativos' },
-            { href: '/checklists?filter=me', icon: ListChecks, label: 'Meus Checklists' },
-            { href: '/meus-reembolsos', icon: HandCoins, label: 'Meus Reembolsos' },
-        ]
-    },
-];
-
-// --- Seção Comum a Todos ---
-const commonSections = [
+    // --- SEÇÃO SUPORTE E FERRAMENTAS ---
     {
       name: 'Suporte & Ferramentas',
+      permission: () => true,
       items: [
-        { href: '/suporte', icon: LifeBuoy, label: 'Suporte' },
-        { href: '/dev-tools', icon: Bug, label: 'Ferramentas de Dev', devOnly: true },
+        { href: '/suporte', icon: LifeBuoy, label: 'Suporte', permission: () => true },
+        { href: '/dev-tools', icon: Bug, label: 'Ferramentas de Dev', permission: (p: any) => p.isDev, devOnly: true },
       ]
     }
-]
+];
 
 function UserAvatar() {
     const { user } = useUser();
@@ -266,15 +257,15 @@ const CollapsibleNavItem = ({ item, pathname }: { item: any, pathname: string })
     );
 };
 
-function NavItem({ item, pathname, isManager, isDev }: { item: any, pathname: string, isManager: boolean, isDev: boolean }) {
+function NavItem({ item, pathname, permissions }: { item: any, pathname: string, permissions: any }) {
   const hasSubItems = item.subItems && item.subItems.length > 0;
   
   if (item.devOnly && process.env.NODE_ENV !== 'development') {
     return null;
   }
   
-  if (item.managerOnly && !isManager && !isDev) {
-    return null;
+  if (item.permission && !item.permission(permissions)) {
+      return null;
   }
   
   if (!hasSubItems) {
@@ -291,8 +282,7 @@ function NavItem({ item, pathname, isManager, isDev }: { item: any, pathname: st
   }
 
   const visibleSubItems = item.subItems.filter((sub: any) => 
-    (!sub.managerOnly || isManager || isDev) && 
-    (!sub.devOnly || isDev)
+    !sub.permission || sub.permission(permissions)
   );
 
   if (visibleSubItems.length === 0) return null;
@@ -303,23 +293,22 @@ function NavItem({ item, pathname, isManager, isDev }: { item: any, pathname: st
 function InnerLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const auth = useAuth();
-  const { user, isUserLoading, claims } = useFirebase();
+  const { user, isUserLoading } = useFirebase();
+  const permissions = usePermissions();
   const router = useRouter();
-
-  const isManager = !!claims?.isManager;
-  const isDev = !!claims?.isDev;
-
-  const navSections = isManager || isDev ? managerNavSections : userNavSections;
 
   useEffect(() => {
     if (!isUserLoading && !user) {
       router.replace('/login');
     }
+  }, [user, isUserLoading, router]);
+
+  useEffect(() => {
     // Redirect from root to dashboard
     if (pathname === '/') {
       router.replace('/dashboard');
     }
-  }, [user, isUserLoading, router, pathname]);
+  }, [pathname, router]);
 
   const handleSignOut = async () => {
     try {
@@ -330,7 +319,7 @@ function InnerLayout({ children }: { children: React.ReactNode }) {
     }
   }
 
-  if (isUserLoading || !user || pathname === '/') {
+  if (isUserLoading || !user) {
       return (
         <div className="flex h-screen w-full items-center justify-center bg-background">
             <div className="flex flex-col items-center gap-4">
@@ -371,15 +360,26 @@ function InnerLayout({ children }: { children: React.ReactNode }) {
           </SidebarHeader>
           <SidebarContent>
              <SidebarMenu>
-                 {[...navSections, ...commonSections].map((section, index) => (
-                    <SidebarGroup key={section.name} className={cn(index === 0 && 'pt-0')}>
-                    <SidebarSeparator />
-                    <SidebarGroupLabel>{section.name}</SidebarGroupLabel>
-                    {section.items.map((item: any) => (
-                        <NavItem key={item.label} item={item} pathname={pathname} isManager={isManager} isDev={isDev} />
-                    ))}
-                    </SidebarGroup>
-                 ))}
+                 {navSections.map((section, index) => {
+                     const hasVisibleItems = section.items.some(item => {
+                         if(item.devOnly && process.env.NODE_ENV !== 'development') return false;
+                         return !item.permission || item.permission(permissions);
+                     });
+                     
+                     if (section.permission && !section.permission(permissions) && !hasVisibleItems) {
+                         return null;
+                     }
+
+                     return (
+                        <SidebarGroup key={section.name} className={cn(index === 0 && 'pt-0')}>
+                            <SidebarSeparator />
+                            <SidebarGroupLabel>{section.name}</SidebarGroupLabel>
+                            {section.items.map((item: any) => (
+                                <NavItem key={item.label} item={item} pathname={pathname} permissions={permissions} />
+                            ))}
+                        </SidebarGroup>
+                     );
+                 })}
             </SidebarMenu>
           </SidebarContent>
           <SidebarFooter>
