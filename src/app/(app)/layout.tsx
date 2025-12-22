@@ -148,7 +148,7 @@ const navSections = [
         name: 'Financeiro',
         permission: (p: any) => p.canAccessFinancial,
         items: [
-            { href: '/financeiro', icon: BarChart2, label: 'Painel Financeiro', permission: (p_any) => p.canAccessFinancial },
+            { href: '/financeiro', icon: BarChart2, label: 'Painel Financeiro', permission: (p: any) => p.canAccessFinancial },
             { href: '/reembolsos', icon: HandCoins, label: 'Solicitações', permission: (p: any) => p.canAccessFinancial },
             { href: '/cost-centers', icon: Wallet, label: 'Centro de Custos', permission: (p: any) => p.canAccessFinancial },
             { href: '/contracts', icon: Archive, label: 'Contratos Gerais', permission: (p: any) => p.canAccessFinancial },
